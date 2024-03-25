@@ -1,8 +1,7 @@
 #![allow(dead_code)]
 
+use bitboards::Bitboard;
 use board::create_board;
-
-use crate::bitboards::Bitboard64;
 
 mod board;
 mod types;

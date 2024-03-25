@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 
-use crate::{bitboards::{Bitboard64, Bitboard8}, consts::{CastleRights, Piece, Side}, types::Square, zobrist::ZobristKey};
+use crate::{bitboards::Bitboard, consts::{CastleRights, Piece, Side}, types::Square, zobrist::ZobristKey};
 use colored::*;
 
 pub struct Board{
-    pub pieces: [Bitboard64; 6],
-    pub piece_maps: [Bitboard64; 2],
-    pub castle_rights: Bitboard8,
-    pub checkers: Bitboard64,
+    pub pieces: [Bitboard<u64>; 6],
+    pub piece_maps: [Bitboard<u64>; 2],
+    pub castle_rights: Bitboard<u8>,
+    pub checkers: Bitboard<u64>,
     pub full_moves: u16,
     pub half_moves: u8,
     pub en_passant: Square,
@@ -16,17 +16,19 @@ pub struct Board{
 }
 
 impl Board {
-    pub const NULL: Board = Board{
-        pieces: [Bitboard64::NULL; 6],
-        piece_maps: [Bitboard64::NULL; 2],
-        castle_rights: Bitboard8::NULL,
-        checkers: Bitboard64::NULL,
-        full_moves: 0,
-        half_moves: 0,
-        en_passant: Square::NULL,
-        side_to_move: 0,
-        zobrist: ZobristKey::NULL
-    };
+    pub fn new() -> Self {
+        Board{
+            pieces: std::array::from_fn(|_| Bitboard::<u64>::new()),
+            piece_maps: std::array::from_fn(|_| Bitboard::<u64>::new()),
+            castle_rights: Bitboard::new(),
+            checkers: Bitboard::new(),
+            full_moves: 0,
+            half_moves: 0,
+            en_passant: Square::NULL,
+            side_to_move: 0,
+            zobrist: ZobristKey::NULL
+        }
+    }
 
     #[inline]
     pub fn get_piece_on_square( &self, square: u8 ) -> u8{
@@ -134,7 +136,7 @@ impl Board {
 }
 
 pub fn create_board( fen: &str ) -> Board {
-    let mut board = Board::NULL;
+    let mut board = Board::new();
     let splits: Vec<&str> = fen.split_whitespace().collect();
 
     let mut index: usize = 0;
