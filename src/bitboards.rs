@@ -35,11 +35,6 @@ impl Bitboard64 {
         return (self.value & (mask << index)) >> index;
     }
 
-    #[inline]
-    pub fn pop_bit( &self, index: u8 ) -> u64 {
-        self.value & (1u64 << index)
-    }
-
     pub fn draw_bitboard( &self ){
         let mut result = " ------------------------\n".to_string();
         for rank in (0..8).rev() {
@@ -93,11 +88,6 @@ impl Bitboard32 {
     #[inline]
     pub fn get_bit_chunk( &self, index: u8, mask: u32 ) -> u32 {
         return (self.value & (mask << index)) >> index;
-    }
-
-    #[inline]
-    pub fn pop_bit( &self, index: u8 ) -> u32 {
-        self.value & (1u32 << index)
     }
 
     pub fn draw_bitboard( &self ){
@@ -155,11 +145,6 @@ impl Bitboard16 {
         return (self.value & (mask << index)) >> index;
     }
 
-    #[inline]
-    pub fn pop_bit( &self, index: u8 ) -> u16 {
-        self.value & (1u16 << index)
-    }
-
     pub fn draw_bitboard( &self ){
         let mut result = " ------------------------\n".to_string();
         for rank in (0..4).rev() {
@@ -213,11 +198,6 @@ impl Bitboard8 {
     #[inline]
     pub fn get_bit_chunk( &self, index: u8, mask: u8 ) -> u8 {
         return (self.value & (mask << index)) >> index;
-    }
-
-    #[inline]
-    pub fn pop_bit( &self, index: u8 ) -> u8 {
-        self.value & (1u8 << index)
     }
 
     pub fn draw_bitboard( &self ){

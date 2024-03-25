@@ -6,6 +6,7 @@ mod board;
 mod types;
 mod bitboards;
 mod consts;
+mod zobrist;
 
 fn main() {
     let mut board = board::create_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq e3 0 1".to_string());

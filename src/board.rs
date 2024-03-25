@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::{bitboards::{Bitboard64, Bitboard8}, consts::{CastleRights, Piece, Side}, types::Square};
+use crate::{bitboards::{Bitboard64, Bitboard8}, consts::{CastleRights, Piece, Side}, types::Square, zobrist::ZobristKey};
 use colored::*;
 
 pub struct Board{
@@ -12,7 +12,7 @@ pub struct Board{
     pub half_moves: u8,
     pub en_passant: Square,
     pub side_to_move: usize,
-    pub zobrist: u64
+    pub zobrist: ZobristKey
 }
 
 impl Board {
@@ -25,7 +25,7 @@ impl Board {
         half_moves: 0,
         en_passant: Square::NULL,
         side_to_move: 0,
-        zobrist: 0
+        zobrist: ZobristKey::NULL
     };
 
     #[inline]
@@ -50,9 +50,18 @@ impl Board {
         return 2;
     }
 
+    #[inline]
     pub fn set_piece_on_square( &mut self, square: u8, side: usize, piece: usize){
         self.pieces[piece-1].set_bit_to_one(square);
         self.piece_maps[side].set_bit_to_one(square);
+        self.zobrist.update_piece_hash(piece, side, square as usize)
+    }
+
+    #[inline]
+    pub fn remove_piece_on_square( &mut self, square: u8, side: usize, piece: usize){
+        self.pieces[piece-1].set_bit_to_zero(square);
+        self.piece_maps[side].set_bit_to_zero(square);
+        self.zobrist.update_piece_hash(piece, side, square as usize)
     }
 
     pub fn draw_board( &self ){
@@ -60,7 +69,7 @@ impl Board {
 
         let mut info = Vec::new();
         info.push("FEN: TBA");
-        let zobrist = format!("Zobrist Key: {}", self.zobrist);
+        let zobrist = format!("Zobrist Key: {}", self.zobrist.key);
         info.push(zobrist.as_str());
         let mut castle_rights = "".to_string();
         if self.castle_rights.get_bit(CastleRights::WHITE_KING) > 0 {
@@ -128,7 +137,6 @@ pub fn create_board( fen: String ) -> Board {
     let mut board = Board::NULL;
     let splits: Vec<&str> = fen.split_whitespace().collect();
 
-    //add pieces
     let mut index: usize = 0;
     let mut file: usize = 0;
     let ranks = splits[0].split('/');
@@ -173,42 +181,44 @@ pub fn create_board( fen: String ) -> Board {
         }
     }
 
-    //add side to move
     if splits[1] == "w" {
         board.side_to_move = Side::WHITE;
     }
     else {
         board.side_to_move = Side::BLACK;
+        board.zobrist.update_side_to_move_hash();
     }
 
-    //add castle rights
     if splits[2].contains('K') {
         board.castle_rights.set_bit_to_one(CastleRights::WHITE_KING);
+        board.zobrist.update_castle_rights_hash(CastleRights::WHITE_KING as usize);
     }
     if splits[2].contains('Q') {
         board.castle_rights.set_bit_to_one(CastleRights::WHITE_QUEEN);
+        board.zobrist.update_castle_rights_hash(CastleRights::WHITE_QUEEN as usize);
     }
     if splits[2].contains('k') {
         board.castle_rights.set_bit_to_one(CastleRights::BLACK_KING);
+        board.zobrist.update_castle_rights_hash(CastleRights::BLACK_KING as usize);
     }
     if splits[2].contains('q') {
         board.castle_rights.set_bit_to_one(CastleRights::BLACK_QUEEN);
+        board.zobrist.update_castle_rights_hash(CastleRights::BLACK_QUEEN as usize);
     }
 
-    //add en passant 
     board.en_passant = Square::NULL;
     if splits[3] != "-" {
         board.en_passant.from_string(splits[3]);
+        board.zobrist.update_en_passant_hash(board.en_passant.value);
     }
 
     board.full_moves = 0;
     board.half_moves = 0;
-    //add moves
+
     if splits.len() > 4 {
         board.full_moves = splits[4].parse::<u16>().unwrap();
     }
 
-    //add half moves
     if splits.len() > 5 {
         board.half_moves = splits[5].parse::<u8>().unwrap();
     }
