@@ -133,7 +133,7 @@ impl Board {
     }
 }
 
-pub fn create_board( fen: String ) -> Board {
+pub fn create_board( fen: &str ) -> Board {
     let mut board = Board::NULL;
     let splits: Vec<&str> = fen.split_whitespace().collect();
 
@@ -144,7 +144,7 @@ pub fn create_board( fen: String ) -> Board {
         index = 0;
         file = 0;
         while file < 8 {
-            let square_index: u8 = (rankIndex * 8 + file) as u8;
+            let square_index: u8 = ((7-rankIndex) * 8 + file) as u8;
             let piece_char = rank.as_bytes()[index] as char;
             if piece_char.is_numeric() {
                 file += piece_char.to_string().parse::<usize>().unwrap();
@@ -153,7 +153,7 @@ pub fn create_board( fen: String ) -> Board {
             }
 
             let mut side_to_move = Side::WHITE;
-            if piece_char < 'a' {
+            if piece_char > 'a' {
                 side_to_move = Side::BLACK;
             }
 
