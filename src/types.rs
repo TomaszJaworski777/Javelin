@@ -1,9 +1,7 @@
 #![allow(dead_code)]
 
-use crate::bitboards::Bitboard;
-
 pub struct Move{
-    pub value: Bitboard<u16>
+    pub value: u16
 }
 
 pub struct Square{
