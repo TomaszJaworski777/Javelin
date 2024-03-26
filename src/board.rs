@@ -18,10 +18,10 @@ pub struct Board{
 impl Board {
     pub fn new() -> Self {
         Board{
-            pieces: std::array::from_fn(|_| Bitboard::<u64>::new()),
-            piece_maps: std::array::from_fn(|_| Bitboard::<u64>::new()),
-            castle_rights: Bitboard::new(),
-            checkers: Bitboard::new(),
+            pieces: std::array::from_fn(|_| Bitboard::<u64>::new(0)),
+            piece_maps: std::array::from_fn(|_| Bitboard::<u64>::new(0)),
+            castle_rights: Bitboard::new(0),
+            checkers: Bitboard::new(0),
             full_moves: 0,
             half_moves: 0,
             en_passant: Square::NULL,

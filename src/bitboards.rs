@@ -5,11 +5,11 @@ use std::ops::{Shl, Shr, Not, BitOr, BitOrAssign, BitAnd, BitAndAssign, ShlAssig
 use std::cmp::PartialEq;
 use colored::*;
 
+#[derive(Clone, Copy)]
 pub struct Bitboard<T> {
     pub value: T,
 }
 
-// Implement generic methods for Bitboard.
 impl<T> Bitboard<T> 
 where
     T: Copy 
@@ -25,8 +25,8 @@ where
     + Display
     + PartialEq,
 {
-    pub fn new() -> Self {
-        Bitboard { value: T::from(0u8) }
+    pub fn new( value: T ) -> Self {
+        Bitboard { value: value }
     }
 
     #[inline]
