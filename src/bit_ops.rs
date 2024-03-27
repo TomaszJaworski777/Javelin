@@ -68,7 +68,7 @@ impl Bitboard {
             result += "|";
             for file in 0..8 {
                 let square = rank * 8 + file;
-                result += if get_bit::<u64>(value, square as u8) > 0 {
+                result += if get_bit(value, square as u8) > 0 {
                     " 1 ".green()
                 } else {
                     " 0 ".red()

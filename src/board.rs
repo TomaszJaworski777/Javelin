@@ -33,7 +33,7 @@ impl Board {
     #[inline]
     pub fn get_piece_on_square( &self, square: u8 ) -> (usize, usize){
         for piece_index in 0..6usize {
-            if get_bit::<u64>(self.pieces[usize::from(piece_index)], square) > 0 {
+            if get_bit(self.pieces[usize::from(piece_index)], square) > 0 {
                 return (piece_index + 1, self.get_piece_color_on_square(square));
             }
         }
@@ -43,10 +43,10 @@ impl Board {
 
     #[inline]
     fn get_piece_color_on_square( &self, square: u8 ) -> usize{
-        if get_bit::<u64>(self.piece_maps[Side::WHITE], square) > 0 {
+        if get_bit(self.piece_maps[Side::WHITE], square) > 0 {
             return Side::WHITE;
         }
-        else if get_bit::<u64>(self.piece_maps[Side::BLACK], square) > 0 {
+        else if get_bit(self.piece_maps[Side::BLACK], square) > 0 {
             return Side::BLACK;
         }
         return 2;
@@ -54,15 +54,15 @@ impl Board {
 
     #[inline]
     pub fn set_piece_on_square( &mut self, square: u8, side: usize, piece: usize){
-        set_bit_to_one::<u64>(&mut self.pieces[piece-1], square);
-        set_bit_to_one::<u64>(&mut self.piece_maps[side], square);
+        set_bit_to_one(&mut self.pieces[piece-1], square);
+        set_bit_to_one(&mut self.piece_maps[side], square);
         self.zobrist.update_piece_hash(piece, side, square as usize)
     }
 
     #[inline]
     pub fn remove_piece_on_square( &mut self, square: u8, side: usize, piece: usize){
-        set_bit_to_zero::<u64>(&mut self.pieces[piece-1], square);
-        set_bit_to_zero::<u64>(&mut self.piece_maps[side], square);
+        set_bit_to_zero(&mut self.pieces[piece-1], square);
+        set_bit_to_zero(&mut self.piece_maps[side], square);
         self.zobrist.update_piece_hash(piece, side, square as usize)
     }
 
@@ -74,16 +74,16 @@ impl Board {
         let zobrist = format!("Zobrist Key: {}", self.zobrist.key);
         info.push(zobrist.as_str());
         let mut castle_rights = "".to_string();
-        if get_bit::<u8>(self.castle_rights, CastleRights::WHITE_KING) > 0 {
+        if get_bit(self.castle_rights, CastleRights::WHITE_KING) > 0 {
             castle_rights += "K";
         }
-        if get_bit::<u8>(self.castle_rights, CastleRights::WHITE_QUEEN) > 0 {
+        if get_bit(self.castle_rights, CastleRights::WHITE_QUEEN) > 0 {
             castle_rights += "Q";
         }
-        if get_bit::<u8>(self.castle_rights, CastleRights::BLACK_KING) > 0 {
+        if get_bit(self.castle_rights, CastleRights::BLACK_KING) > 0 {
             castle_rights += "k";
         }
-        if get_bit::<u8>(self.castle_rights, CastleRights::BLACK_QUEEN) > 0 {
+        if get_bit(self.castle_rights, CastleRights::BLACK_QUEEN) > 0 {
             castle_rights += "q";
         }
         if castle_rights == "" {
@@ -138,14 +138,12 @@ pub fn create_board( fen: &str ) -> Board {
     let mut board = Board::new();
     let splits: Vec<&str> = fen.split_whitespace().collect();
 
-    let mut index: usize = 0;
-    let mut file: usize = 0;
     let ranks = splits[0].split('/');
-    for (rankIndex, rank) in ranks.enumerate() {
-        index = 0;
-        file = 0;
+    for (rank_index, rank) in ranks.enumerate() {
+        let mut index = 0;
+        let mut file = 0;
         while file < 8 {
-            let square_index: u8 = ((7-rankIndex) * 8 + file) as u8;
+            let square_index: u8 = ((7-rank_index) * 8 + file) as u8;
             let piece_char = rank.as_bytes()[index] as char;
             if piece_char.is_numeric() {
                 file += piece_char.to_string().parse::<usize>().unwrap();
@@ -191,19 +189,19 @@ pub fn create_board( fen: &str ) -> Board {
     }
 
     if splits[2].contains('K') {
-        set_bit_to_one::<u8>(&mut board.castle_rights, CastleRights::WHITE_KING);
+        set_bit_to_one(&mut board.castle_rights, CastleRights::WHITE_KING);
         board.zobrist.update_castle_rights_hash(CastleRights::WHITE_KING as usize);
     }
     if splits[2].contains('Q') {
-        set_bit_to_one::<u8>(&mut board.castle_rights,CastleRights::WHITE_QUEEN);
+        set_bit_to_one(&mut board.castle_rights,CastleRights::WHITE_QUEEN);
         board.zobrist.update_castle_rights_hash(CastleRights::WHITE_QUEEN as usize);
     }
     if splits[2].contains('k') {
-        set_bit_to_one::<u8>(&mut board.castle_rights,CastleRights::BLACK_KING);
+        set_bit_to_one(&mut board.castle_rights,CastleRights::BLACK_KING);
         board.zobrist.update_castle_rights_hash(CastleRights::BLACK_KING as usize);
     }
     if splits[2].contains('q') {
-        set_bit_to_one::<u8>(&mut board.castle_rights, CastleRights::BLACK_QUEEN);
+        set_bit_to_one(&mut board.castle_rights, CastleRights::BLACK_QUEEN);
         board.zobrist.update_castle_rights_hash(CastleRights::BLACK_QUEEN as usize);
     }
 
@@ -217,11 +215,11 @@ pub fn create_board( fen: &str ) -> Board {
     board.half_moves = 0;
 
     if splits.len() > 4 {
-        board.full_moves = splits[4].parse::<u16>().unwrap();
+        board.full_moves = splits[4].parse().unwrap();
     }
 
     if splits.len() > 5 {
-        board.half_moves = splits[5].parse::<u8>().unwrap();
+        board.half_moves = splits[5].parse().unwrap();
     }
 
     return board;

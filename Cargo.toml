@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 colored = "*"
+rand = "0.8"
+once_cell = "1.10.0" 
