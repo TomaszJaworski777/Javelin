@@ -1,13 +1,15 @@
 #![allow(dead_code)]
 
-use crate::{bit_ops::{get_bit, set_bit_to_one, set_bit_to_zero}, consts::{CastleRights, Piece, Side}, types::Square, zobrist::ZobristKey};
+use crate::{attacks::Attacks, bit_ops::{get_bit, set_bit_to_one, set_bit_to_zero}, bitboard::Bitboard, consts::{CastleRights, Piece, Side}, types::Square, zobrist::ZobristKey};
 use colored::*;
 
 pub struct Board{
-    pub pieces: [u64; 6],
-    pub piece_maps: [u64; 2],
+    pub pieces: [Bitboard; 6],
+    pub piece_maps: [Bitboard; 2],
     pub castle_rights: u8,
-    pub checkers: u64,
+    pub checkers: Bitboard,
+    pub ortographic_pins: Bitboard,
+    pub diagonal_pins: Bitboard,
     pub full_moves: u16,
     pub half_moves: u8,
     pub en_passant: Square,
@@ -18,10 +20,12 @@ pub struct Board{
 impl Board {
     pub fn new() -> Self {
         Board{
-            pieces: [0; 6],
-            piece_maps: [0; 2],
+            pieces: [Bitboard::EMPTY; 6],
+            piece_maps: [Bitboard::EMPTY; 2],
             castle_rights: 0,
-            checkers: 0,
+            checkers: Bitboard::EMPTY,
+            ortographic_pins: Bitboard::EMPTY,
+            diagonal_pins: Bitboard::EMPTY,
             full_moves: 0,
             half_moves: 0,
             en_passant: Square::NULL,
@@ -31,9 +35,19 @@ impl Board {
     }
 
     #[inline]
-    pub fn get_piece_on_square( &self, square: u8 ) -> (usize, usize){
+    pub fn get_piece_mask( &self, piece: usize, side: usize ) -> Bitboard {
+        self.pieces[piece-1].and(self.piece_maps[side])
+    }
+    
+    #[inline]
+    pub fn get_occupancy( &self ) -> Bitboard {
+        self.piece_maps[0].or(self.piece_maps[1])
+    }
+
+    #[inline]
+    pub fn get_piece_on_square( &self, square: Square ) -> (usize, usize){
         for piece_index in 0..6usize {
-            if get_bit(self.pieces[usize::from(piece_index)], square) > 0 {
+            if self.pieces[usize::from(piece_index)].get_bit(square) {
                 return (piece_index + 1, self.get_piece_color_on_square(square));
             }
         }
@@ -42,28 +56,46 @@ impl Board {
     }
 
     #[inline]
-    fn get_piece_color_on_square( &self, square: u8 ) -> usize{
-        if get_bit(self.piece_maps[Side::WHITE], square) > 0 {
+    fn get_piece_color_on_square( &self, square: Square ) -> usize{
+        if self.piece_maps[Side::WHITE].get_bit(square) {
             return Side::WHITE;
         }
-        else if get_bit(self.piece_maps[Side::BLACK], square) > 0 {
-            return Side::BLACK;
+        return Side::BLACK;
+    }
+
+    #[inline]
+    pub fn set_piece_on_square( &mut self, square: Square, side: usize, piece: usize){
+        self.pieces[piece-1].set_bit(square);
+        self.piece_maps[side].set_bit(square);
+        self.zobrist.update_piece_hash(piece, side, square)
+    }
+
+    #[inline]
+    pub fn remove_piece_on_square( &mut self, square: Square, side: usize, piece: usize){
+        self.pieces[piece-1].pop_bit(square);
+        self.piece_maps[side].pop_bit(square);
+        self.zobrist.update_piece_hash(piece, side, square)
+    }
+
+    #[inline]
+    pub fn is_square_attacked( &self, square: Square, attacker_color: usize ) -> bool{
+        let occupancy_mask = self.get_occupancy();
+        if Attacks::get_bishop_attacks_for_square(square, occupancy_mask) & self.get_piece_mask(Piece::BISHOP, attacker_color).or(self.get_piece_mask(Piece::QUEEN, attacker_color)).get_value() > 0 { 
+            return true;
         }
-        return 2;
-    }
-
-    #[inline]
-    pub fn set_piece_on_square( &mut self, square: u8, side: usize, piece: usize){
-        set_bit_to_one(&mut self.pieces[piece-1], square);
-        set_bit_to_one(&mut self.piece_maps[side], square);
-        self.zobrist.update_piece_hash(piece, side, square as usize)
-    }
-
-    #[inline]
-    pub fn remove_piece_on_square( &mut self, square: u8, side: usize, piece: usize){
-        set_bit_to_zero(&mut self.pieces[piece-1], square);
-        set_bit_to_zero(&mut self.piece_maps[side], square);
-        self.zobrist.update_piece_hash(piece, side, square as usize)
+        if Attacks::get_knight_attacks_for_square(square) & self.get_piece_mask(Piece::KNIGHT, attacker_color).get_value() > 0 {
+            return true;
+        }
+        if Attacks::get_rook_attacks_for_square(square, occupancy_mask) & self.get_piece_mask(Piece::ROOK, attacker_color).or(self.get_piece_mask(Piece::QUEEN, attacker_color)).get_value() > 0 {
+            return true;
+        }
+        if Attacks::get_pawn_attacks_for_square(square, 1-attacker_color) & self.get_piece_mask(Piece::PAWN, attacker_color).get_value() > 0 {
+            return true;
+        }
+        if Attacks::get_king_attacks_for_square(square) & self.get_piece_mask(Piece::KING, attacker_color).get_value() > 0 {
+            return true;
+        }
+        false
     }
 
     pub fn draw_board( &self ){
@@ -91,9 +123,9 @@ impl Board {
         }
         castle_rights = format!("Castle Rights: {}", castle_rights);
         info.push(castle_rights.as_str());
-        let mut side_sign = "w".to_string();
+        let mut side_sign = "White".to_string();
         if self.side_to_move == Side::BLACK {
-            side_sign = "b".to_string();
+            side_sign = "Black".to_string();
         }
         side_sign = format!("Side To Move: {}", side_sign);
         info.push(side_sign.as_str());
@@ -109,8 +141,8 @@ impl Board {
         for rank in (0..8).rev() {
             result += "|".to_string().as_str();
             for file in 0..8 {
-                let square = rank * 8 + file;
-                if square == self.en_passant.value {
+                let square = Square::from_coords(rank, file);
+                if square.equals(self.en_passant) {
                     result += " x ";
                     continue;
                 }
@@ -143,7 +175,7 @@ pub fn create_board( fen: &str ) -> Board {
         let mut index = 0;
         let mut file = 0;
         while file < 8 {
-            let square_index: u8 = ((7-rank_index) * 8 + file) as u8;
+            let square = Square::from_coords(7-rank_index, file);
             let piece_char = rank.as_bytes()[index] as char;
             if piece_char.is_numeric() {
                 file += piece_char.to_string().parse::<usize>().unwrap();
@@ -157,22 +189,22 @@ pub fn create_board( fen: &str ) -> Board {
             }
 
             if piece_char == 'p' || piece_char == 'P' {
-                board.set_piece_on_square(square_index, side_to_move, Piece::PAWN)
+                board.set_piece_on_square(square, side_to_move, Piece::PAWN)
             }
             else if piece_char == 'n' || piece_char == 'N' {
-                board.set_piece_on_square(square_index, side_to_move, Piece::KNIGHT)
+                board.set_piece_on_square(square, side_to_move, Piece::KNIGHT)
             }
             else if piece_char == 'b' || piece_char == 'B' {
-                board.set_piece_on_square(square_index, side_to_move, Piece::BISHOP)
+                board.set_piece_on_square(square, side_to_move, Piece::BISHOP)
             }
             else if piece_char == 'r' || piece_char == 'R' {
-                board.set_piece_on_square(square_index, side_to_move, Piece::ROOK)
+                board.set_piece_on_square(square, side_to_move, Piece::ROOK)
             }
             else if piece_char == 'q' || piece_char == 'Q' {
-                board.set_piece_on_square(square_index, side_to_move, Piece::QUEEN)
+                board.set_piece_on_square(square, side_to_move, Piece::QUEEN)
             }
             else if piece_char == 'k' || piece_char == 'K' {
-                board.set_piece_on_square(square_index, side_to_move, Piece::KING)
+                board.set_piece_on_square(square, side_to_move, Piece::KING)
             }
 
             index += 1;
@@ -207,8 +239,8 @@ pub fn create_board( fen: &str ) -> Board {
 
     board.en_passant = Square::NULL;
     if splits[3] != "-" {
-        board.en_passant.from_string(splits[3]);
-        board.zobrist.update_en_passant_hash(board.en_passant.value);
+        board.en_passant = Square::from_string(splits[3]);
+        board.zobrist.update_en_passant_hash(board.en_passant);
     }
 
     board.full_moves = 0;
@@ -221,6 +253,10 @@ pub fn create_board( fen: &str ) -> Board {
     if splits.len() > 5 {
         board.half_moves = splits[5].parse().unwrap();
     }
+
+    board.checkers = Attacks::generate_checkers_mask(&board);
+    board.ortographic_pins = Attacks::generate_ortographic_pins_mask(&board);
+    board.diagonal_pins = Attacks::generate_diagonal_pins_mask(&board);
 
     return board;
 }

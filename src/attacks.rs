@@ -1,4 +1,4 @@
-use crate::{bit_ops::Bitboard, consts::{FileMask, Side}, types::Square};
+use crate::{bitboard::Bitboard, board::Board, consts::{Piece, Side}, types::Square};
 extern crate rand;
 use rand::Rng;
 use once_cell::sync::Lazy;
@@ -6,38 +6,38 @@ use std::sync::Mutex;
 
 pub struct Attacks;
 impl Attacks {
-    pub fn get_pawn_attacks_for_square( square_index: usize, color: usize ) -> u64{
-        ATTACK_TABLES.lock().unwrap().pawn_attacks[color][square_index]
+    pub fn get_pawn_attacks_for_square( square: Square, color: usize ) -> u64{
+        ATTACK_TABLES.lock().unwrap().pawn_attacks[color][square.get_value()]
     }
 
-    pub fn get_knight_attacks_for_square( square_index: usize ) -> u64{
-        ATTACK_TABLES.lock().unwrap().knight_attacks[square_index]
+    pub fn get_knight_attacks_for_square( square: Square) -> u64{
+        ATTACK_TABLES.lock().unwrap().knight_attacks[square.get_value()]
     }
 
-    pub fn get_king_attacks_for_square( square_index: usize ) -> u64{
-        ATTACK_TABLES.lock().unwrap().king_attacks[square_index]
+    pub fn get_king_attacks_for_square( square: Square) -> u64{
+        ATTACK_TABLES.lock().unwrap().king_attacks[square.get_value()]
     }
 
-    pub fn get_bishop_attacks_for_square( square_index: usize, occupancy: u64 ) -> u64{
+    pub fn get_bishop_attacks_for_square( square: Square, occupancy: Bitboard ) -> u64{
         let attack_tables = ATTACK_TABLES.lock().unwrap();
-        let mut occ = occupancy;
-        occ &= attack_tables.bishop_masks[square_index];
-        occ = u64::wrapping_mul(occ, MAGIC_NUMBERS_BISHOP[square_index]);
-        occ >>= 64 - BISHOP_OCCUPANCY_COUNT[square_index];
-        attack_tables.bishop_attacks[square_index][occ as usize]
+        let mut occ = occupancy.get_value();
+        occ &= attack_tables.bishop_masks[square.get_value()];
+        occ = u64::wrapping_mul(occ, MAGIC_NUMBERS_BISHOP[square.get_value()]);
+        occ >>= 64 - BISHOP_OCCUPANCY_COUNT[square.get_value()];
+        attack_tables.bishop_attacks[square.get_value()][occ as usize]
     }
 
-    pub fn get_rook_attacks_for_square( square_index: usize, occupancy: u64 ) -> u64{
+    pub fn get_rook_attacks_for_square( square: Square, occupancy: Bitboard ) -> u64{
         let attack_tables = ATTACK_TABLES.lock().unwrap();
-        let mut occ = occupancy;
-        occ &= attack_tables.rook_masks[square_index];
-        occ = u64::wrapping_mul(occ, MAGIC_NUMBERS_ROOK[square_index]);
-        occ >>= 64 - ROOK_OCCUPANCY_COUNT[square_index];
-        attack_tables.rook_attacks[square_index][occ as usize]
+        let mut occ = occupancy.get_value();
+        occ &= attack_tables.rook_masks[square.get_value()];
+        occ = u64::wrapping_mul(occ, MAGIC_NUMBERS_ROOK[square.get_value()]);
+        occ >>= 64 - ROOK_OCCUPANCY_COUNT[square.get_value()];
+        attack_tables.rook_attacks[square.get_value()][occ as usize]
     }
 
-    pub fn get_queen_attacks_for_square( square_index: usize, occupancy: u64 ) -> u64{
-        Attacks::get_bishop_attacks_for_square( square_index, occupancy ) | Attacks::get_rook_attacks_for_square( square_index, occupancy )
+    pub fn get_queen_attacks_for_square( square: Square, occupancy: Bitboard ) -> u64{
+        Attacks::get_bishop_attacks_for_square( square, occupancy ) | Attacks::get_rook_attacks_for_square( square, occupancy )
     }
 
     pub fn initialize_slider_pieces(){
@@ -48,20 +48,10 @@ impl Attacks {
                 let attack_mask = mask_bishop_attacks(square_index);
                 let relevant_bit_count = attack_mask.count_ones() as usize;
                 let mut index = 0;
-                if square_index == Square::create_from_string("e4").value as usize {
-                    //Bitboard::draw_bitboard(generate_occupancy(0, relevant_bit_count, attack_mask));
-                    //Bitboard::draw_bitboard(generate_occupancy(12, relevant_bit_count, attack_mask));
-                    //Bitboard::draw_bitboard(generate_occupancy(100, relevant_bit_count, attack_mask));
-                    //Bitboard::draw_bitboard(generate_occupancy(250, relevant_bit_count, attack_mask));
-                    //Bitboard::draw_bitboard(generate_occupancy(333, relevant_bit_count, attack_mask));
-                }
                 while index < 1 << relevant_bit_count {
                     let occupancy = generate_occupancy(index, relevant_bit_count, attack_mask);
                     let magic_index = u64::wrapping_mul(occupancy, MAGIC_NUMBERS_BISHOP[square_index]) >> (64 - relevant_bit_count);
                     attack_tables.bishop_attacks[square_index][magic_index as usize] = generate_bishop_attacks(square_index, occupancy);
-                    if square_index == Square::create_from_string("e4").value as usize {
-                        //print!("Index: {}({}). Number of 1s: {}. Occupancy is: {}\n", index, magic_index, attack_tables.bishop_attacks[square_index][magic_index as usize].count_ones(), occupancy);
-                    }
                     index += 1;
                 }
             }
@@ -79,9 +69,31 @@ impl Attacks {
             }
         }
     }
+
+    pub fn generate_checkers_mask( board: &Board ) -> Bitboard{
+        let mut result = 0u64;
+        let occupancy_mask = board.get_occupancy();
+        let square = board.get_piece_mask(Piece::KING, board.side_to_move).ls1b_square();
+        let attacker_color = 1 - board.side_to_move;
+
+        result |= Attacks::get_bishop_attacks_for_square(square, occupancy_mask) & board.get_piece_mask(Piece::BISHOP, attacker_color).or(board.get_piece_mask(Piece::QUEEN, attacker_color)).get_value();
+        result |= Attacks::get_knight_attacks_for_square(square) & board.get_piece_mask(Piece::KNIGHT, attacker_color).get_value();
+        result |= Attacks::get_rook_attacks_for_square(square, occupancy_mask) & board.get_piece_mask(Piece::ROOK, attacker_color).or(board.get_piece_mask(Piece::QUEEN, attacker_color)).get_value();
+        result |= Attacks::get_pawn_attacks_for_square(square, 1-attacker_color) & board.get_piece_mask(Piece::PAWN, attacker_color).get_value();
+        result |= Attacks::get_king_attacks_for_square(square) & board.get_piece_mask(Piece::KING, attacker_color).get_value();
+        Bitboard::from_raw(result)
+    }
+
+    pub fn generate_ortographic_pins_mask( board: &Board ) -> Bitboard{
+        Bitboard::EMPTY
+    }
+
+    pub fn generate_diagonal_pins_mask( board: &Board ) -> Bitboard{
+        Bitboard::EMPTY
+    }
 }
 
-pub struct AttackTables{
+struct AttackTables{
     pawn_attacks : [[u64; 64]; 2],
     knight_attacks: [u64; 64],
     king_attacks: [u64; 64],
@@ -91,7 +103,7 @@ pub struct AttackTables{
     rook_attacks: Vec<Vec<u64>>,
 } 
 
-pub static ATTACK_TABLES: Lazy<Mutex<AttackTables>> = Lazy::new(|| {
+static ATTACK_TABLES: Lazy<Mutex<AttackTables>> = Lazy::new(|| {
     Mutex::new(AttackTables {
         pawn_attacks: AttackTables::PAWN_ATTACKS,
         knight_attacks: AttackTables::KNIGHT_ATTACKS,
@@ -108,11 +120,11 @@ impl AttackTables {
         let mut result = [[0; 64]; 2];
         let mut square_index = 0usize;
         while square_index < 64 {
-            let bb: u64 = 1u64 << square_index;
-            if bb << 9 & !FileMask::A > 0 { result[Side::WHITE][square_index] |= bb << 9 }
-            if bb << 7 & !FileMask::H > 0 { result[Side::WHITE][square_index] |= bb << 7 }
-            if bb >> 7 & !FileMask::A > 0 { result[Side::BLACK][square_index] |= bb >> 7 }
-            if bb >> 9 & !FileMask::H > 0 { result[Side::BLACK][square_index] |= bb >> 9 }
+            let bb = Bitboard::from_raw(1u64 << square_index);
+            if !Bitboard::FILE_A.inverse().and(bb.shift_left(9)).is_empty() { result[Side::WHITE][square_index] |= bb.shift_left(9).get_value() }
+            if !Bitboard::FILE_H.inverse().and(bb.shift_left(7)).is_empty() { result[Side::WHITE][square_index] |= bb.shift_left(7).get_value() }
+            if !Bitboard::FILE_A.inverse().and(bb.shift_right(7)).is_empty() { result[Side::BLACK][square_index] |= bb.shift_right(7).get_value() }
+            if !Bitboard::FILE_H.inverse().and(bb.shift_right(9)).is_empty() { result[Side::BLACK][square_index] |= bb.shift_right(9).get_value() }
             square_index += 1;
         }
         result
@@ -121,15 +133,15 @@ impl AttackTables {
         let mut result = [0; 64];
         let mut square_index = 0usize;
         while square_index < 64 {
-            let bb: u64 = 1u64 << square_index;
-            if bb << 17 & !FileMask::A > 0 { result[square_index] |= bb << 17 }
-            if bb << 15 & !FileMask::H > 0 { result[square_index] |= bb << 15 }
-            if bb << 10 & !(FileMask::A | FileMask::B) > 0 { result[square_index] |= bb << 10 }
-            if bb << 6 & !(FileMask::H | FileMask::G) > 0 { result[square_index] |= bb << 6 }
-            if bb >> 17 & !FileMask::H > 0 { result[square_index] |= bb >> 17 }
-            if bb >> 15 & !FileMask::A > 0 { result[square_index] |= bb >> 15 }
-            if bb >> 10 & !(FileMask::H | FileMask::G) > 0 { result[square_index] |= bb >> 10 }
-            if bb >> 6 & !(FileMask::A | FileMask::B) > 0 { result[square_index] |= bb >> 6 }
+            let bb = Bitboard::from_raw(1u64 << square_index);
+            if !Bitboard::FILE_A.inverse().and(bb.shift_left(17)).is_empty() { result[square_index] |= bb.shift_left(17).get_value() }
+            if !Bitboard::FILE_H.inverse().and(bb.shift_left(15)).is_empty() { result[square_index] |= bb.shift_left(15).get_value() }
+            if !Bitboard::FILE_A.or(Bitboard::FILE_B).inverse().and(bb.shift_left(10)).is_empty() { result[square_index] |= bb.shift_left(10).get_value() }
+            if !Bitboard::FILE_H.or(Bitboard::FILE_G).inverse().and(bb.shift_left(6)).is_empty() { result[square_index] |= bb.shift_left(6).get_value() }
+            if !Bitboard::FILE_H.inverse().and(bb.shift_right(17)).is_empty() { result[square_index] |= bb.shift_right(17).get_value() }
+            if !Bitboard::FILE_A.inverse().and(bb.shift_right(15)).is_empty() { result[square_index] |= bb.shift_right(15).get_value()}
+            if !Bitboard::FILE_H.or(Bitboard::FILE_G).inverse().and(bb.shift_right(10)).is_empty() { result[square_index] |= bb.shift_right(10).get_value() }
+            if !Bitboard::FILE_A.or(Bitboard::FILE_B).inverse().and(bb.shift_right(6)).is_empty() { result[square_index] |= bb.shift_right(6).get_value() }
             square_index += 1;
         }
         result
@@ -138,15 +150,15 @@ impl AttackTables {
         let mut result = [0; 64];
         let mut square_index = 0usize;
         while square_index < 64 {
-            let bb: u64 = 1u64 << square_index;
-            if bb << 7 & !FileMask::H > 0 { result[square_index] |= bb << 7 }
-            result[square_index] |= bb << 8;
-            if bb << 9 & !FileMask::A > 0 { result[square_index] |= bb << 9 }
-            if bb >> 7 & !FileMask::A > 0 { result[square_index] |= bb >> 7 }
-            result[square_index] |= bb >> 8;
-            if bb >> 9 & !FileMask::H > 0 { result[square_index] |= bb >> 9 }
-            if bb << 1 & !FileMask::A > 0 { result[square_index] |= bb << 1 }
-            if bb >> 1 & !FileMask::H > 0 { result[square_index] |= bb >> 1 }
+            let bb = Bitboard::from_raw(1u64 << square_index);
+            if !Bitboard::FILE_H.inverse().and(bb.shift_left(7)).is_empty() { result[square_index] |= bb.shift_right(7).get_value() }
+            result[square_index] |= bb.shift_left(8).get_value();
+            if !Bitboard::FILE_A.inverse().and(bb.shift_left(9)).is_empty() { result[square_index] |= bb.shift_left(9).get_value() }
+            if !Bitboard::FILE_A.inverse().and(bb.shift_right(7)).is_empty() { result[square_index] |= bb.shift_right(7).get_value() }
+            result[square_index] |= bb.shift_right(8).get_value();
+            if !Bitboard::FILE_H.inverse().and(bb.shift_right(9)).is_empty() { result[square_index] |= bb.shift_right(9).get_value() }
+            if !Bitboard::FILE_A.inverse().and(bb.shift_left(1)).is_empty() { result[square_index] |= bb.shift_left(1).get_value() }
+            if !Bitboard::FILE_H.inverse().and(bb.shift_right(1)).is_empty() { result[square_index] |= bb.shift_right(1).get_value() }
             square_index += 1;
         }
         result
@@ -171,7 +183,7 @@ impl AttackTables {
     };
 }
 
-pub const fn mask_bishop_attacks( square_index: usize ) -> u64 {
+const fn mask_bishop_attacks( square_index: usize ) -> u64 {
     let mut result: u64 = 0;
     let bishop_position = (square_index as i32 / 8, square_index as i32 % 8);
 
@@ -194,7 +206,7 @@ pub const fn mask_bishop_attacks( square_index: usize ) -> u64 {
     result
 }
 
-pub const fn generate_bishop_attacks( square_index: usize, occupancy: u64 ) -> u64 {
+fn generate_bishop_attacks( square_index: usize, occupancy: u64 ) -> u64 {
     let mut result: u64 = 0;
     let bishop_position = (square_index as i32 / 8, square_index as i32 % 8);
 
@@ -217,7 +229,7 @@ pub const fn generate_bishop_attacks( square_index: usize, occupancy: u64 ) -> u
     result
 }
 
-pub const fn mask_rook_attacks( square_index: usize ) -> u64 {
+const fn mask_rook_attacks( square_index: usize ) -> u64 {
     let mut result: u64 = 0;
     let bishop_position = (square_index as i32 / 8, square_index as i32 % 8);
     
@@ -240,7 +252,7 @@ pub const fn mask_rook_attacks( square_index: usize ) -> u64 {
     result
 }
 
-pub const fn generate_rook_attacks( square_index: usize, occupancy: u64 ) -> u64 {
+fn generate_rook_attacks( square_index: usize, occupancy: u64 ) -> u64 {
     let mut result: u64 = 0;
     let bishop_position = (square_index as i32 / 8, square_index as i32 % 8);
     
@@ -263,7 +275,7 @@ pub const fn generate_rook_attacks( square_index: usize, occupancy: u64 ) -> u64
     result
 }
 
-pub const fn generate_occupancy( index: usize, bit_count: usize, attack_mask: u64 ) -> u64 {
+fn generate_occupancy( index: usize, bit_count: usize, attack_mask: u64 ) -> u64 {
     let mut result = 0u64;
     let mut attack_mask_cpy = attack_mask;
     let mut count_index = 0u16;
@@ -310,7 +322,7 @@ pub const ROOK_OCCUPANCY_COUNT: [usize; 64] = {
     result
 };
 
-pub fn get_low_ones_random_u64() -> u64 {
+fn get_low_ones_random_u64() -> u64 {
     let mut rng = rand::thread_rng();
     (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 16 | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 32 | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 48) & 
     (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 16 | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 32 | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 48) & 
@@ -320,7 +332,6 @@ pub fn get_low_ones_random_u64() -> u64 {
 pub fn find_magic_number( square_index: usize, relevent_bit_count: usize, is_bishop: bool ) -> u64 {
     let mut occupancies = [0u64; 4096];
     let mut attacks = [0u64; 4096];
-    let mut used_attacks = [0u64; 4096];
     let attack_mask = if is_bishop { mask_bishop_attacks(square_index) } else { mask_rook_attacks(square_index) };
     let occupancy_count = 1 << relevent_bit_count;
     let mut occupancy_index = 0;
@@ -332,6 +343,7 @@ pub fn find_magic_number( square_index: usize, relevent_bit_count: usize, is_bis
         occupancy_index += 1;
     }
 
+    let mut used_attacks: [u64; 4096];
     loop {
         let magic_number = get_low_ones_random_u64();
         if (u64::wrapping_mul( attack_mask, magic_number ) & 0xFF00000000000000).count_ones() < 6 {
@@ -394,7 +406,7 @@ pub fn test_magic_number( square_index: usize, is_bishop: bool ) -> bool {
     return !fail_flag;
 }
 
-pub const MAGIC_NUMBERS_BISHOP: [u64; 64] = [
+const MAGIC_NUMBERS_BISHOP: [u64; 64] = [
     9300092178686681120,
     1284830893973760,
     2322997520105472,
@@ -461,7 +473,7 @@ pub const MAGIC_NUMBERS_BISHOP: [u64; 64] = [
     18085875364200714,
 ];
 
-pub const MAGIC_NUMBERS_ROOK: [u64; 64] = [
+const MAGIC_NUMBERS_ROOK: [u64; 64] = [
     9259400973461241857,
     234187460333015040,
     36063981659521032,

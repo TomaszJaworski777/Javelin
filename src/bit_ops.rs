@@ -59,25 +59,3 @@ where
 {
     (value & (mask << index)) >> index
 }
-
-pub struct Bitboard;
-impl Bitboard {
-    pub fn draw_bitboard(value: u64) {
-        let mut result = " ------------------------\n".to_string();
-        for rank in (0..8).rev() {
-            result += "|";
-            for file in 0..8 {
-                let square = rank * 8 + file;
-                result += if get_bit(value, square as u8) > 0 {
-                    " 1 ".green()
-                } else {
-                    " 0 ".red()
-                }.to_string().as_str();
-            }
-            result += "|\n";
-        }
-        result += " ------------------------\n";
-        result += &format!("  Bitboard: {}\n", value);
-        print!("{}\n", result);
-    }
-}

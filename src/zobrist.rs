@@ -1,15 +1,17 @@
+use crate::types::Square;
+
 pub struct ZobristKey {
     pub key: u64
 }
 
 impl ZobristKey{
-    pub const NULL : ZobristKey = ZobristKey {
+    pub const NULL : Self = Self {
         key: 0
     };
 
     #[inline]
-    pub fn update_piece_hash( &mut self, piece_index: usize, piece_color: usize, square_index: usize ){
-        self.key ^= ZobristKey::SEEDS[ (piece_index - 1 + piece_color * 6) * 64 + square_index ];
+    pub fn update_piece_hash( &mut self, piece_index: usize, piece_color: usize, square: Square ){
+        self.key ^= ZobristKey::SEEDS[ (piece_index - 1 + piece_color * 6) * 64 + square.get_value() ];
     }
 
     #[inline]
@@ -17,15 +19,17 @@ impl ZobristKey{
         self.key ^= ZobristKey::SEEDS[768];
     }
 
+    #[inline]
     pub fn update_castle_rights_hash( &mut self, castle_right: usize ){
         self.key ^= ZobristKey::SEEDS[769 + castle_right];
     }
 
-    pub fn update_en_passant_hash( &mut self, square_index: u8 ){
-        self.key ^= ZobristKey::SEEDS[773 + (square_index as usize) % 8];
+    #[inline]
+    pub fn update_en_passant_hash( &mut self, square: Square  ){
+        self.key ^= ZobristKey::SEEDS[773 + square.get_value() % 8];
     }
 
-    pub const SEEDS : [u64; 781] = [
+    const SEEDS : [u64; 781] = [
         6010607256382380006,
         386869187810051925,
         6942428122597393202,
