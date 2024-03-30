@@ -2,7 +2,7 @@ use crate::{
     bitboard::Bitboard,
     board::Board,
     consts::{Piece, Side},
-    core_structs::Square,
+    core_structs::Square, rays::Ray,
 };
 extern crate rand;
 use once_cell::sync::Lazy;
@@ -101,11 +101,33 @@ impl Attacks {
     }
 
     pub fn generate_ortographic_pins_mask(board: &Board) -> Bitboard {
-        Bitboard::EMPTY
+        let attacker_color = 1-board.side_to_move;
+        let king_square = board.get_king_square(board.side_to_move);
+        let relevant_pieces = board.get_piece_mask(Piece::ROOK, attacker_color) | board.get_piece_mask(Piece::QUEEN, 1-board.side_to_move);
+        let potential_pinners = Attacks::get_rook_attacks_for_square(king_square, board.piece_maps[attacker_color]) & relevant_pieces;
+        let mut pin_mask = Bitboard::EMPTY;
+        for potential_pinner in potential_pinners {
+            let ray = Ray::get_ray(king_square, potential_pinner);
+            if (ray & board.piece_maps[board.side_to_move]).only_one_bit() {
+                pin_mask |= ray;
+            }
+        }
+        pin_mask
     }
 
     pub fn generate_diagonal_pins_mask(board: &Board) -> Bitboard {
-        Bitboard::EMPTY
+        let attacker_color = 1-board.side_to_move;
+        let king_square = board.get_king_square(board.side_to_move);
+        let relevant_pieces = board.get_piece_mask(Piece::BISHOP, attacker_color) | board.get_piece_mask(Piece::QUEEN, 1-board.side_to_move);
+        let potential_pinners = Attacks::get_bishop_attacks_for_square(king_square, board.piece_maps[attacker_color]) & relevant_pieces;
+        let mut pin_mask = Bitboard::EMPTY;
+        for potential_pinner in potential_pinners {
+            let ray = Ray::get_ray(king_square, potential_pinner);
+            if (ray & board.piece_maps[board.side_to_move]).only_one_bit() {
+                pin_mask |= ray;
+            }
+        }
+        pin_mask
     }
 }
 

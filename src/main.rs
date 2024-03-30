@@ -21,8 +21,10 @@ mod zobrist;
 
 fn main() {
     Attacks::initialize_slider_pieces();
-    let board = create_board("8/8/3q4/6b1/8/8/r2K4/5n2 w - - 0 1");
+    let board = create_board("8/3q4/q5b1/1N6/2P1B1n1/r1QK3N/3n1n2/3r4 w - - 0 1");
 
     board.draw_board();
     board.checkers.draw_bitboard();
+    board.ortographic_pins.draw_bitboard();
+    board.diagonal_pins.draw_bitboard();
 }

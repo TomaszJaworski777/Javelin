@@ -8,7 +8,7 @@ impl Ray {
 }
 
 const RAYS: [[Bitboard; 64]; 64] = {
-    let mut result = [[Bitboard::from_raw(0); 64]; 64];
+    let mut result = [[Bitboard::EMPTY; 64]; 64];
     let mut from_square_index = 0;
     while from_square_index < 64 {
         let mut to_square_index = 0;
@@ -29,7 +29,7 @@ const fn generate_ray(from: Square, to: Square) -> Bitboard {
     let file_increment = (to.get_file() as i32 - from.get_file() as i32).signum();
 
     if rank_increment == 0 && file_increment == 0 {
-        return Bitboard::from_raw(0);
+        return Bitboard::EMPTY;
     }
 
     let mut result = 0u64;
@@ -46,5 +46,5 @@ const fn generate_ray(from: Square, to: Square) -> Bitboard {
         file += file_increment;
     }
 
-    Bitboard::from_raw(0)
+    Bitboard::EMPTY
 }

@@ -10,7 +10,7 @@ use crate::{
 };
 use colored::*;
 
-pub struct Board {
+pub struct Board { //800 bit
     pub pieces: [Bitboard; 6],
     pub piece_maps: [Bitboard; 2],
     pub castle_rights: u8,
@@ -45,6 +45,10 @@ impl Board {
 
     pub fn get_occupancy(&self) -> Bitboard {
         self.piece_maps[0] | self.piece_maps[1]
+    }
+
+    pub fn get_king_square(&self, color: usize) -> Square {
+        self.get_piece_mask(Piece::KING, color).ls1b_square()
     }
 
     pub fn get_piece_on_square(&self, square: Square) -> (usize, usize) {
