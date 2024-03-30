@@ -139,6 +139,10 @@ impl Square {
         Bitboard::from_raw(1u64 << self.value)
     }
 
+    pub const fn equals(&self, rhs: Square) -> bool {
+        self.value == rhs.value
+    }
+
     pub fn to_string(&self) -> String {
         if *self == Square::NULL {
             return "NULL".to_string();

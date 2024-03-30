@@ -2,6 +2,7 @@
 
 use attacks::Attacks;
 use board::{create_board, Board};
+use rays::Ray;
 
 use crate::{
     consts::{Piece, Side},
@@ -15,6 +16,7 @@ mod board;
 mod consts;
 mod core_structs;
 mod movegen;
+mod rays;
 mod zobrist;
 
 fn main() {

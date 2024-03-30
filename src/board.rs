@@ -17,7 +17,6 @@ pub struct Board {
     pub checkers: Bitboard,
     pub ortographic_pins: Bitboard,
     pub diagonal_pins: Bitboard,
-    pub full_moves: u16,
     pub half_moves: u8,
     pub en_passant: Square,
     pub side_to_move: usize,
@@ -33,7 +32,6 @@ impl Board {
             checkers: Bitboard::EMPTY,
             ortographic_pins: Bitboard::EMPTY,
             diagonal_pins: Bitboard::EMPTY,
-            full_moves: 0,
             half_moves: 0,
             en_passant: Square::NULL,
             side_to_move: 0,
@@ -146,10 +144,9 @@ impl Board {
         info.push(side_sign.as_str());
         let en_passant = format!("En Passant: {}", self.en_passant.to_string());
         info.push(en_passant.as_str());
-        let moves = format!("Moves: {}", self.full_moves);
-        info.push(moves.as_str());
         let half_moves = format!("Half Moves: {}", self.half_moves);
         info.push(half_moves.as_str());
+        info.push("");
         info.push("");
 
         let mut result = " ------------------------\n".to_string();
@@ -163,7 +160,7 @@ impl Board {
                 }
 
                 let piece_tuple = self.get_piece_on_square(square);
-                if piece_tuple.1 == 2 {
+                if piece_tuple.0 == 0 {
                     result += piece_icons[0][usize::from(piece_tuple.0)];
                 } else if piece_tuple.1 == Side::BLACK {
                     result += piece_icons[Side::BLACK][usize::from(piece_tuple.0)].blue().to_string().as_str();
@@ -250,12 +247,7 @@ pub fn create_board(fen: &str) -> Board {
         board.zobrist.update_en_passant_hash(board.en_passant);
     }
 
-    board.full_moves = 0;
     board.half_moves = 0;
-
-    if splits.len() > 4 {
-        board.full_moves = splits[4].parse().unwrap();
-    }
 
     if splits.len() > 5 {
         board.half_moves = splits[5].parse().unwrap();
