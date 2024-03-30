@@ -1,11 +1,11 @@
 pub struct Side;
-impl Side{
+impl Side {
     pub const WHITE: usize = 0;
     pub const BLACK: usize = 1;
 }
 
 pub struct Piece;
-impl Piece{
+impl Piece {
     pub const NONE: usize = 0;
     pub const PAWN: usize = 1;
     pub const KNIGHT: usize = 2;
@@ -16,7 +16,7 @@ impl Piece{
 }
 
 pub struct CastleRights;
-impl CastleRights{
+impl CastleRights {
     pub const BLACK_QUEEN: u8 = 0;
     pub const BLACK_KING: u8 = 1;
     pub const WHITE_QUEEN: u8 = 2;

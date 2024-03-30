@@ -1,107 +1,128 @@
-use crate::{bitboard::Bitboard, board::Board, consts::{Piece, Side}, types::Square};
+use crate::{
+    bitboard::Bitboard,
+    board::Board,
+    consts::{Piece, Side},
+    core_structs::Square,
+};
 extern crate rand;
-use rand::Rng;
 use once_cell::sync::Lazy;
+use rand::Rng;
 use std::sync::Mutex;
 
 pub struct Attacks;
 impl Attacks {
-    pub fn get_pawn_attacks_for_square( square: Square, color: usize ) -> u64{
+    pub fn get_pawn_attacks_for_square(square: Square, color: usize) -> Bitboard {
         ATTACK_TABLES.lock().unwrap().pawn_attacks[color][square.get_value()]
     }
 
-    pub fn get_knight_attacks_for_square( square: Square) -> u64{
+    pub fn get_knight_attacks_for_square(square: Square) -> Bitboard {
         ATTACK_TABLES.lock().unwrap().knight_attacks[square.get_value()]
     }
 
-    pub fn get_king_attacks_for_square( square: Square) -> u64{
+    pub fn get_king_attacks_for_square(square: Square) -> Bitboard {
         ATTACK_TABLES.lock().unwrap().king_attacks[square.get_value()]
     }
 
-    pub fn get_bishop_attacks_for_square( square: Square, occupancy: Bitboard ) -> u64{
+    pub fn get_bishop_attacks_for_square(square: Square, occupancy: Bitboard) -> Bitboard {
         let attack_tables = ATTACK_TABLES.lock().unwrap();
-        let mut occ = occupancy.get_value();
+        let mut occ = occupancy;
         occ &= attack_tables.bishop_masks[square.get_value()];
-        occ = u64::wrapping_mul(occ, MAGIC_NUMBERS_BISHOP[square.get_value()]);
-        occ >>= 64 - BISHOP_OCCUPANCY_COUNT[square.get_value()];
-        attack_tables.bishop_attacks[square.get_value()][occ as usize]
+        occ = occ.wrapping_mul(MAGIC_NUMBERS_BISHOP[square.get_value()].into());
+        occ >>= 64 - BISHOP_OCCUPANCY_COUNT[square.get_value()] as u32;
+        attack_tables.bishop_attacks[square.get_value()][occ.get_value() as usize]
     }
 
-    pub fn get_rook_attacks_for_square( square: Square, occupancy: Bitboard ) -> u64{
+    pub fn get_rook_attacks_for_square(square: Square, occupancy: Bitboard) -> Bitboard {
         let attack_tables = ATTACK_TABLES.lock().unwrap();
-        let mut occ = occupancy.get_value();
+        let mut occ = occupancy;
         occ &= attack_tables.rook_masks[square.get_value()];
-        occ = u64::wrapping_mul(occ, MAGIC_NUMBERS_ROOK[square.get_value()]);
-        occ >>= 64 - ROOK_OCCUPANCY_COUNT[square.get_value()];
-        attack_tables.rook_attacks[square.get_value()][occ as usize]
+        occ = occ.wrapping_mul(MAGIC_NUMBERS_ROOK[square.get_value()].into());
+        occ >>= 64 - ROOK_OCCUPANCY_COUNT[square.get_value()] as u32;
+        attack_tables.rook_attacks[square.get_value()][occ.get_value() as usize]
     }
 
-    pub fn get_queen_attacks_for_square( square: Square, occupancy: Bitboard ) -> u64{
-        Attacks::get_bishop_attacks_for_square( square, occupancy ) | Attacks::get_rook_attacks_for_square( square, occupancy )
+    pub fn get_queen_attacks_for_square(square: Square, occupancy: Bitboard) -> Bitboard {
+        Attacks::get_bishop_attacks_for_square(square, occupancy)
+            .or(Attacks::get_rook_attacks_for_square(square, occupancy))
     }
 
-    pub fn initialize_slider_pieces(){
+    pub fn initialize_slider_pieces() {
         let mut attack_tables = ATTACK_TABLES.lock().unwrap();
 
         for square_index in 0..64 {
+            let square = Square::from_raw(square_index);
             {
-                let attack_mask = mask_bishop_attacks(square_index);
-                let relevant_bit_count = attack_mask.count_ones() as usize;
+                let attack_mask = mask_bishop_attacks(square);
+                let relevant_bit_count = attack_mask.pop_count();
                 let mut index = 0;
                 while index < 1 << relevant_bit_count {
-                    let occupancy = generate_occupancy(index, relevant_bit_count, attack_mask);
-                    let magic_index = u64::wrapping_mul(occupancy, MAGIC_NUMBERS_BISHOP[square_index]) >> (64 - relevant_bit_count);
-                    attack_tables.bishop_attacks[square_index][magic_index as usize] = generate_bishop_attacks(square_index, occupancy);
+                    let occupancy = generate_occupancy(index, relevant_bit_count as usize, attack_mask);
+                    let magic_index: u64 = (occupancy.wrapping_mul(MAGIC_NUMBERS_BISHOP[square_index].into())
+                        >> (64 - relevant_bit_count))
+                        .into();
+                    attack_tables.bishop_attacks[square_index][magic_index as usize] =
+                        generate_bishop_attacks(square, occupancy);
                     index += 1;
                 }
             }
 
             {
-                let attack_mask = mask_rook_attacks(square_index);
-                let relevant_bit_count = attack_mask.count_ones() as usize;
+                let attack_mask = mask_rook_attacks(square);
+                let relevant_bit_count = attack_mask.pop_count();
                 let mut index = 0;
                 while index < 1 << relevant_bit_count {
-                    let occupancy = generate_occupancy(index, relevant_bit_count, attack_mask);
-                    let magic_index = u64::wrapping_mul(occupancy, MAGIC_NUMBERS_ROOK[square_index]) >> (64 - relevant_bit_count);
-                    attack_tables.rook_attacks[square_index][magic_index as usize] = generate_rook_attacks(square_index, occupancy);
+                    let occupancy = generate_occupancy(index, relevant_bit_count as usize, attack_mask);
+                    let magic_index: u64 = (occupancy.wrapping_mul(MAGIC_NUMBERS_BISHOP[square_index].into())
+                        >> (64 - relevant_bit_count))
+                        .into();
+                    if magic_index > 4096 {
+                        print!( "warpping_mul {}\n",  (occupancy.wrapping_mul(MAGIC_NUMBERS_BISHOP[square_index].into())).get_value());
+                        print!( "shift {}\n",  (64 - relevant_bit_count));
+                        print!( "index {}\n",  magic_index);
+                    }
+                    attack_tables.rook_attacks[square_index][magic_index as usize] =
+                        generate_rook_attacks(square, occupancy);
                     index += 1;
                 }
             }
         }
     }
 
-    pub fn generate_checkers_mask( board: &Board ) -> Bitboard{
-        let mut result = 0u64;
+    pub fn generate_checkers_mask(board: &Board) -> Bitboard {
         let occupancy_mask = board.get_occupancy();
         let square = board.get_piece_mask(Piece::KING, board.side_to_move).ls1b_square();
         let attacker_color = 1 - board.side_to_move;
 
-        result |= Attacks::get_bishop_attacks_for_square(square, occupancy_mask) & board.get_piece_mask(Piece::BISHOP, attacker_color).or(board.get_piece_mask(Piece::QUEEN, attacker_color)).get_value();
-        result |= Attacks::get_knight_attacks_for_square(square) & board.get_piece_mask(Piece::KNIGHT, attacker_color).get_value();
-        result |= Attacks::get_rook_attacks_for_square(square, occupancy_mask) & board.get_piece_mask(Piece::ROOK, attacker_color).or(board.get_piece_mask(Piece::QUEEN, attacker_color)).get_value();
-        result |= Attacks::get_pawn_attacks_for_square(square, 1-attacker_color) & board.get_piece_mask(Piece::PAWN, attacker_color).get_value();
-        result |= Attacks::get_king_attacks_for_square(square) & board.get_piece_mask(Piece::KING, attacker_color).get_value();
-        Bitboard::from_raw(result)
+        (Attacks::get_bishop_attacks_for_square(square, occupancy_mask)
+            & board.get_piece_mask(Piece::BISHOP, attacker_color)
+            | board.get_piece_mask(Piece::QUEEN, attacker_color))
+            | (Attacks::get_knight_attacks_for_square(square) & board.get_piece_mask(Piece::KNIGHT, attacker_color))
+            | (Attacks::get_rook_attacks_for_square(square, occupancy_mask)
+                & board.get_piece_mask(Piece::ROOK, attacker_color)
+                | board.get_piece_mask(Piece::QUEEN, attacker_color))
+            | (Attacks::get_pawn_attacks_for_square(square, 1 - attacker_color)
+                & board.get_piece_mask(Piece::PAWN, attacker_color))
+            | (Attacks::get_king_attacks_for_square(square) & board.get_piece_mask(Piece::KING, attacker_color))
     }
 
-    pub fn generate_ortographic_pins_mask( board: &Board ) -> Bitboard{
+    pub fn generate_ortographic_pins_mask(board: &Board) -> Bitboard {
         Bitboard::EMPTY
     }
 
-    pub fn generate_diagonal_pins_mask( board: &Board ) -> Bitboard{
+    pub fn generate_diagonal_pins_mask(board: &Board) -> Bitboard {
         Bitboard::EMPTY
     }
 }
 
-struct AttackTables{
-    pawn_attacks : [[u64; 64]; 2],
-    knight_attacks: [u64; 64],
-    king_attacks: [u64; 64],
-    bishop_masks: [u64; 64],
-    bishop_attacks: Vec<Vec<u64>>,
-    rook_masks: [u64; 64],
-    rook_attacks: Vec<Vec<u64>>,
-} 
+struct AttackTables {
+    pawn_attacks: [[Bitboard; 64]; 2],
+    knight_attacks: [Bitboard; 64],
+    king_attacks: [Bitboard; 64],
+    bishop_masks: [Bitboard; 64],
+    bishop_attacks: Vec<Vec<Bitboard>>,
+    rook_masks: [Bitboard; 64],
+    rook_attacks: Vec<Vec<Bitboard>>,
+}
 
 static ATTACK_TABLES: Lazy<Mutex<AttackTables>> = Lazy::new(|| {
     Mutex::new(AttackTables {
@@ -109,181 +130,304 @@ static ATTACK_TABLES: Lazy<Mutex<AttackTables>> = Lazy::new(|| {
         knight_attacks: AttackTables::KNIGHT_ATTACKS,
         king_attacks: AttackTables::KING_ATTACKS,
         bishop_masks: AttackTables::BISHOP_MASKS,
-        bishop_attacks: vec![vec![0; 512]; 64],
+        bishop_attacks: vec![vec![Bitboard::EMPTY; 512]; 64],
         rook_masks: AttackTables::ROOK_MASKS,
-        rook_attacks: vec![vec![0; 4096]; 64],
+        rook_attacks: vec![vec![Bitboard::EMPTY; 4096]; 64],
     })
 });
 
 impl AttackTables {
-    const PAWN_ATTACKS: [[u64; 64]; 2] = {
-        let mut result = [[0; 64]; 2];
+    const PAWN_ATTACKS: [[Bitboard; 64]; 2] = {
+        let mut result = [[Bitboard::EMPTY; 64]; 2];
         let mut square_index = 0usize;
         while square_index < 64 {
             let bb = Bitboard::from_raw(1u64 << square_index);
-            if !Bitboard::FILE_A.inverse().and(bb.shift_left(9)).is_empty() { result[Side::WHITE][square_index] |= bb.shift_left(9).get_value() }
-            if !Bitboard::FILE_H.inverse().and(bb.shift_left(7)).is_empty() { result[Side::WHITE][square_index] |= bb.shift_left(7).get_value() }
-            if !Bitboard::FILE_A.inverse().and(bb.shift_right(7)).is_empty() { result[Side::BLACK][square_index] |= bb.shift_right(7).get_value() }
-            if !Bitboard::FILE_H.inverse().and(bb.shift_right(9)).is_empty() { result[Side::BLACK][square_index] |= bb.shift_right(9).get_value() }
+            let mut attack_map: u64 = 0;
+            if Bitboard::FILE_A.inverse().and(bb.shift_left(9)).is_not_empty() {
+                attack_map |= bb.shift_left(9).get_value()
+            }
+            if Bitboard::FILE_H.inverse().and(bb.shift_left(7)).is_not_empty() {
+                attack_map |= bb.shift_left(7).get_value()
+            }
+            result[Side::WHITE][square_index] = Bitboard::from_raw(attack_map);
+            attack_map = 0;
+            if Bitboard::FILE_A.inverse().and(bb.shift_right(7)).is_not_empty() {
+                attack_map |= bb.shift_right(7).get_value()
+            }
+            if Bitboard::FILE_H.inverse().and(bb.shift_right(9)).is_not_empty() {
+                attack_map |= bb.shift_right(9).get_value()
+            }
+            result[Side::BLACK][square_index] = Bitboard::from_raw(attack_map);
             square_index += 1;
         }
         result
     };
-    const KNIGHT_ATTACKS: [u64; 64] = {
-        let mut result = [0; 64];
+    const KNIGHT_ATTACKS: [Bitboard; 64] = {
+        let mut result = [Bitboard::EMPTY; 64];
         let mut square_index = 0usize;
         while square_index < 64 {
             let bb = Bitboard::from_raw(1u64 << square_index);
-            if !Bitboard::FILE_A.inverse().and(bb.shift_left(17)).is_empty() { result[square_index] |= bb.shift_left(17).get_value() }
-            if !Bitboard::FILE_H.inverse().and(bb.shift_left(15)).is_empty() { result[square_index] |= bb.shift_left(15).get_value() }
-            if !Bitboard::FILE_A.or(Bitboard::FILE_B).inverse().and(bb.shift_left(10)).is_empty() { result[square_index] |= bb.shift_left(10).get_value() }
-            if !Bitboard::FILE_H.or(Bitboard::FILE_G).inverse().and(bb.shift_left(6)).is_empty() { result[square_index] |= bb.shift_left(6).get_value() }
-            if !Bitboard::FILE_H.inverse().and(bb.shift_right(17)).is_empty() { result[square_index] |= bb.shift_right(17).get_value() }
-            if !Bitboard::FILE_A.inverse().and(bb.shift_right(15)).is_empty() { result[square_index] |= bb.shift_right(15).get_value()}
-            if !Bitboard::FILE_H.or(Bitboard::FILE_G).inverse().and(bb.shift_right(10)).is_empty() { result[square_index] |= bb.shift_right(10).get_value() }
-            if !Bitboard::FILE_A.or(Bitboard::FILE_B).inverse().and(bb.shift_right(6)).is_empty() { result[square_index] |= bb.shift_right(6).get_value() }
+            let mut attack_map: u64 = 0;
+            if Bitboard::FILE_A.inverse().and(bb.shift_left(17)).is_not_empty() {
+                attack_map |= bb.shift_left(17).get_value()
+            }
+            if Bitboard::FILE_H.inverse().and(bb.shift_left(15)).is_not_empty() {
+                attack_map |= bb.shift_left(15).get_value()
+            }
+            if Bitboard::FILE_A.or(Bitboard::FILE_B).inverse().and(bb.shift_left(10)).is_not_empty() {
+                attack_map |= bb.shift_left(10).get_value()
+            }
+            if Bitboard::FILE_H.or(Bitboard::FILE_G).inverse().and(bb.shift_left(6)).is_not_empty() {
+                attack_map |= bb.shift_left(6).get_value()
+            }
+            if Bitboard::FILE_H.inverse().and(bb.shift_right(17)).is_not_empty() {
+                attack_map |= bb.shift_right(17).get_value()
+            }
+            if Bitboard::FILE_A.inverse().and(bb.shift_right(15)).is_not_empty() {
+                attack_map |= bb.shift_right(15).get_value()
+            }
+            if Bitboard::FILE_H.or(Bitboard::FILE_G).inverse().and(bb.shift_right(10)).is_not_empty() {
+                attack_map |= bb.shift_right(10).get_value()
+            }
+            if Bitboard::FILE_A.or(Bitboard::FILE_B).inverse().and(bb.shift_right(6)).is_not_empty() {
+                attack_map |= bb.shift_right(6).get_value()
+            }
+            result[square_index] = Bitboard::from_raw(attack_map);
             square_index += 1;
         }
         result
     };
-    const KING_ATTACKS: [u64; 64] = {
-        let mut result = [0; 64];
+    const KING_ATTACKS: [Bitboard; 64] = {
+        let mut result = [Bitboard::EMPTY; 64];
         let mut square_index = 0usize;
         while square_index < 64 {
             let bb = Bitboard::from_raw(1u64 << square_index);
-            if !Bitboard::FILE_H.inverse().and(bb.shift_left(7)).is_empty() { result[square_index] |= bb.shift_right(7).get_value() }
-            result[square_index] |= bb.shift_left(8).get_value();
-            if !Bitboard::FILE_A.inverse().and(bb.shift_left(9)).is_empty() { result[square_index] |= bb.shift_left(9).get_value() }
-            if !Bitboard::FILE_A.inverse().and(bb.shift_right(7)).is_empty() { result[square_index] |= bb.shift_right(7).get_value() }
-            result[square_index] |= bb.shift_right(8).get_value();
-            if !Bitboard::FILE_H.inverse().and(bb.shift_right(9)).is_empty() { result[square_index] |= bb.shift_right(9).get_value() }
-            if !Bitboard::FILE_A.inverse().and(bb.shift_left(1)).is_empty() { result[square_index] |= bb.shift_left(1).get_value() }
-            if !Bitboard::FILE_H.inverse().and(bb.shift_right(1)).is_empty() { result[square_index] |= bb.shift_right(1).get_value() }
+            let mut attack_map: u64 = 0;
+            if Bitboard::FILE_H.inverse().and(bb.shift_left(7)).is_not_empty() {
+                attack_map |= bb.shift_right(7).get_value()
+            }
+            attack_map |= bb.shift_left(8).get_value();
+            if Bitboard::FILE_A.inverse().and(bb.shift_left(9)).is_not_empty() {
+                attack_map |= bb.shift_left(9).get_value()
+            }
+            if Bitboard::FILE_A.inverse().and(bb.shift_right(7)).is_not_empty() {
+                attack_map |= bb.shift_right(7).get_value()
+            }
+            attack_map |= bb.shift_right(8).get_value();
+            if Bitboard::FILE_H.inverse().and(bb.shift_right(9)).is_not_empty() {
+                attack_map |= bb.shift_right(9).get_value()
+            }
+            if Bitboard::FILE_A.inverse().and(bb.shift_left(1)).is_not_empty() {
+                attack_map |= bb.shift_left(1).get_value()
+            }
+            if Bitboard::FILE_H.inverse().and(bb.shift_right(1)).is_not_empty() {
+                attack_map |= bb.shift_right(1).get_value()
+            }
+            result[square_index] = Bitboard::from_raw(attack_map);
             square_index += 1;
         }
         result
     };
-    const BISHOP_MASKS: [u64; 64] = {
-        let mut result = [0; 64];
+    const BISHOP_MASKS: [Bitboard; 64] = {
+        let mut result = [Bitboard::EMPTY; 64];
         let mut square_index = 0usize;
         while square_index < 64 {
-            result[square_index] = mask_bishop_attacks(square_index);
+            result[square_index] = mask_bishop_attacks(Square::from_raw(square_index));
             square_index += 1;
         }
         result
     };
-    const ROOK_MASKS: [u64; 64] = {
-        let mut result = [0; 64];
+    const ROOK_MASKS: [Bitboard; 64] = {
+        let mut result = [Bitboard::EMPTY; 64];
         let mut square_index = 0usize;
         while square_index < 64 {
-            result[square_index] = mask_rook_attacks(square_index);
+            result[square_index] = mask_rook_attacks(Square::from_raw(square_index));
             square_index += 1;
         }
         result
     };
 }
 
-const fn mask_bishop_attacks( square_index: usize ) -> u64 {
+const fn mask_bishop_attacks(square: Square) -> Bitboard {
     let mut result: u64 = 0;
-    let bishop_position = (square_index as i32 / 8, square_index as i32 % 8);
+    let bishop_position = (square.get_rank() as i32, square.get_file() as i32);
 
     let mut rank = bishop_position.0 + 1;
     let mut file = bishop_position.1 + 1;
-    while rank < 7 && file < 7 { result |= 1u64 << rank * 8 + file; rank += 1; file += 1; }
+    while rank < 7 && file < 7 {
+        result |= Square::from_coords(rank as usize, file as usize).get_bit().get_value();
+        rank += 1;
+        file += 1;
+    }
 
     rank = bishop_position.0 - 1;
     file = bishop_position.1 + 1;
-    while rank > 0 && file < 7 { result |= 1u64 << rank * 8 + file; rank -= 1; file += 1; }
+    while rank > 0 && file < 7 {
+        result |= Square::from_coords(rank as usize, file as usize).get_bit().get_value();
+        rank -= 1;
+        file += 1;
+    }
 
     rank = bishop_position.0 - 1;
     file = bishop_position.1 - 1;
-    while rank > 0 && file > 0 { result |= 1u64 << rank * 8 + file; rank -= 1; file -= 1; }
+    while rank > 0 && file > 0 {
+        result |= Square::from_coords(rank as usize, file as usize).get_bit().get_value();
+        rank -= 1;
+        file -= 1;
+    }
 
     rank = bishop_position.0 + 1;
     file = bishop_position.1 - 1;
-    while rank < 7 && file > 0 { result |= 1u64 << rank * 8 + file; rank += 1; file -= 1; }
+    while rank < 7 && file > 0 {
+        result |= Square::from_coords(rank as usize, file as usize).get_bit().get_value();
+        rank += 1;
+        file -= 1;
+    }
 
-    result
+    Bitboard::from_raw(result)
 }
 
-fn generate_bishop_attacks( square_index: usize, occupancy: u64 ) -> u64 {
-    let mut result: u64 = 0;
-    let bishop_position = (square_index as i32 / 8, square_index as i32 % 8);
+fn generate_bishop_attacks(square: Square, occupancy: Bitboard) -> Bitboard {
+    let mut result: Bitboard = Bitboard::EMPTY;
+    let bishop_position = (square.get_rank() as i32, square.get_file() as i32);
 
     let mut rank = bishop_position.0 + 1;
     let mut file = bishop_position.1 + 1;
-    while rank < 8 && file < 8 { result |= 1u64 << rank * 8 + file; if 1u64 << rank * 8 + file & occupancy > 0 { break } rank += 1; file += 1; }
+    while rank < 8 && file < 8 {
+        result.set_bit(Square::from_coords(rank as usize, file as usize));
+        if (Square::from_coords(rank as usize, file as usize).get_bit() & occupancy).is_not_empty() {
+            break;
+        }
+        rank += 1;
+        file += 1;
+    }
 
     rank = bishop_position.0 - 1;
     file = bishop_position.1 + 1;
-    while rank >= 0 && file < 8 { result |= 1u64 << rank * 8 + file; if 1u64 << rank * 8 + file & occupancy > 0 { break } rank -= 1; file += 1; }
+    while rank >= 0 && file < 8 {
+        result.set_bit(Square::from_coords(rank as usize, file as usize));
+        if (Square::from_coords(rank as usize, file as usize).get_bit() & occupancy).is_not_empty() {
+            break;
+        }
+        rank -= 1;
+        file += 1;
+    }
 
     rank = bishop_position.0 - 1;
     file = bishop_position.1 - 1;
-    while rank >= 0 && file >= 0 { result |= 1u64 << rank * 8 + file; if 1u64 << rank * 8 + file & occupancy > 0 { break }rank -= 1; file -= 1; }
+    while rank >= 0 && file >= 0 {
+        result.set_bit(Square::from_coords(rank as usize, file as usize));
+        if (Square::from_coords(rank as usize, file as usize).get_bit() & occupancy).is_not_empty() {
+            break;
+        }
+        rank -= 1;
+        file -= 1;
+    }
 
     rank = bishop_position.0 + 1;
     file = bishop_position.1 - 1;
-    while rank < 8 && file >= 0 { result |= 1u64 << rank * 8 + file; if 1u64 << rank * 8 + file & occupancy > 0 { break } rank += 1; file -= 1; }
+    while rank < 8 && file >= 0 {
+        result.set_bit(Square::from_coords(rank as usize, file as usize));
+        if (Square::from_coords(rank as usize, file as usize).get_bit() & occupancy).is_not_empty() {
+            break;
+        }
+        rank += 1;
+        file -= 1;
+    }
 
     result
 }
 
-const fn mask_rook_attacks( square_index: usize ) -> u64 {
+const fn mask_rook_attacks(square: Square) -> Bitboard {
     let mut result: u64 = 0;
-    let bishop_position = (square_index as i32 / 8, square_index as i32 % 8);
-    
-    let mut rank = bishop_position.0 + 1;
-    let mut file = bishop_position.1;
-    while rank < 7 { result |= 1u64 << rank * 8 + file; rank += 1; }
+    let rook_position = (square.get_rank() as i32, square.get_file() as i32);
 
-    rank = bishop_position.0 - 1;
-    file = bishop_position.1;
-    while rank > 0 { result |= 1u64 << rank * 8 + file; rank -= 1; }
+    let mut rank = rook_position.0 + 1;
+    let mut file = rook_position.1;
+    while rank < 7 {
+        result |= Square::from_coords(rank as usize, file as usize).get_bit().get_value();
+        rank += 1;
+    }
 
-    rank = bishop_position.0;
-    file = bishop_position.1 + 1;
-    while file < 7 { result |= 1u64 << rank * 8 + file; file += 1; }
+    rank = rook_position.0 - 1;
+    file = rook_position.1;
+    while rank > 0 {
+        result |= Square::from_coords(rank as usize, file as usize).get_bit().get_value();
+        rank -= 1;
+    }
 
-    rank = bishop_position.0;
-    file = bishop_position.1 - 1;
-    while file > 0 { result |= 1u64 << rank * 8 + file; file -= 1; }
+    rank = rook_position.0;
+    file = rook_position.1 + 1;
+    while file < 7 {
+        result |= Square::from_coords(rank as usize, file as usize).get_bit().get_value();
+        file += 1;
+    }
+
+    rank = rook_position.0;
+    file = rook_position.1 - 1;
+    while file > 0 {
+        result |= Square::from_coords(rank as usize, file as usize).get_bit().get_value();
+        file -= 1;
+    }
+
+    Bitboard::from_raw(result)
+}
+
+fn generate_rook_attacks(square: Square, occupancy: Bitboard) -> Bitboard {
+    let mut result: Bitboard = Bitboard::EMPTY;
+    let rook_position = (square.get_rank() as i32, square.get_file() as i32);
+
+    let mut rank = rook_position.0 + 1;
+    let mut file = rook_position.1;
+    while rank < 8 {
+        result.set_bit(Square::from_coords(rank as usize, file as usize));
+        if (Square::from_coords(rank as usize, file as usize).get_bit() & occupancy).is_not_empty() {
+            break;
+        }
+        rank += 1;
+    }
+
+    rank = rook_position.0 - 1;
+    file = rook_position.1;
+    while rank >= 0 {
+        result.set_bit(Square::from_coords(rank as usize, file as usize));
+        if (Square::from_coords(rank as usize, file as usize).get_bit() & occupancy).is_not_empty() {
+            break;
+        }
+        rank -= 1;
+    }
+
+    rank = rook_position.0;
+    file = rook_position.1 + 1;
+    while file < 8 {
+        result.set_bit(Square::from_coords(rank as usize, file as usize));
+        if (Square::from_coords(rank as usize, file as usize).get_bit() & occupancy).is_not_empty() {
+            break;
+        }
+        file += 1;
+    }
+
+    rank = rook_position.0;
+    file = rook_position.1 - 1;
+    while file >= 0 {
+        result.set_bit(Square::from_coords(rank as usize, file as usize));
+        if (Square::from_coords(rank as usize, file as usize).get_bit() & occupancy).is_not_empty() {
+            break;
+        }
+        file -= 1;
+    }
 
     result
 }
 
-fn generate_rook_attacks( square_index: usize, occupancy: u64 ) -> u64 {
-    let mut result: u64 = 0;
-    let bishop_position = (square_index as i32 / 8, square_index as i32 % 8);
-    
-    let mut rank = bishop_position.0 + 1;
-    let mut file = bishop_position.1;
-    while rank < 8 { result |= 1u64 << rank * 8 + file; if 1u64 << rank * 8 + file & occupancy > 0 { break } rank += 1; }
-
-    rank = bishop_position.0 - 1;
-    file = bishop_position.1;
-    while rank >= 0 { result |= 1u64 << rank * 8 + file; if 1u64 << rank * 8 + file & occupancy > 0 { break } rank -= 1; }
-
-    rank = bishop_position.0;
-    file = bishop_position.1 + 1;
-    while file < 8 { result |= 1u64 << rank * 8 + file; if 1u64 << rank * 8 + file & occupancy > 0 { break } file += 1; }
-
-    rank = bishop_position.0;
-    file = bishop_position.1 - 1;
-    while file >= 0 { result |= 1u64 << rank * 8 + file; if 1u64 << rank * 8 + file & occupancy > 0 { break } file -= 1; }
-
-    result
-}
-
-fn generate_occupancy( index: usize, bit_count: usize, attack_mask: u64 ) -> u64 {
-    let mut result = 0u64;
-    let mut attack_mask_cpy = attack_mask;
+fn generate_occupancy(index: usize, bit_count: usize, attack_mask: Bitboard) -> Bitboard {
+    let mut result = Bitboard::EMPTY;
+    let mut mut_attack_mask = attack_mask;
     let mut count_index = 0u16;
     while count_index < bit_count as u16 {
-        let square_index: u8 = attack_mask_cpy.trailing_zeros() as u8;
-        attack_mask_cpy &= !(1 << square_index);
+        let square: Square = mut_attack_mask.pop_ls1b_square();
         if index & (1usize << count_index) > 0 {
-            result |= 1u64 << square_index;
+            result.set_bit(square);
         }
 
         count_index += 1;
@@ -298,8 +442,8 @@ pub const BISHOP_OCCUPANCY_COUNT: [usize; 64] = {
     while rank < 8 {
         let mut file = 0;
         while file < 8 {
-            let square_index = rank * 8 + file;
-            result[square_index] = mask_bishop_attacks(square_index).count_ones() as usize;
+            let square = Square::from_coords(rank, file);
+            result[square.get_value()] = mask_bishop_attacks(square).pop_count() as usize;
             file += 1;
         }
         rank += 1;
@@ -313,8 +457,8 @@ pub const ROOK_OCCUPANCY_COUNT: [usize; 64] = {
     while rank < 8 {
         let mut file = 0;
         while file < 8 {
-            let square_index = rank * 8 + file;
-            result[square_index] = mask_rook_attacks(square_index).count_ones() as usize;
+            let square = Square::from_coords(rank, file);
+            result[square.get_value()] = mask_rook_attacks(square).pop_count() as usize;
             file += 1;
         }
         rank += 1;
@@ -324,42 +468,54 @@ pub const ROOK_OCCUPANCY_COUNT: [usize; 64] = {
 
 fn get_low_ones_random_u64() -> u64 {
     let mut rng = rand::thread_rng();
-    (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 16 | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 32 | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 48) & 
-    (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 16 | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 32 | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 48) & 
-    (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 16 | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 32 | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 48)
+    (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF
+        | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 16
+        | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 32
+        | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 48)
+        & (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF
+            | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 16
+            | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 32
+            | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 48)
+        & (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF
+            | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 16
+            | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 32
+            | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 48)
 }
 
-pub fn find_magic_number( square_index: usize, relevent_bit_count: usize, is_bishop: bool ) -> u64 {
-    let mut occupancies = [0u64; 4096];
-    let mut attacks = [0u64; 4096];
-    let attack_mask = if is_bishop { mask_bishop_attacks(square_index) } else { mask_rook_attacks(square_index) };
+pub fn find_magic_number(square: Square, relevent_bit_count: usize, is_bishop: bool) -> u64 {
+    let mut occupancies = [Bitboard::EMPTY; 4096];
+    let mut attacks = [Bitboard::EMPTY; 4096];
+    let attack_mask = if is_bishop { mask_bishop_attacks(square) } else { mask_rook_attacks(square) };
     let occupancy_count = 1 << relevent_bit_count;
     let mut occupancy_index = 0;
     while occupancy_index < occupancy_count {
         occupancies[occupancy_index] = generate_occupancy(occupancy_index, relevent_bit_count, attack_mask);
-        attacks[occupancy_index] = if is_bishop { generate_bishop_attacks(square_index, occupancies[occupancy_index]) } 
-                                             else { generate_rook_attacks(square_index, occupancies[occupancy_index]) };
-        
+        attacks[occupancy_index] = if is_bishop {
+            generate_bishop_attacks(square, occupancies[occupancy_index])
+        } else {
+            generate_rook_attacks(square, occupancies[occupancy_index])
+        };
+
         occupancy_index += 1;
     }
 
-    let mut used_attacks: [u64; 4096];
+    let mut used_attacks: [Bitboard; 4096];
     loop {
         let magic_number = get_low_ones_random_u64();
-        if (u64::wrapping_mul( attack_mask, magic_number ) & 0xFF00000000000000).count_ones() < 6 {
+        if (attack_mask.wrapping_mul(magic_number.into()) & 0xFF00000000000000).pop_count() < 6 {
             continue;
         }
 
-
-        used_attacks = [0u64; 4096];
+        used_attacks = [Bitboard::EMPTY; 4096];
         let mut occupancy_index = 0usize;
         let mut fail_flag = false;
         while occupancy_index < occupancy_count {
-            let magic_index = u64::wrapping_mul(occupancies[occupancy_index], magic_number) as usize >> (64 - relevent_bit_count);
-            if used_attacks[magic_index] == 0 {
+            let magic_index = (occupancies[occupancy_index].wrapping_mul(magic_number.into())
+                >> (64 - relevent_bit_count as u32))
+                .get_value() as usize;
+            if used_attacks[magic_index].is_empty() {
                 used_attacks[magic_index] = attacks[occupancy_index];
-            }
-            else if used_attacks[magic_index] != attacks[occupancy_index]{
+            } else if used_attacks[magic_index] != attacks[occupancy_index] {
                 fail_flag = true;
                 break;
             }
@@ -372,31 +528,43 @@ pub fn find_magic_number( square_index: usize, relevent_bit_count: usize, is_bis
     }
 }
 
-pub fn test_magic_number( square_index: usize, is_bishop: bool ) -> bool {
-    let mut occupancies = [0u64; 4096];
-    let mut attacks = [0u64; 4096];
-    let attack_mask = if is_bishop { mask_bishop_attacks(square_index) } else { mask_rook_attacks(square_index) };
-    let relevent_bit_count = if is_bishop { BISHOP_OCCUPANCY_COUNT[square_index] } else { ROOK_OCCUPANCY_COUNT[square_index] };
+pub fn test_magic_number(square: Square, is_bishop: bool) -> bool {
+    let mut occupancies = [Bitboard::EMPTY; 4096];
+    let mut attacks = [Bitboard::EMPTY; 4096];
+    let attack_mask = if is_bishop { mask_bishop_attacks(square) } else { mask_rook_attacks(square) };
+    let relevent_bit_count = if is_bishop {
+        BISHOP_OCCUPANCY_COUNT[square.get_value()]
+    } else {
+        ROOK_OCCUPANCY_COUNT[square.get_value()]
+    };
     let occupancy_count = 1 << relevent_bit_count;
     let mut occupancy_index = 0;
     while occupancy_index < occupancy_count {
         occupancies[occupancy_index] = generate_occupancy(occupancy_index, relevent_bit_count, attack_mask);
-        attacks[occupancy_index] = if is_bishop { generate_bishop_attacks(square_index, occupancies[occupancy_index]) } 
-                                             else { generate_rook_attacks(square_index, occupancies[occupancy_index]) };
-        
+        attacks[occupancy_index] = if is_bishop {
+            generate_bishop_attacks(square, occupancies[occupancy_index])
+        } else {
+            generate_rook_attacks(square, occupancies[occupancy_index])
+        };
+
         occupancy_index += 1;
     }
 
-    let magic_number = if is_bishop { MAGIC_NUMBERS_BISHOP[square_index] } else { MAGIC_NUMBERS_ROOK[square_index] };
-    let mut used_attacks = [0u64; 4096];
+    let magic_number = if is_bishop {
+        MAGIC_NUMBERS_BISHOP[square.get_value()]
+    } else {
+        MAGIC_NUMBERS_ROOK[square.get_value()]
+    };
+    let mut used_attacks = [Bitboard::EMPTY; 4096];
     occupancy_index = 0usize;
     let mut fail_flag = false;
     while occupancy_index < occupancy_count {
-        let magic_index = u64::wrapping_mul(occupancies[occupancy_index], magic_number) as usize >> (64 - relevent_bit_count);
-        if used_attacks[magic_index] == 0 {
+        let magic_index = (occupancies[occupancy_index].wrapping_mul(magic_number.into())
+            >> (64 - relevent_bit_count as u32))
+            .get_value() as usize;
+        if used_attacks[magic_index].is_empty() {
             used_attacks[magic_index] = attacks[occupancy_index];
-        }
-        else if used_attacks[magic_index] != attacks[occupancy_index]{
+        } else if used_attacks[magic_index] != attacks[occupancy_index] {
             fail_flag = true;
             break;
         }
