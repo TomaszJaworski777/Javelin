@@ -82,8 +82,7 @@ impl Board {
     pub fn is_square_attacked(&self, square: Square, attacker_color: usize) -> bool {
         let occupancy_mask = self.get_occupancy();
         if (Attacks::get_bishop_attacks_for_square(square, occupancy_mask)
-            & self.get_piece_mask(Piece::BISHOP, attacker_color)
-            | self.get_piece_mask(Piece::QUEEN, attacker_color))
+            & (self.get_piece_mask(Piece::BISHOP, attacker_color) | self.get_piece_mask(Piece::QUEEN, attacker_color)))
         .is_not_empty()
         {
             return true;
@@ -94,8 +93,7 @@ impl Board {
             return true;
         }
         if (Attacks::get_rook_attacks_for_square(square, occupancy_mask)
-            & self.get_piece_mask(Piece::ROOK, attacker_color)
-            | self.get_piece_mask(Piece::QUEEN, attacker_color))
+            & (self.get_piece_mask(Piece::ROOK, attacker_color) | self.get_piece_mask(Piece::QUEEN, attacker_color)))
         .is_not_empty()
         {
             return true;

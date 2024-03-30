@@ -72,14 +72,9 @@ impl Attacks {
                 let mut index = 0;
                 while index < 1 << relevant_bit_count {
                     let occupancy = generate_occupancy(index, relevant_bit_count as usize, attack_mask);
-                    let magic_index: u64 = (occupancy.wrapping_mul(MAGIC_NUMBERS_BISHOP[square_index].into())
+                    let magic_index: u64 = (occupancy.wrapping_mul(MAGIC_NUMBERS_ROOK[square_index].into())
                         >> (64 - relevant_bit_count))
                         .into();
-                    if magic_index > 4096 {
-                        print!( "warpping_mul {}\n",  (occupancy.wrapping_mul(MAGIC_NUMBERS_BISHOP[square_index].into())).get_value());
-                        print!( "shift {}\n",  (64 - relevant_bit_count));
-                        print!( "index {}\n",  magic_index);
-                    }
                     attack_tables.rook_attacks[square_index][magic_index as usize] =
                         generate_rook_attacks(square, occupancy);
                     index += 1;
@@ -94,12 +89,12 @@ impl Attacks {
         let attacker_color = 1 - board.side_to_move;
 
         (Attacks::get_bishop_attacks_for_square(square, occupancy_mask)
-            & board.get_piece_mask(Piece::BISHOP, attacker_color)
-            | board.get_piece_mask(Piece::QUEEN, attacker_color))
+            & (board.get_piece_mask(Piece::BISHOP, attacker_color)
+                | board.get_piece_mask(Piece::QUEEN, attacker_color)))
             | (Attacks::get_knight_attacks_for_square(square) & board.get_piece_mask(Piece::KNIGHT, attacker_color))
             | (Attacks::get_rook_attacks_for_square(square, occupancy_mask)
-                & board.get_piece_mask(Piece::ROOK, attacker_color)
-                | board.get_piece_mask(Piece::QUEEN, attacker_color))
+                & (board.get_piece_mask(Piece::ROOK, attacker_color)
+                    | board.get_piece_mask(Piece::QUEEN, attacker_color)))
             | (Attacks::get_pawn_attacks_for_square(square, 1 - attacker_color)
                 & board.get_piece_mask(Piece::PAWN, attacker_color))
             | (Attacks::get_king_attacks_for_square(square) & board.get_piece_mask(Piece::KING, attacker_color))
@@ -204,7 +199,7 @@ impl AttackTables {
             let bb = Bitboard::from_raw(1u64 << square_index);
             let mut attack_map: u64 = 0;
             if Bitboard::FILE_H.inverse().and(bb.shift_left(7)).is_not_empty() {
-                attack_map |= bb.shift_right(7).get_value()
+                attack_map |= bb.shift_left(7).get_value()
             }
             attack_map |= bb.shift_left(8).get_value();
             if Bitboard::FILE_A.inverse().and(bb.shift_left(9)).is_not_empty() {
