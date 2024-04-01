@@ -1,5 +1,6 @@
 use crate::core_structs::Square;
 
+#[derive(Copy, Clone)]
 pub struct ZobristKey {
     pub key: u64,
 }

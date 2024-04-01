@@ -6,6 +6,7 @@ use once_cell::sync::Lazy;
 
 use crate::bit_ops::get_bit;
 use crate::bit_ops::set_bit_to_one;
+use crate::bit_ops::set_bit_to_zero;
 use crate::{
     bit_ops::{get_bit_chunk, set_bit_chunk},
     bitboard::Bitboard,
@@ -38,19 +39,12 @@ impl Move {
             let mut square_index = 0;
             while square_index < 64 {
                 let square = Square::from_raw(square_index);
-                let double_push = if side == 0 { square.get_bit().and(Bitboard::RANK_2).is_not_empty() } else { square.get_bit().and(Bitboard::RANK_7).is_not_empty() };
                 let mut value = 0;
                 if side == 0 {
                     value |= square.get_bit().shift_left(8).get_value();
-                    if double_push {
-                        value |= square.get_bit().shift_left(16).get_value();
-                    }
                 }
                 else {
                     value |= square.get_bit().shift_right(8).get_value();
-                    if double_push {
-                        value |= square.get_bit().shift_right(16).get_value();
-                    }
                 }
                 result[side][square_index] = Bitboard::from_raw(value);
                 square_index += 1;
@@ -87,13 +81,33 @@ impl Move {
         get_bit_chunk(self.value.into(), 12, 0b0000_000000_000011) + 2
     }
 
+    pub fn is_capture(&self) -> bool {
+        self.value & Move::CAPTURE_MASK > 0
+    }
+
+    pub fn is_en_passant(&self) -> bool {
+        self.is_capture() && self.value & 0xF000 == Move::EN_PASSANT_MASK
+    }
+
+    pub fn is_double_push(&self) -> bool {
+        self.value & 0xF000 == Move::DOUBLE_PUSH_MASK
+    }
+
+    pub fn is_king_castle(&self) -> bool {
+        self.value & 0xF000 == Move::KING_CASTLE_MASK
+    }
+
+    pub fn is_queen_castle(&self) -> bool {
+        self.value & 0xF000 == Move::QUEEN_CASTLE_MASK
+    }
+
     pub fn to_string(&self) -> String {
         format!(
             "{}{}{}",
             self.get_from_square().to_string(),
             self.get_to_square().to_string(),
             if (self.value & Move::PROMOTION_KNIGHT_MASK) > 0 {
-                ["n", "b", "r", "q"][self.get_promotion_piece_index()]
+                ["n", "b", "r", "q"][self.get_promotion_piece()-2]
             } else {
                 ""
             }
@@ -281,6 +295,7 @@ impl BaseRookPositions {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct CastleRights {
     value: u8
 }
@@ -293,6 +308,10 @@ impl CastleRights {
 
     pub fn set_right(&mut self, right: u8){
         set_bit_to_one(&mut self.value, right);
+    }
+
+    pub fn remove_right(&mut self, right: u8){
+        set_bit_to_zero(&mut self.value, right);
     }
 
     pub fn get_right(&self, right: u8) -> bool {

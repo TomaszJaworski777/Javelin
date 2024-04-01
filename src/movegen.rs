@@ -112,6 +112,8 @@ fn generate_pawn_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitbo
             continue;
         }
         let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][double_push_pawn.get_value()] & !board.get_opponent_occupancy();
+        populate_pawn_moves(move_list, double_push_pawn, pawn_move_mask & move_mask, 0);
+        let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][double_push_pawn.get_value() ^ 24] & !board.get_opponent_occupancy();
         populate_pawn_moves(move_list, double_push_pawn, pawn_move_mask & move_mask, Move::DOUBLE_PUSH_MASK);
     }
 
@@ -121,6 +123,8 @@ fn generate_pawn_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitbo
             continue;
         }
         let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][double_push_pawn.get_value()] & board.ortographic_pins & !board.get_opponent_occupancy();
+        populate_pawn_moves(move_list, double_push_pawn, pawn_move_mask & move_mask, 0);
+        let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][double_push_pawn.get_value() ^ 24] & board.ortographic_pins & !board.get_opponent_occupancy();
         populate_pawn_moves(move_list, double_push_pawn, pawn_move_mask & move_mask, Move::DOUBLE_PUSH_MASK);
     }
 

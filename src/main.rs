@@ -35,6 +35,9 @@ fn main() {
     print!("{}\n", moves.len());
     for mov in moves {
         print!("{} - 1\n", mov.to_string());
+        let mut new_board = board;
+        new_board.make_move(mov);
+        new_board.draw_board();
     }
 
     println!("Time elapsed is: {:?}", duration);
