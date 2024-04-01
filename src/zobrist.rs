@@ -9,7 +9,7 @@ impl ZobristKey {
 
     #[inline]
     pub fn update_piece_hash(&mut self, piece_index: usize, piece_color: usize, square: Square) {
-        self.key ^= ZobristKey::SEEDS[(piece_index - 1 + piece_color * 6) * 64 + square.get_value()];
+        self.key ^= ZobristKey::SEEDS[(piece_index + piece_color * 6) * 64 + square.get_value()];
     }
 
     #[inline]

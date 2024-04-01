@@ -1,19 +1,16 @@
 #![allow(dead_code)]
 
 use attacks::Attacks;
-use board::{create_board, Board};
-use rays::Ray;
+use board::create_board;
+use movegen::MoveProvider;
+use std::time::Instant;
 
-use crate::{
-    consts::{Piece, Side},
-    core_structs::Square,
-};
+use crate::core_structs::MoveList;
 
 mod attacks;
 mod bit_ops;
 mod bitboard;
 mod board;
-mod consts;
 mod core_structs;
 mod movegen;
 mod rays;
@@ -21,10 +18,24 @@ mod zobrist;
 
 fn main() {
     Attacks::initialize_slider_pieces();
-    let board = create_board("8/3q4/q5b1/1N6/2P1B1n1/r1QK3N/3n1n2/3r4 w - - 0 1");
+    let board = create_board("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10");
 
     board.draw_board();
-    board.checkers.draw_bitboard();
-    board.ortographic_pins.draw_bitboard();
-    board.diagonal_pins.draw_bitboard();
+
+    let mut moves = MoveList::new();
+    let start = Instant::now();
+    {
+        for _ in 0..10_000 {
+            moves = MoveList::new();
+            MoveProvider::generate_moves(&mut moves, &board);
+        }
+    }
+    let duration = start.elapsed();
+
+    print!("{}\n", moves.len());
+    for mov in moves {
+        print!("{} - 1\n", mov.to_string());
+    }
+
+    println!("Time elapsed is: {:?}", duration);
 }

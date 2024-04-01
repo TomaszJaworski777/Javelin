@@ -1,8 +1,8 @@
 use crate::{
     bitboard::Bitboard,
     board::Board,
-    consts::{Piece, Side},
-    core_structs::Square, rays::Ray,
+    core_structs::{Piece, Side, Square},
+    rays::Ray,
 };
 extern crate rand;
 use once_cell::sync::Lazy;
@@ -11,8 +11,8 @@ use std::sync::Mutex;
 
 pub struct Attacks;
 impl Attacks {
-    pub fn get_pawn_attacks_for_square(square: Square, color: usize) -> Bitboard {
-        ATTACK_TABLES.lock().unwrap().pawn_attacks[color][square.get_value()]
+    pub fn get_pawn_attacks_for_square(square: Square, color: Side) -> Bitboard {
+        ATTACK_TABLES.lock().unwrap().pawn_attacks[color.current()][square.get_value()]
     }
 
     pub fn get_knight_attacks_for_square(square: Square) -> Bitboard {
@@ -86,7 +86,7 @@ impl Attacks {
     pub fn generate_checkers_mask(board: &Board) -> Bitboard {
         let occupancy_mask = board.get_occupancy();
         let square = board.get_piece_mask(Piece::KING, board.side_to_move).ls1b_square();
-        let attacker_color = 1 - board.side_to_move;
+        let attacker_color = board.side_to_move.flipped();
 
         (Attacks::get_bishop_attacks_for_square(square, occupancy_mask)
             & (board.get_piece_mask(Piece::BISHOP, attacker_color)
@@ -95,20 +95,22 @@ impl Attacks {
             | (Attacks::get_rook_attacks_for_square(square, occupancy_mask)
                 & (board.get_piece_mask(Piece::ROOK, attacker_color)
                     | board.get_piece_mask(Piece::QUEEN, attacker_color)))
-            | (Attacks::get_pawn_attacks_for_square(square, 1 - attacker_color)
+            | (Attacks::get_pawn_attacks_for_square(square, board.side_to_move)
                 & board.get_piece_mask(Piece::PAWN, attacker_color))
             | (Attacks::get_king_attacks_for_square(square) & board.get_piece_mask(Piece::KING, attacker_color))
     }
 
     pub fn generate_ortographic_pins_mask(board: &Board) -> Bitboard {
-        let attacker_color = 1-board.side_to_move;
+        let attacker_color = board.side_to_move.flipped();
         let king_square = board.get_king_square(board.side_to_move);
-        let relevant_pieces = board.get_piece_mask(Piece::ROOK, attacker_color) | board.get_piece_mask(Piece::QUEEN, 1-board.side_to_move);
-        let potential_pinners = Attacks::get_rook_attacks_for_square(king_square, board.piece_maps[attacker_color]) & relevant_pieces;
+        let relevant_pieces =
+            board.get_piece_mask(Piece::ROOK, attacker_color) | board.get_piece_mask(Piece::QUEEN, attacker_color);
+        let potential_pinners =
+            Attacks::get_rook_attacks_for_square(king_square, board.get_opponent_occupancy()) & relevant_pieces;
         let mut pin_mask = Bitboard::EMPTY;
         for potential_pinner in potential_pinners {
             let ray = Ray::get_ray(king_square, potential_pinner);
-            if (ray & board.piece_maps[board.side_to_move]).only_one_bit() {
+            if (ray & board.get_allied_occupancy()).only_one_bit() {
                 pin_mask |= ray;
             }
         }
@@ -116,14 +118,16 @@ impl Attacks {
     }
 
     pub fn generate_diagonal_pins_mask(board: &Board) -> Bitboard {
-        let attacker_color = 1-board.side_to_move;
+        let attacker_color = board.side_to_move.flipped();
         let king_square = board.get_king_square(board.side_to_move);
-        let relevant_pieces = board.get_piece_mask(Piece::BISHOP, attacker_color) | board.get_piece_mask(Piece::QUEEN, 1-board.side_to_move);
-        let potential_pinners = Attacks::get_bishop_attacks_for_square(king_square, board.piece_maps[attacker_color]) & relevant_pieces;
+        let relevant_pieces =
+            board.get_piece_mask(Piece::BISHOP, attacker_color) | board.get_piece_mask(Piece::QUEEN, attacker_color);
+        let potential_pinners =
+            Attacks::get_bishop_attacks_for_square(king_square, board.get_opponent_occupancy()) & relevant_pieces;
         let mut pin_mask = Bitboard::EMPTY;
         for potential_pinner in potential_pinners {
             let ray = Ray::get_ray(king_square, potential_pinner);
-            if (ray & board.piece_maps[board.side_to_move]).only_one_bit() {
+            if (ray & board.get_allied_occupancy()).only_one_bit() {
                 pin_mask |= ray;
             }
         }
@@ -166,7 +170,7 @@ impl AttackTables {
             if Bitboard::FILE_H.inverse().and(bb.shift_left(7)).is_not_empty() {
                 attack_map |= bb.shift_left(7).get_value()
             }
-            result[Side::WHITE][square_index] = Bitboard::from_raw(attack_map);
+            result[Side::WHITE.current()][square_index] = Bitboard::from_raw(attack_map);
             attack_map = 0;
             if Bitboard::FILE_A.inverse().and(bb.shift_right(7)).is_not_empty() {
                 attack_map |= bb.shift_right(7).get_value()
@@ -174,7 +178,7 @@ impl AttackTables {
             if Bitboard::FILE_H.inverse().and(bb.shift_right(9)).is_not_empty() {
                 attack_map |= bb.shift_right(9).get_value()
             }
-            result[Side::BLACK][square_index] = Bitboard::from_raw(attack_map);
+            result[Side::BLACK.current()][square_index] = Bitboard::from_raw(attack_map);
             square_index += 1;
         }
         result

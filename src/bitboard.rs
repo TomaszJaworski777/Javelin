@@ -7,14 +7,14 @@ pub struct Bitboard {
     value: u64,
 }
 impl Bitboard {
-    pub const RANK_1: Self = Self::from_raw(0x00000000000000ff);
-    pub const RANK_2: Self = Self::from_raw(0x000000000000ff00);
-    pub const RANK_3: Self = Self::from_raw(0x0000000000ff0000);
-    pub const RANK_4: Self = Self::from_raw(0x00000000ff000000);
-    pub const RANK_5: Self = Self::from_raw(0x000000ff00000000);
-    pub const RANK_6: Self = Self::from_raw(0x0000ff0000000000);
-    pub const RANK_7: Self = Self::from_raw(0x00ff000000000000);
-    pub const RANK_8: Self = Self::from_raw(0xff00000000000000);
+    pub const RANK_1: Self = Self::from_raw(0x00000000000000FF);
+    pub const RANK_2: Self = Self::from_raw(0x000000000000FF00);
+    pub const RANK_3: Self = Self::from_raw(0x0000000000FF0000);
+    pub const RANK_4: Self = Self::from_raw(0x00000000FF000000);
+    pub const RANK_5: Self = Self::from_raw(0x000000FF00000000);
+    pub const RANK_6: Self = Self::from_raw(0x0000FF0000000000);
+    pub const RANK_7: Self = Self::from_raw(0x00FF000000000000);
+    pub const RANK_8: Self = Self::from_raw(0xFF00000000000000);
 
     pub const FILE_A: Self = Self::from_raw(0x0101010101010101);
     pub const FILE_B: Self = Self::from_raw(0x0202020202020202);
@@ -25,7 +25,7 @@ impl Bitboard {
     pub const FILE_G: Self = Self::from_raw(0x4040404040404040);
     pub const FILE_H: Self = Self::from_raw(0x8080808080808080);
 
-    pub const ALL: Self = Self::from_raw(0xffffffffffffffff);
+    pub const FULL: Self = Self::from_raw(0xFFFFFFFFFFFFFFFF);
     pub const EMPTY: Self = Self::from_raw(0);
 
     pub const fn from_raw(value: u64) -> Self {

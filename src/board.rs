@@ -1,25 +1,22 @@
-#![allow(dead_code)]
-
 use crate::{
     attacks::Attacks,
-    bit_ops::{get_bit, set_bit_to_one},
     bitboard::Bitboard,
-    consts::{CastleRights, Piece, Side},
-    core_structs::Square,
+    core_structs::{CastleRights, Move, Piece, Side, Square, BASE_ROOK_POSITIONS},
     zobrist::ZobristKey,
 };
 use colored::*;
 
-pub struct Board { //800 bit
-    pub pieces: [Bitboard; 6],
-    pub piece_maps: [Bitboard; 2],
-    pub castle_rights: u8,
+pub struct Board {
+    //800 bit
+    pieces: [Bitboard; 6],
+    piece_maps: [Bitboard; 2],
+    pub castle_rights: CastleRights,
     pub checkers: Bitboard,
     pub ortographic_pins: Bitboard,
     pub diagonal_pins: Bitboard,
     pub half_moves: u8,
     pub en_passant: Square,
-    pub side_to_move: usize,
+    pub side_to_move: Side,
     pub zobrist: ZobristKey,
 }
 
@@ -28,61 +25,68 @@ impl Board {
         Board {
             pieces: [Bitboard::EMPTY; 6],
             piece_maps: [Bitboard::EMPTY; 2],
-            castle_rights: 0,
+            castle_rights: CastleRights::NULL,
             checkers: Bitboard::EMPTY,
             ortographic_pins: Bitboard::EMPTY,
             diagonal_pins: Bitboard::EMPTY,
             half_moves: 0,
             en_passant: Square::NULL,
-            side_to_move: 0,
+            side_to_move: Side::WHITE,
             zobrist: ZobristKey::NULL,
         }
     }
 
-    pub fn get_piece_mask(&self, piece: usize, side: usize) -> Bitboard {
-        self.pieces[piece - 1] & self.piece_maps[side]
+    pub fn get_piece_mask(&self, piece: usize, side: Side) -> Bitboard {
+        self.pieces[piece - 1] & self.piece_maps[side.current()]
     }
 
     pub fn get_occupancy(&self) -> Bitboard {
         self.piece_maps[0] | self.piece_maps[1]
     }
 
-    pub fn get_king_square(&self, color: usize) -> Square {
+    pub fn get_allied_occupancy(&self) -> Bitboard {
+        self.piece_maps[self.side_to_move.current()]
+    }
+
+    pub fn get_opponent_occupancy(&self) -> Bitboard {
+        self.piece_maps[self.side_to_move.opposite()]
+    }
+
+    pub fn get_king_square(&self, color: Side) -> Square {
         self.get_piece_mask(Piece::KING, color).ls1b_square()
     }
 
-    pub fn get_piece_on_square(&self, square: Square) -> (usize, usize) {
+    pub fn get_piece_on_square(&self, square: Square) -> (usize, Side) {
         for piece_index in 0..6usize {
             if self.pieces[usize::from(piece_index)].get_bit(square) {
                 return (piece_index + 1, self.get_piece_color_on_square(square));
             }
         }
 
-        return (0, 0);
+        return (0, Side::WHITE);
     }
 
-    fn get_piece_color_on_square(&self, square: Square) -> usize {
-        if self.piece_maps[Side::WHITE].get_bit(square) {
+    fn get_piece_color_on_square(&self, square: Square) -> Side {
+        if self.piece_maps[Side::WHITE.current()].get_bit(square) {
             Side::WHITE
         } else {
             Side::BLACK
         }
     }
 
-    pub fn set_piece_on_square(&mut self, square: Square, side: usize, piece: usize) {
+    pub fn set_piece_on_square(&mut self, square: Square, side: Side, piece: usize) {
         self.pieces[piece - 1].set_bit(square);
-        self.piece_maps[side].set_bit(square);
-        self.zobrist.update_piece_hash(piece, side, square)
+        self.piece_maps[side.current()].set_bit(square);
+        self.zobrist.update_piece_hash(piece - 1, side.current(), square)
     }
 
-    pub fn remove_piece_on_square(&mut self, square: Square, side: usize, piece: usize) {
+    pub fn remove_piece_on_square(&mut self, square: Square, side: Side, piece: usize) {
         self.pieces[piece - 1].pop_bit(square);
-        self.piece_maps[side].pop_bit(square);
-        self.zobrist.update_piece_hash(piece, side, square)
+        self.piece_maps[side.current()].pop_bit(square);
+        self.zobrist.update_piece_hash(piece - 1, side.current(), square)
     }
 
-    pub fn is_square_attacked(&self, square: Square, attacker_color: usize) -> bool {
-        let occupancy_mask = self.get_occupancy();
+    pub fn is_square_attacked_extended(&self, square: Square, attacker_color: Side, occupancy_mask: Bitboard) -> bool {
         if (Attacks::get_bishop_attacks_for_square(square, occupancy_mask)
             & (self.get_piece_mask(Piece::BISHOP, attacker_color) | self.get_piece_mask(Piece::QUEEN, attacker_color)))
         .is_not_empty()
@@ -100,7 +104,7 @@ impl Board {
         {
             return true;
         }
-        if (Attacks::get_pawn_attacks_for_square(square, 1 - attacker_color)
+        if (Attacks::get_pawn_attacks_for_square(square, attacker_color.flipped())
             & self.get_piece_mask(Piece::PAWN, attacker_color))
         .is_not_empty()
         {
@@ -114,6 +118,43 @@ impl Board {
         false
     }
 
+    pub fn is_square_attacked(&self, square: Square, attacker_color: Side) -> bool {
+        self.is_square_attacked_extended(square, attacker_color, self.get_occupancy())
+    }
+
+    pub fn any_squares_attacked(&self, squares: Bitboard, attacker_color: Side) -> bool {
+        for square in squares {
+            if self.is_square_attacked(square, attacker_color) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    pub fn make_move( &mut self, _move: Move ) {
+        let from_square = _move.get_from_square();
+        let to_square = _move.get_to_square();
+        //move piece on the board
+        let moving_piece = self.get_piece_on_square(from_square);
+        let target_piece = self.get_piece_on_square(to_square);
+        self.remove_piece_on_square(from_square, moving_piece.1, moving_piece.0);
+        if target_piece.0 != Piece::NONE {
+            self.remove_piece_on_square(from_square, target_piece.1, target_piece.0);
+        }
+        self.set_piece_on_square(to_square, moving_piece.1, moving_piece.0);
+        //handle promotions
+        if _move.is_promotion() {
+
+        } else {
+            
+        }
+        //switch sides
+        //update castle rights
+        //update en-passant
+        //update half-move counter
+        //update pin masks
+    }
+
     pub fn draw_board(&self) {
         let piece_icons: [[&str; 7]; 2] =
             [[" . ", " P ", " N ", " B ", " R ", " Q ", " K "], [" . ", " p ", " n ", " b ", " r ", " q ", " k "]];
@@ -122,23 +163,8 @@ impl Board {
         info.push("FEN: TBA");
         let zobrist = format!("Zobrist Key: {}", self.zobrist.key);
         info.push(zobrist.as_str());
-        let mut castle_rights = "".to_string();
-        if get_bit(self.castle_rights, CastleRights::WHITE_KING) > 0 {
-            castle_rights += "K";
-        }
-        if get_bit(self.castle_rights, CastleRights::WHITE_QUEEN) > 0 {
-            castle_rights += "Q";
-        }
-        if get_bit(self.castle_rights, CastleRights::BLACK_KING) > 0 {
-            castle_rights += "k";
-        }
-        if get_bit(self.castle_rights, CastleRights::BLACK_QUEEN) > 0 {
-            castle_rights += "q";
-        }
-        if castle_rights == "" {
-            castle_rights = "-".to_string();
-        }
-        castle_rights = format!("Castle Rights: {}", castle_rights);
+
+        let castle_rights = format!("Castle Rights: {}", self.castle_rights.to_string());
         info.push(castle_rights.as_str());
         let mut side_sign = "White".to_string();
         if self.side_to_move == Side::BLACK {
@@ -167,9 +193,11 @@ impl Board {
                 if piece_tuple.0 == 0 {
                     result += piece_icons[0][usize::from(piece_tuple.0)];
                 } else if piece_tuple.1 == Side::BLACK {
-                    result += piece_icons[Side::BLACK][usize::from(piece_tuple.0)].blue().to_string().as_str();
+                    result +=
+                        piece_icons[Side::BLACK.current()][usize::from(piece_tuple.0)].blue().to_string().as_str();
                 } else {
-                    result += piece_icons[Side::WHITE][usize::from(piece_tuple.0)].yellow().to_string().as_str();
+                    result +=
+                        piece_icons[Side::WHITE.current()][usize::from(piece_tuple.0)].yellow().to_string().as_str();
                 }
             }
             result += format!("| {}", info[(7 - rank) as usize]).as_str();
@@ -229,19 +257,19 @@ pub fn create_board(fen: &str) -> Board {
     }
 
     if splits[2].contains('K') {
-        set_bit_to_one(&mut board.castle_rights, CastleRights::WHITE_KING);
+        board.castle_rights.set_right(CastleRights::WHITE_KING);
         board.zobrist.update_castle_rights_hash(CastleRights::WHITE_KING as usize);
     }
     if splits[2].contains('Q') {
-        set_bit_to_one(&mut board.castle_rights, CastleRights::WHITE_QUEEN);
+        board.castle_rights.set_right(CastleRights::WHITE_QUEEN);
         board.zobrist.update_castle_rights_hash(CastleRights::WHITE_QUEEN as usize);
     }
     if splits[2].contains('k') {
-        set_bit_to_one(&mut board.castle_rights, CastleRights::BLACK_KING);
+        board.castle_rights.set_right(CastleRights::BLACK_KING);
         board.zobrist.update_castle_rights_hash(CastleRights::BLACK_KING as usize);
     }
     if splits[2].contains('q') {
-        set_bit_to_one(&mut board.castle_rights, CastleRights::BLACK_QUEEN);
+        board.castle_rights.set_right(CastleRights::BLACK_QUEEN);
         board.zobrist.update_castle_rights_hash(CastleRights::BLACK_QUEEN as usize);
     }
 
@@ -255,6 +283,19 @@ pub fn create_board(fen: &str) -> Board {
 
     if splits.len() > 5 {
         board.half_moves = splits[5].parse().unwrap();
+    }
+
+    {
+        let mut base_rooks = BASE_ROOK_POSITIONS.write().unwrap();
+        let mut rooks = board.get_piece_mask(Piece::ROOK, Side::WHITE);
+        base_rooks.queen_side = Square::NULL;
+        base_rooks.king_side = Square::NULL;
+        if rooks.get_value() > 0 {
+            base_rooks.queen_side = rooks.pop_ls1b_square();
+        }
+        if rooks.get_value() > 0 {
+            base_rooks.king_side = rooks.pop_ls1b_square();
+        }
     }
 
     board.checkers = Attacks::generate_checkers_mask(&board);
