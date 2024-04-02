@@ -14,6 +14,6 @@ mod zobrist;
 
 fn main() {
     Attacks::initialize_slider_pieces();
-    //print!("Speed {:.2} Mnps", Perft::test_speed() as f64 / 1000000f64);
-    Perft::perft_test();
+    print!("Speed {:.2} Mnps", Perft::test_speed() as f64 / 1000000f64);
+    //Perft::perft_test();
 }

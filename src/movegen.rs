@@ -54,27 +54,33 @@ fn generate_king_moves(move_list: &mut MoveList, board: &Board) {
 
 fn generate_casting_moves(move_list: &mut MoveList, board: &Board) {
     let king_position = board.get_king_square(board.side_to_move);
+    let side_multiplier = board.side_to_move.current() as u8 * 2;
+    let square_offset = board.side_to_move.current() * 56;
+    let king_side_rook_position = BaseRookPositions::get_king_side() + square_offset;
+    let queen_side_rook_position = BaseRookPositions::get_queen_side() + square_offset;
+    let occupancy = board.get_occupancy();
 
-    let mut process_castle_right = |king_destination: Square, rook_posiiton: Square, move_mask: u16| {
+    // Helper to check if path is clear and not under attack
+    let is_castle_path_clear = |king_destination: Square, rook_position: Square| -> bool {
         let king_ray = Ray::get_ray(king_position, king_destination).include(king_destination);
-        let rook_ray = Ray::get_ray(king_position, rook_posiiton);
-        let is_line_empty = ((king_ray | rook_ray) & board.get_occupancy().exclude(rook_posiiton)).is_empty();
-        if !board.any_squares_attacked(king_ray, board.side_to_move.flipped()) && is_line_empty {
-            move_list.push(Move::create_move(king_position, king_destination, move_mask));
-        }
+        let rook_ray = Ray::get_ray(king_position, rook_position);
+        let is_line_empty = ((king_ray | rook_ray) & occupancy.exclude(rook_position)).is_empty();
+        !board.any_squares_attacked(king_ray, board.side_to_move.flipped()) && is_line_empty
     };
 
-    if board.castle_rights.get_right(CastleRights::WHITE_KING + (board.side_to_move.current() as u8 * 2)) {
-        let king_destination = Square::G1 + (board.side_to_move.current() * 56);
-        let rook_position = BaseRookPositions::get_king_side() + (board.side_to_move.current() * 56);
-        process_castle_right(king_destination, rook_position, Move::KING_CASTLE_MASK);
+    let king_destination = Square::G1 + square_offset;
+    if board.castle_rights.get_right(CastleRights::WHITE_KING + side_multiplier) && 
+       is_castle_path_clear(king_destination, king_side_rook_position) {
+        move_list.push(Move::create_move(king_position, king_destination, Move::KING_CASTLE_MASK));
     }
-    if board.castle_rights.get_right(CastleRights::WHITE_QUEEN + (board.side_to_move.current() as u8 * 2)) {
-        let king_destination = Square::C1 + (board.side_to_move.current() * 56);
-        let rook_position = BaseRookPositions::get_queen_side() + (board.side_to_move.current() * 56);
-        process_castle_right(king_destination, rook_position, Move::QUEEN_CASTLE_MASK);
+
+    let king_destination = Square::C1 + square_offset;
+    if board.castle_rights.get_right(CastleRights::WHITE_QUEEN + side_multiplier) &&
+       is_castle_path_clear(king_destination, queen_side_rook_position) {
+        move_list.push(Move::create_move(king_position, king_destination, Move::QUEEN_CASTLE_MASK));
     }
 }
+
 
 fn generate_pawn_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitboard) {
     let promotion_rank = Bitboard::RANK_7 >> (board.side_to_move.current() * 40) as u32;
