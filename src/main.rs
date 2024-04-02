@@ -15,4 +15,5 @@ mod zobrist;
 fn main() {
     Attacks::initialize_slider_pieces();
     print!("Speed {} nps", Perft::test_speed());
+    //Perft::perft_test();
 }

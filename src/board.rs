@@ -137,6 +137,8 @@ impl Board {
         let moving_piece = self.get_piece_on_square(from_square);
         let target_piece_square = if _move.is_en_passant() { to_square ^ 8 } else { to_square };
         let target_piece = self.get_piece_on_square(target_piece_square);
+        let castle_rights_offset = (self.side_to_move.current() * 2) as u8;
+        let square_value_offset = self.side_to_move.current() * 56;
 
         self.remove_piece_on_square(from_square, moving_piece.1, moving_piece.0);
         if target_piece.0 != Piece::NONE {
@@ -146,7 +148,6 @@ impl Board {
         let destination_piece = if _move.is_promotion() { _move.get_promotion_piece() } else { moving_piece.0 };
         self.set_piece_on_square(to_square, moving_piece.1, destination_piece);
 
-        let castle_rights_offset = (self.side_to_move.current() * 2) as u8;
         let remove_castle_rights = |board: &mut Board| {
             board.castle_rights.remove_right(CastleRights::WHITE_KING + castle_rights_offset);
             board.castle_rights.remove_right(CastleRights::WHITE_QUEEN + castle_rights_offset);
@@ -155,15 +156,15 @@ impl Board {
         };
 
         if _move.is_king_castle() {
-            let rook_position = BaseRookPositions::get_king_side() + (self.side_to_move.current() * 56);
-            let rook_destination = Square::F1 + (self.side_to_move.current() * 56);
+            let rook_position = BaseRookPositions::get_king_side() + square_value_offset;
+            let rook_destination = Square::F1 + square_value_offset;
             self.remove_piece_on_square(rook_position, moving_piece.1, Piece::ROOK);
             self.set_piece_on_square(rook_destination, moving_piece.1, Piece::ROOK);
 
             remove_castle_rights(self);
         } else if _move.is_queen_castle() {
-            let rook_position = BaseRookPositions::get_queen_side() + (self.side_to_move.current() * 56);
-            let rook_destination = Square::D1 + (self.side_to_move.current() * 56);
+            let rook_position = BaseRookPositions::get_queen_side() + square_value_offset;
+            let rook_destination = Square::D1 + square_value_offset;
             self.remove_piece_on_square(rook_position, moving_piece.1, Piece::ROOK);
             self.set_piece_on_square(rook_destination, moving_piece.1, Piece::ROOK);
 
@@ -173,8 +174,8 @@ impl Board {
         if moving_piece.0 == Piece::KING {
             remove_castle_rights(self);
         } else if moving_piece.0 == Piece::ROOK {
-            let king_rook_position = BaseRookPositions::get_king_side() + (self.side_to_move.current() * 56);
-            let queen_rook_position = BaseRookPositions::get_queen_side() + (self.side_to_move.current() * 56);
+            let king_rook_position = BaseRookPositions::get_king_side() + square_value_offset;
+            let queen_rook_position = BaseRookPositions::get_queen_side() + square_value_offset;
 
             if from_square == king_rook_position {
                 self.castle_rights.remove_right(CastleRights::WHITE_KING + castle_rights_offset);
