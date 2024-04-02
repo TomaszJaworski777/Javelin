@@ -16,7 +16,7 @@ pub type MoveList = ArrayVec<Move, 256>;
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct Move {
-    value: u16,
+    pub value: u16,
 }
 impl Move {
     pub const PROMOTION: u16             = 0b1000_000000_000000;
@@ -29,8 +29,6 @@ impl Move {
     pub const KING_CASTLE_MASK: u16      = 0b0010_000000_000000;
     pub const QUEEN_CASTLE_MASK: u16     = 0b0011_000000_000000;
     pub const EN_PASSANT_MASK: u16       = 0b0001_000000_000000;
-
-    pub const NULL: Move = Move { value: 0 };
 
     pub const PAWN_MOVES: [[Bitboard; 64]; 2] = {
         let mut result = [[Bitboard::EMPTY; 64]; 2];
@@ -86,7 +84,7 @@ impl Move {
     }
 
     pub fn is_en_passant(&self) -> bool {
-        self.is_capture() && self.value & 0xF000 == Move::EN_PASSANT_MASK
+        self.is_capture() && self.value & 0xF000 == Move::EN_PASSANT_MASK | Move::CAPTURE_MASK
     }
 
     pub fn is_double_push(&self) -> bool {

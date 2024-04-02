@@ -137,9 +137,10 @@ impl Board {
         let moving_piece = self.get_piece_on_square(from_square);
         let target_piece_square = if _move.is_en_passant() { to_square ^ 8 } else { to_square };
         let target_piece = self.get_piece_on_square(target_piece_square);
+
         self.remove_piece_on_square(from_square, moving_piece.1, moving_piece.0);
         if target_piece.0 != Piece::NONE {
-            self.remove_piece_on_square(from_square, target_piece.1, target_piece.0);
+            self.remove_piece_on_square(target_piece_square, target_piece.1, target_piece.0);
         }
         
         let destination_piece = if _move.is_promotion() { _move.get_promotion_piece() } else { moving_piece.0 };
@@ -175,6 +176,7 @@ impl Board {
         else if moving_piece.0 == Piece::ROOK {
             let king_rook_position = BaseRookPositions::get_king_side() + (self.side_to_move.current() * 56);
             let queen_rook_position = BaseRookPositions::get_queen_side() + (self.side_to_move.current() * 56);
+
             if from_square == king_rook_position {
                 self.castle_rights.remove_right(CastleRights::WHITE_KING + (self.side_to_move.current() * 2) as u8);
                 self.zobrist.update_castle_rights_hash((CastleRights::WHITE_KING + (self.side_to_move.current() * 2) as u8) as usize);
@@ -182,6 +184,19 @@ impl Board {
             else if from_square == queen_rook_position {
                 self.castle_rights.remove_right(CastleRights::WHITE_QUEEN + (self.side_to_move.current() * 2) as u8);
                 self.zobrist.update_castle_rights_hash((CastleRights::WHITE_QUEEN + (self.side_to_move.current() * 2) as u8) as usize);
+            }
+        }
+        if target_piece.0 == Piece::ROOK {
+            let king_rook_position = BaseRookPositions::get_king_side() + (self.side_to_move.opposite() * 56);
+            let queen_rook_position = BaseRookPositions::get_queen_side() + (self.side_to_move.opposite() * 56);
+
+            if to_square == king_rook_position {
+                self.castle_rights.remove_right(CastleRights::WHITE_KING + (self.side_to_move.opposite() * 2) as u8);
+                self.zobrist.update_castle_rights_hash((CastleRights::WHITE_KING + (self.side_to_move.opposite() * 2) as u8) as usize);
+            }
+            else if to_square == queen_rook_position {
+                self.castle_rights.remove_right(CastleRights::WHITE_QUEEN + (self.side_to_move.opposite() * 2) as u8);
+                self.zobrist.update_castle_rights_hash((CastleRights::WHITE_QUEEN + (self.side_to_move.opposite() * 2) as u8) as usize);
             }
         }
 
@@ -207,6 +222,7 @@ impl Board {
         self.diagonal_pins = Attacks::generate_diagonal_pins_mask(&self);
     }
 
+    #[allow(dead_code)]
     pub fn draw_board(&self) {
         let piece_icons: [[&str; 7]; 2] =
             [[" . ", " P ", " N ", " B ", " R ", " Q ", " K "], [" . ", " p ", " n ", " b ", " r ", " q ", " k "]];
@@ -339,14 +355,21 @@ pub fn create_board(fen: &str) -> Board {
 
     {
         let mut base_rooks = BASE_ROOK_POSITIONS.write().unwrap();
-        let mut rooks = board.get_piece_mask(Piece::ROOK, Side::WHITE);
         base_rooks.queen_side = Square::NULL;
         base_rooks.king_side = Square::NULL;
-        if rooks.get_value() > 0 {
-            base_rooks.queen_side = rooks.pop_ls1b_square();
+
+        if false {
+            let mut rooks = board.get_piece_mask(Piece::ROOK, Side::WHITE);
+            if rooks.get_value() > 0 {
+                base_rooks.queen_side = rooks.pop_ls1b_square();
+            }
+            if rooks.get_value() > 0 {
+                base_rooks.king_side = rooks.pop_ls1b_square();
+            }
         }
-        if rooks.get_value() > 0 {
-            base_rooks.king_side = rooks.pop_ls1b_square();
+        else {
+            base_rooks.queen_side = Square::A1;
+            base_rooks.king_side = Square::H1;
         }
     }
 

@@ -1,3 +1,5 @@
+#[allow(dead_code)]
+
 use crate::{
     bitboard::Bitboard,
     board::Board,
@@ -41,11 +43,6 @@ impl Attacks {
         attack_tables.rook_attacks[square.get_value()][occ.get_value() as usize]
     }
 
-    pub fn get_queen_attacks_for_square(square: Square, occupancy: Bitboard) -> Bitboard {
-        Attacks::get_bishop_attacks_for_square(square, occupancy)
-            .or(Attacks::get_rook_attacks_for_square(square, occupancy))
-    }
-
     pub fn initialize_slider_pieces() {
         let mut attack_tables = ATTACK_TABLES.lock().unwrap();
 
@@ -85,7 +82,7 @@ impl Attacks {
 
     pub fn generate_checkers_mask(board: &Board) -> Bitboard {
         let occupancy_mask = board.get_occupancy();
-        let square = board.get_piece_mask(Piece::KING, board.side_to_move).ls1b_square();
+        let square = board.get_king_square(board.side_to_move);
         let attacker_color = board.side_to_move.flipped();
 
         (Attacks::get_bishop_attacks_for_square(square, occupancy_mask)
@@ -503,6 +500,7 @@ fn get_low_ones_random_u64() -> u64 {
             | (rng.gen_range(0..=std::u32::MAX) as u64 & 0xFFFF) << 48)
 }
 
+#[allow(dead_code)]
 pub fn find_magic_number(square: Square, relevent_bit_count: usize, is_bishop: bool) -> u64 {
     let mut occupancies = [Bitboard::EMPTY; 4096];
     let mut attacks = [Bitboard::EMPTY; 4096];
@@ -549,6 +547,7 @@ pub fn find_magic_number(square: Square, relevent_bit_count: usize, is_bishop: b
     }
 }
 
+#[allow(dead_code)]
 pub fn test_magic_number(square: Square, is_bishop: bool) -> bool {
     let mut occupancies = [Bitboard::EMPTY; 4096];
     let mut attacks = [Bitboard::EMPTY; 4096];

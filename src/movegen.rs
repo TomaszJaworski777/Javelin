@@ -20,7 +20,7 @@ impl MoveProvider {
             !board.get_allied_occupancy()
         } else {
             let checker = checkers.ls1b_square();
-            Ray::get_ray(board.get_king_square(board.side_to_move), checker)
+            Ray::get_ray(board.get_king_square(board.side_to_move), checker).include(checker)
         };
 
         generate_pawn_moves(move_list, board, move_mask);
@@ -157,6 +157,11 @@ fn generate_pawn_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitbo
     }
 
     let process_en_passant_capture_pawn = |target: Square, attacker: Square| -> u64 {
+        if (target.get_bit() & move_mask).is_empty() {
+            return 0;
+        } 
+
+        assert_ne!( board.get_king_square(board.side_to_move).get_value(), Square::NULL.get_value() );
         let diagonal_xray = Attacks::get_bishop_attacks_for_square(board.get_king_square(board.side_to_move), board.get_occupancy().exclude(target).exclude(attacker).include(board.en_passant));
         let ortographic_xray = Attacks::get_rook_attacks_for_square(board.get_king_square(board.side_to_move), board.get_occupancy().exclude(target).exclude(attacker).include(board.en_passant));
 
@@ -179,7 +184,7 @@ fn generate_pawn_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitbo
 
     //en passant not pinned
     for en_passant_pawn in agressive_pawns & !agressive_pinned_pawns {
-        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(en_passant_pawn, board.side_to_move) & board.en_passant.get_bit() & move_mask;
+        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(en_passant_pawn, board.side_to_move) & board.en_passant.get_bit();
         let attacked_pawn = board.en_passant ^ 8;
         let adjusted_move_mask = Bitboard::from_raw(pawn_attack_mask.get_value() * process_en_passant_capture_pawn(attacked_pawn, en_passant_pawn));
         populate_pawn_moves(move_list, en_passant_pawn, adjusted_move_mask, Move::CAPTURE_MASK | Move::EN_PASSANT_MASK);
@@ -187,7 +192,7 @@ fn generate_pawn_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitbo
 
     //en passant pinned
     for en_passant_pawn in agressive_pinned_pawns {
-        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(en_passant_pawn, board.side_to_move) & board.en_passant.get_bit() & move_mask & board.diagonal_pins;
+        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(en_passant_pawn, board.side_to_move) & board.en_passant.get_bit() & board.diagonal_pins;
         let attacked_pawn = board.en_passant ^ 8;
         let adjusted_move_mask = Bitboard::from_raw(pawn_attack_mask.get_value() * process_en_passant_capture_pawn(attacked_pawn, en_passant_pawn));
         populate_pawn_moves(move_list, en_passant_pawn, adjusted_move_mask, Move::CAPTURE_MASK | Move::EN_PASSANT_MASK);
