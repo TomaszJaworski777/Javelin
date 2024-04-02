@@ -16,7 +16,7 @@ impl Perft {
 
         if log {
             print!("-----------------------------------------------------------\n");
-            print!("  Perft ended! Nodes: {}, Duration: {}, Nps: {}\n", nodes, duration, nodes_per_second);
+            print!("  Perft ended! {} nodes, {}s, {:.2} Mnps\n", nodes, duration, nodes_per_second as f64 / 1000000f64);
             print!("-----------------------------------------------------------\n");
         }
 
@@ -102,14 +102,14 @@ impl Perft {
         let board = create_board("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
         let mut node_result = 0u64;
         let mut duration = 0f64;
-        for _ in 0..6 {
+        for _ in 0..5 {
             let timer = Instant::now();
             node_result += Perft::execute(&board, 5, false);
             duration += timer.elapsed().as_secs_f64();
         }
 
-        let avg_nodes = node_result / 6;
-        let avg_time = duration / 6f64;
+        let avg_nodes = node_result / 5;
+        let avg_time = duration / 5f64;
 
         (avg_nodes as f64 / avg_time) as u64
     }

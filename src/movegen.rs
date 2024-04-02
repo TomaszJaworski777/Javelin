@@ -36,31 +36,18 @@ impl MoveProvider {
 }
 
 fn generate_king_moves(move_list: &mut MoveList, board: &Board) {
-    let ally_occupancy = board.get_allied_occupancy() & !board.get_king_square(board.side_to_move).get_bit();
     let king_square = board.get_king_square(board.side_to_move);
-    let king_moves_mask = Attacks::get_king_attacks_for_square(king_square) & !ally_occupancy;
+    let king_moves = Attacks::get_king_attacks_for_square(king_square);
+    let occupnacy_mask = board.get_occupancy().exclude(king_square);
+    let opponent_occupancy = board.get_opponent_occupancy();
+    let king_move_mask = king_moves & !board.get_allied_occupancy();
     //can prune obviously illegal moves prior to this loop (king in check by slider piece can cut potential escape squares)
 
-    let quiet_moves = king_moves_mask & !board.get_occupancy();
-    let captures = king_moves_mask & board.get_opponent_occupancy();
-
-    for king_move in quiet_moves {
-        if !board.is_square_attacked_extended(
-            king_move,
-            board.side_to_move.flipped(),
-            board.get_occupancy().exclude(king_square),
-        ) {
-            move_list.push(Move::create_move(king_square, king_move, 0));
-        }
-    }
-
-    for king_move in captures {
-        if !board.is_square_attacked_extended(
-            king_move,
-            board.side_to_move.flipped(),
-            board.get_occupancy().exclude(king_square),
-        ) {
-            move_list.push(Move::create_move(king_square, king_move, Move::CAPTURE_MASK));
+    for king_move in king_move_mask {
+        if !board.is_square_attacked_extended(king_move,board.side_to_move.flipped(), occupnacy_mask) {
+            let is_capture = opponent_occupancy.get_bit(king_move);
+            let move_mask = if is_capture { Move::CAPTURE_MASK } else { 0 };
+            move_list.push(Move::create_move(king_square, king_move, move_mask));
         }
     }
 }
