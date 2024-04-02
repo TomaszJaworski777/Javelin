@@ -10,9 +10,6 @@ lto = true
 opt-level = 3
 codegen-units = 1
 
-[build]
-rustflags = ["-C", "target-cpu=native", "-C", "vectorize-loops", "-C", "vectorize-slp"]
-
 [dependencies]
 colored = "*"
 rand = "0.8"

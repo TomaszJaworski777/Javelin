@@ -87,31 +87,20 @@ impl Board {
     }
 
     pub fn is_square_attacked_extended(&self, square: Square, attacker_color: Side, occupancy_mask: Bitboard) -> bool {
-        if (Attacks::get_bishop_attacks_for_square(square, occupancy_mask)
-            & (self.get_piece_mask(Piece::BISHOP, attacker_color) | self.get_piece_mask(Piece::QUEEN, attacker_color)))
-        .is_not_empty()
-        {
-            return true;
-        }
-        if (Attacks::get_knight_attacks_for_square(square) & self.get_piece_mask(Piece::KNIGHT, attacker_color))
+        let bishop_queen_mask =
+            self.get_piece_mask(Piece::BISHOP, attacker_color) | self.get_piece_mask(Piece::QUEEN, attacker_color);
+        let rook_queen_mask =
+            self.get_piece_mask(Piece::ROOK, attacker_color) | self.get_piece_mask(Piece::QUEEN, attacker_color);
+
+        if (Attacks::get_bishop_attacks_for_square(square, occupancy_mask) & bishop_queen_mask).is_not_empty()
+            || (Attacks::get_knight_attacks_for_square(square) & self.get_piece_mask(Piece::KNIGHT, attacker_color))
+                .is_not_empty()
+            || (Attacks::get_rook_attacks_for_square(square, occupancy_mask) & rook_queen_mask).is_not_empty()
+            || (Attacks::get_pawn_attacks_for_square(square, attacker_color.flipped())
+                & self.get_piece_mask(Piece::PAWN, attacker_color))
             .is_not_empty()
-        {
-            return true;
-        }
-        if (Attacks::get_rook_attacks_for_square(square, occupancy_mask)
-            & (self.get_piece_mask(Piece::ROOK, attacker_color) | self.get_piece_mask(Piece::QUEEN, attacker_color)))
-        .is_not_empty()
-        {
-            return true;
-        }
-        if (Attacks::get_pawn_attacks_for_square(square, attacker_color.flipped())
-            & self.get_piece_mask(Piece::PAWN, attacker_color))
-        .is_not_empty()
-        {
-            return true;
-        }
-        if (Attacks::get_king_attacks_for_square(square) & self.get_piece_mask(Piece::KING, attacker_color))
-            .is_not_empty()
+            || (Attacks::get_king_attacks_for_square(square) & self.get_piece_mask(Piece::KING, attacker_color))
+                .is_not_empty()
         {
             return true;
         }
@@ -179,14 +168,10 @@ impl Board {
 
             if from_square == king_rook_position {
                 self.castle_rights.remove_right(CastleRights::WHITE_KING + castle_rights_offset);
-                self.zobrist.update_castle_rights_hash(
-                    (CastleRights::WHITE_KING + castle_rights_offset) as usize,
-                );
+                self.zobrist.update_castle_rights_hash((CastleRights::WHITE_KING + castle_rights_offset) as usize);
             } else if from_square == queen_rook_position {
                 self.castle_rights.remove_right(CastleRights::WHITE_QUEEN + castle_rights_offset);
-                self.zobrist.update_castle_rights_hash(
-                    (CastleRights::WHITE_QUEEN + castle_rights_offset) as usize,
-                );
+                self.zobrist.update_castle_rights_hash((CastleRights::WHITE_QUEEN + castle_rights_offset) as usize);
             }
         }
         if target_piece.0 == Piece::ROOK {
