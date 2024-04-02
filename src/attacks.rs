@@ -1,5 +1,4 @@
 #[allow(dead_code)]
-
 use crate::{
     bitboard::Bitboard,
     board::Board,

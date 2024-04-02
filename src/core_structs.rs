@@ -1,8 +1,8 @@
+use arrayvec::ArrayVec;
+use once_cell::sync::Lazy;
 use std::ops::Add;
 use std::ops::BitXor;
 use std::sync::RwLock;
-use arrayvec::ArrayVec;
-use once_cell::sync::Lazy;
 
 use crate::bit_ops::get_bit;
 use crate::bit_ops::set_bit_to_one;
@@ -19,16 +19,16 @@ pub struct Move {
     pub value: u16,
 }
 impl Move {
-    pub const PROMOTION: u16             = 0b1000_000000_000000;
+    pub const PROMOTION: u16 = 0b1000_000000_000000;
     pub const PROMOTION_KNIGHT_MASK: u16 = 0b1000_000000_000000;
     pub const PROMOTION_BISHOP_MASK: u16 = 0b1001_000000_000000;
-    pub const PROMOTION_ROOK_MASK: u16   = 0b1010_000000_000000;
-    pub const PROMOTION_QUEEN_MASK: u16  = 0b1011_000000_000000;
-    pub const CAPTURE_MASK: u16          = 0b0100_000000_000000;
-    pub const DOUBLE_PUSH_MASK: u16      = 0b0001_000000_000000;
-    pub const KING_CASTLE_MASK: u16      = 0b0010_000000_000000;
-    pub const QUEEN_CASTLE_MASK: u16     = 0b0011_000000_000000;
-    pub const EN_PASSANT_MASK: u16       = 0b0001_000000_000000;
+    pub const PROMOTION_ROOK_MASK: u16 = 0b1010_000000_000000;
+    pub const PROMOTION_QUEEN_MASK: u16 = 0b1011_000000_000000;
+    pub const CAPTURE_MASK: u16 = 0b0100_000000_000000;
+    pub const DOUBLE_PUSH_MASK: u16 = 0b0001_000000_000000;
+    pub const KING_CASTLE_MASK: u16 = 0b0010_000000_000000;
+    pub const QUEEN_CASTLE_MASK: u16 = 0b0011_000000_000000;
+    pub const EN_PASSANT_MASK: u16 = 0b0001_000000_000000;
 
     pub const PAWN_MOVES: [[Bitboard; 64]; 2] = {
         let mut result = [[Bitboard::EMPTY; 64]; 2];
@@ -40,8 +40,7 @@ impl Move {
                 let mut value = 0;
                 if side == 0 {
                     value |= square.get_bit().shift_left(8).get_value();
-                }
-                else {
+                } else {
                     value |= square.get_bit().shift_right(8).get_value();
                 }
                 result[side][square_index] = Bitboard::from_raw(value);
@@ -105,7 +104,7 @@ impl Move {
             self.get_from_square().to_string(),
             self.get_to_square().to_string(),
             if (self.value & Move::PROMOTION_KNIGHT_MASK) > 0 {
-                ["n", "b", "r", "q"][self.get_promotion_piece()-2]
+                ["n", "b", "r", "q"][self.get_promotion_piece() - 2]
             } else {
                 ""
             }
@@ -295,7 +294,7 @@ impl BaseRookPositions {
 
 #[derive(Copy, Clone)]
 pub struct CastleRights {
-    value: u8
+    value: u8,
 }
 impl CastleRights {
     pub const WHITE_KING: u8 = 0;
@@ -304,11 +303,11 @@ impl CastleRights {
     pub const BLACK_QUEEN: u8 = 3;
     pub const NULL: Self = Self { value: 0 };
 
-    pub fn set_right(&mut self, right: u8){
+    pub fn set_right(&mut self, right: u8) {
         set_bit_to_one(&mut self.value, right);
     }
 
-    pub fn remove_right(&mut self, right: u8){
+    pub fn remove_right(&mut self, right: u8) {
         set_bit_to_zero(&mut self.value, right);
     }
 
@@ -316,7 +315,7 @@ impl CastleRights {
         get_bit(self.value, right) > 0
     }
 
-    pub fn to_string(&self) -> String{
+    pub fn to_string(&self) -> String {
         let mut rights = "".to_string();
         if self.get_right(CastleRights::WHITE_KING) {
             rights += "K";

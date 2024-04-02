@@ -131,7 +131,7 @@ impl Board {
         return false;
     }
 
-    pub fn make_move( &mut self, _move: Move ) {
+    pub fn make_move(&mut self, _move: Move) {
         let from_square = _move.get_from_square();
         let to_square = _move.get_to_square();
         let moving_piece = self.get_piece_on_square(from_square);
@@ -142,15 +142,16 @@ impl Board {
         if target_piece.0 != Piece::NONE {
             self.remove_piece_on_square(target_piece_square, target_piece.1, target_piece.0);
         }
-        
+
         let destination_piece = if _move.is_promotion() { _move.get_promotion_piece() } else { moving_piece.0 };
         self.set_piece_on_square(to_square, moving_piece.1, destination_piece);
 
-        let remove_castle_rights = |board: &mut Board|{
-            board.castle_rights.remove_right(CastleRights::WHITE_KING + (board.side_to_move.current() * 2) as u8);
-            board.castle_rights.remove_right(CastleRights::WHITE_QUEEN + (board.side_to_move.current() * 2) as u8);
-            board.zobrist.update_castle_rights_hash((CastleRights::WHITE_KING + (board.side_to_move.current() * 2) as u8) as usize);
-            board.zobrist.update_castle_rights_hash((CastleRights::WHITE_QUEEN + (board.side_to_move.current() * 2) as u8) as usize);
+        let castle_rights_offset = (self.side_to_move.current() * 2) as u8;
+        let remove_castle_rights = |board: &mut Board| {
+            board.castle_rights.remove_right(CastleRights::WHITE_KING + castle_rights_offset);
+            board.castle_rights.remove_right(CastleRights::WHITE_QUEEN + castle_rights_offset);
+            board.zobrist.update_castle_rights_hash((CastleRights::WHITE_KING + castle_rights_offset) as usize);
+            board.zobrist.update_castle_rights_hash((CastleRights::WHITE_QUEEN + castle_rights_offset) as usize);
         };
 
         if _move.is_king_castle() {
@@ -160,8 +161,7 @@ impl Board {
             self.set_piece_on_square(rook_destination, moving_piece.1, Piece::ROOK);
 
             remove_castle_rights(self);
-        }
-        else if _move.is_queen_castle() {
+        } else if _move.is_queen_castle() {
             let rook_position = BaseRookPositions::get_queen_side() + (self.side_to_move.current() * 56);
             let rook_destination = Square::D1 + (self.side_to_move.current() * 56);
             self.remove_piece_on_square(rook_position, moving_piece.1, Piece::ROOK);
@@ -172,18 +172,20 @@ impl Board {
 
         if moving_piece.0 == Piece::KING {
             remove_castle_rights(self);
-        }
-        else if moving_piece.0 == Piece::ROOK {
+        } else if moving_piece.0 == Piece::ROOK {
             let king_rook_position = BaseRookPositions::get_king_side() + (self.side_to_move.current() * 56);
             let queen_rook_position = BaseRookPositions::get_queen_side() + (self.side_to_move.current() * 56);
 
             if from_square == king_rook_position {
-                self.castle_rights.remove_right(CastleRights::WHITE_KING + (self.side_to_move.current() * 2) as u8);
-                self.zobrist.update_castle_rights_hash((CastleRights::WHITE_KING + (self.side_to_move.current() * 2) as u8) as usize);
-            }
-            else if from_square == queen_rook_position {
-                self.castle_rights.remove_right(CastleRights::WHITE_QUEEN + (self.side_to_move.current() * 2) as u8);
-                self.zobrist.update_castle_rights_hash((CastleRights::WHITE_QUEEN + (self.side_to_move.current() * 2) as u8) as usize);
+                self.castle_rights.remove_right(CastleRights::WHITE_KING + castle_rights_offset);
+                self.zobrist.update_castle_rights_hash(
+                    (CastleRights::WHITE_KING + castle_rights_offset) as usize,
+                );
+            } else if from_square == queen_rook_position {
+                self.castle_rights.remove_right(CastleRights::WHITE_QUEEN + castle_rights_offset);
+                self.zobrist.update_castle_rights_hash(
+                    (CastleRights::WHITE_QUEEN + castle_rights_offset) as usize,
+                );
             }
         }
         if target_piece.0 == Piece::ROOK {
@@ -192,19 +194,21 @@ impl Board {
 
             if to_square == king_rook_position {
                 self.castle_rights.remove_right(CastleRights::WHITE_KING + (self.side_to_move.opposite() * 2) as u8);
-                self.zobrist.update_castle_rights_hash((CastleRights::WHITE_KING + (self.side_to_move.opposite() * 2) as u8) as usize);
-            }
-            else if to_square == queen_rook_position {
+                self.zobrist.update_castle_rights_hash(
+                    (CastleRights::WHITE_KING + (self.side_to_move.opposite() * 2) as u8) as usize,
+                );
+            } else if to_square == queen_rook_position {
                 self.castle_rights.remove_right(CastleRights::WHITE_QUEEN + (self.side_to_move.opposite() * 2) as u8);
-                self.zobrist.update_castle_rights_hash((CastleRights::WHITE_QUEEN + (self.side_to_move.opposite() * 2) as u8) as usize);
+                self.zobrist.update_castle_rights_hash(
+                    (CastleRights::WHITE_QUEEN + (self.side_to_move.opposite() * 2) as u8) as usize,
+                );
             }
         }
 
         if _move.is_double_push() {
             self.en_passant = from_square ^ 24;
             self.zobrist.update_en_passant_hash(self.en_passant);
-        } 
-        else if self.en_passant != Square::NULL {
+        } else if self.en_passant != Square::NULL {
             self.zobrist.update_en_passant_hash(self.en_passant);
             self.en_passant = Square::NULL;
         }
@@ -366,8 +370,7 @@ pub fn create_board(fen: &str) -> Board {
             if rooks.get_value() > 0 {
                 base_rooks.king_side = rooks.pop_ls1b_square();
             }
-        }
-        else {
+        } else {
             base_rooks.queen_side = Square::A1;
             base_rooks.king_side = Square::H1;
         }

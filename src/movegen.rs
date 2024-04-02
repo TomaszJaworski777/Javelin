@@ -1,5 +1,9 @@
 use crate::{
-    attacks::Attacks, bitboard::Bitboard, board::Board, core_structs::{BaseRookPositions, CastleRights, Move, MoveList, Piece, Square}, rays::Ray
+    attacks::Attacks,
+    bitboard::Bitboard,
+    board::Board,
+    core_structs::{BaseRookPositions, CastleRights, Move, MoveList, Piece, Square},
+    rays::Ray,
 };
 
 pub struct MoveProvider;
@@ -41,13 +45,21 @@ fn generate_king_moves(move_list: &mut MoveList, board: &Board) {
     let captures = king_moves_mask & board.get_opponent_occupancy();
 
     for king_move in quiet_moves {
-        if !board.is_square_attacked_extended(king_move, board.side_to_move.flipped(), board.get_occupancy().exclude(king_square)) {
+        if !board.is_square_attacked_extended(
+            king_move,
+            board.side_to_move.flipped(),
+            board.get_occupancy().exclude(king_square),
+        ) {
             move_list.push(Move::create_move(king_square, king_move, 0));
         }
     }
 
     for king_move in captures {
-        if !board.is_square_attacked_extended(king_move, board.side_to_move.flipped(), board.get_occupancy().exclude(king_square)) {
+        if !board.is_square_attacked_extended(
+            king_move,
+            board.side_to_move.flipped(),
+            board.get_occupancy().exclude(king_square),
+        ) {
             move_list.push(Move::create_move(king_square, king_move, Move::CAPTURE_MASK));
         }
     }
@@ -83,26 +95,30 @@ fn generate_pawn_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitbo
 
     let movable_pawns = pawns & !board.diagonal_pins;
     let movable_pinned_pawns = movable_pawns & board.ortographic_pins;
-    let double_pushable_pawns = movable_pawns & ( Bitboard::RANK_2 << (board.side_to_move.current() * 40) as u32 );
+    let double_pushable_pawns = movable_pawns & (Bitboard::RANK_2 << (board.side_to_move.current() * 40) as u32);
 
     let agressive_pawns = pawns & !board.ortographic_pins;
     let agressive_pinned_pawns = agressive_pawns & board.diagonal_pins;
 
     //normal move, not capture, not pinned, not double push, not promotion
     for not_pinned_pawn in movable_pawns & !double_pushable_pawns & !movable_pinned_pawns & !promotion_rank {
-        let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][not_pinned_pawn.get_value()] & !board.get_opponent_occupancy();
+        let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][not_pinned_pawn.get_value()]
+            & !board.get_opponent_occupancy();
         populate_pawn_moves(move_list, not_pinned_pawn, pawn_move_mask & move_mask, 0);
     }
 
     //normal pinned move, not capture, not double push, not promotion
     for pinned_pawn in movable_pinned_pawns & !double_pushable_pawns & !promotion_rank {
-        let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][pinned_pawn.get_value()] & board.ortographic_pins & !board.get_opponent_occupancy();
+        let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][pinned_pawn.get_value()]
+            & board.ortographic_pins
+            & !board.get_opponent_occupancy();
         populate_pawn_moves(move_list, pinned_pawn, pawn_move_mask & move_mask, 0);
     }
 
     //promotion move, not capture, not pinned
     for promotion_move_pawn in movable_pawns & !movable_pinned_pawns & promotion_rank {
-        let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][promotion_move_pawn.get_value()] & !board.get_opponent_occupancy();
+        let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][promotion_move_pawn.get_value()]
+            & !board.get_opponent_occupancy();
         populate_pawn_promotion_moves(move_list, promotion_move_pawn, pawn_move_mask & move_mask, 0);
     }
 
@@ -111,9 +127,11 @@ fn generate_pawn_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitbo
         if (Square::from_raw(double_push_pawn.get_value() ^ 24).get_bit() & board.get_occupancy()).is_not_empty() {
             continue;
         }
-        let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][double_push_pawn.get_value()] & !board.get_opponent_occupancy();
+        let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][double_push_pawn.get_value()]
+            & !board.get_opponent_occupancy();
         populate_pawn_moves(move_list, double_push_pawn, pawn_move_mask & move_mask, 0);
-        let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][double_push_pawn.get_value() ^ 24] & !board.get_opponent_occupancy();
+        let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][double_push_pawn.get_value() ^ 24]
+            & !board.get_opponent_occupancy();
         populate_pawn_moves(move_list, double_push_pawn, pawn_move_mask & move_mask, Move::DOUBLE_PUSH_MASK);
     }
 
@@ -122,33 +140,43 @@ fn generate_pawn_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitbo
         if ((double_push_pawn ^ 24).get_bit() & board.get_occupancy()).is_not_empty() {
             continue;
         }
-        let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][double_push_pawn.get_value()] & board.ortographic_pins & !board.get_opponent_occupancy();
+        let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][double_push_pawn.get_value()]
+            & board.ortographic_pins
+            & !board.get_opponent_occupancy();
         populate_pawn_moves(move_list, double_push_pawn, pawn_move_mask & move_mask, 0);
-        let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][double_push_pawn.get_value() ^ 24] & board.ortographic_pins & !board.get_opponent_occupancy();
+        let pawn_move_mask = Move::PAWN_MOVES[board.side_to_move.current()][double_push_pawn.get_value() ^ 24]
+            & board.ortographic_pins
+            & !board.get_opponent_occupancy();
         populate_pawn_moves(move_list, double_push_pawn, pawn_move_mask & move_mask, Move::DOUBLE_PUSH_MASK);
     }
 
     //capture, not pinned, not promotion
     for not_pinned_capture in agressive_pawns & !agressive_pinned_pawns & !promotion_rank {
-        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(not_pinned_capture, board.side_to_move) & board.get_opponent_occupancy();
+        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(not_pinned_capture, board.side_to_move)
+            & board.get_opponent_occupancy();
         populate_pawn_moves(move_list, not_pinned_capture, pawn_attack_mask & move_mask, Move::CAPTURE_MASK);
     }
 
     //capture, pinned, not promotion
     for pinned_capture in agressive_pinned_pawns & !promotion_rank {
-        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(pinned_capture, board.side_to_move) & board.get_opponent_occupancy() & board.diagonal_pins;
+        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(pinned_capture, board.side_to_move)
+            & board.get_opponent_occupancy()
+            & board.diagonal_pins;
         populate_pawn_moves(move_list, pinned_capture, pawn_attack_mask & move_mask, Move::CAPTURE_MASK);
     }
 
     //capture, not pinned, promotion
     for not_pinned_capture in agressive_pawns & !agressive_pinned_pawns & promotion_rank {
-        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(not_pinned_capture, board.side_to_move) & board.get_opponent_occupancy();
+        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(not_pinned_capture, board.side_to_move)
+            & board.get_opponent_occupancy();
         populate_pawn_promotion_moves(move_list, not_pinned_capture, pawn_attack_mask & move_mask, Move::CAPTURE_MASK);
     }
 
     //capture, pinned, promotion
     for pinned_capture in agressive_pinned_pawns & promotion_rank {
-        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(pinned_capture, board.side_to_move) & board.get_opponent_occupancy() & board.diagonal_pins;
+        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(pinned_capture, board.side_to_move)
+            & board.get_opponent_occupancy()
+            & board.diagonal_pins;
         populate_pawn_promotion_moves(move_list, pinned_capture, pawn_attack_mask & move_mask, Move::CAPTURE_MASK);
     }
 
@@ -159,22 +187,30 @@ fn generate_pawn_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitbo
     let process_en_passant_capture_pawn = |target: Square, attacker: Square| -> u64 {
         if (target.get_bit() & move_mask).is_empty() {
             return 0;
-        } 
+        }
 
-        assert_ne!( board.get_king_square(board.side_to_move).get_value(), Square::NULL.get_value() );
-        let diagonal_xray = Attacks::get_bishop_attacks_for_square(board.get_king_square(board.side_to_move), board.get_occupancy().exclude(target).exclude(attacker).include(board.en_passant));
-        let ortographic_xray = Attacks::get_rook_attacks_for_square(board.get_king_square(board.side_to_move), board.get_occupancy().exclude(target).exclude(attacker).include(board.en_passant));
+        assert_ne!(board.get_king_square(board.side_to_move).get_value(), Square::NULL.get_value());
+        let diagonal_xray = Attacks::get_bishop_attacks_for_square(
+            board.get_king_square(board.side_to_move),
+            board.get_occupancy().exclude(target).exclude(attacker).include(board.en_passant),
+        );
+        let ortographic_xray = Attacks::get_rook_attacks_for_square(
+            board.get_king_square(board.side_to_move),
+            board.get_occupancy().exclude(target).exclude(attacker).include(board.en_passant),
+        );
 
         if ((diagonal_xray | ortographic_xray) & target.get_bit()).is_empty() {
             return 1;
         }
-        
-        let mut piece_mask = board.get_piece_mask(Piece::BISHOP, board.side_to_move.flipped()) |  board.get_piece_mask(Piece::QUEEN, board.side_to_move.flipped());
+
+        let mut piece_mask = board.get_piece_mask(Piece::BISHOP, board.side_to_move.flipped())
+            | board.get_piece_mask(Piece::QUEEN, board.side_to_move.flipped());
         if (diagonal_xray & target.get_bit()).is_not_empty() && (diagonal_xray & piece_mask).is_not_empty() {
             return 0;
         }
-        
-        piece_mask = board.get_piece_mask(Piece::ROOK, board.side_to_move.flipped()) |  board.get_piece_mask(Piece::QUEEN, board.side_to_move.flipped());
+
+        piece_mask = board.get_piece_mask(Piece::ROOK, board.side_to_move.flipped())
+            | board.get_piece_mask(Piece::QUEEN, board.side_to_move.flipped());
         if (ortographic_xray & target.get_bit()).is_not_empty() && (ortographic_xray & piece_mask).is_not_empty() {
             return 0;
         }
@@ -184,17 +220,24 @@ fn generate_pawn_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitbo
 
     //en passant not pinned
     for en_passant_pawn in agressive_pawns & !agressive_pinned_pawns {
-        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(en_passant_pawn, board.side_to_move) & board.en_passant.get_bit();
+        let pawn_attack_mask =
+            Attacks::get_pawn_attacks_for_square(en_passant_pawn, board.side_to_move) & board.en_passant.get_bit();
         let attacked_pawn = board.en_passant ^ 8;
-        let adjusted_move_mask = Bitboard::from_raw(pawn_attack_mask.get_value() * process_en_passant_capture_pawn(attacked_pawn, en_passant_pawn));
+        let adjusted_move_mask = Bitboard::from_raw(
+            pawn_attack_mask.get_value() * process_en_passant_capture_pawn(attacked_pawn, en_passant_pawn),
+        );
         populate_pawn_moves(move_list, en_passant_pawn, adjusted_move_mask, Move::CAPTURE_MASK | Move::EN_PASSANT_MASK);
     }
 
     //en passant pinned
     for en_passant_pawn in agressive_pinned_pawns {
-        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(en_passant_pawn, board.side_to_move) & board.en_passant.get_bit() & board.diagonal_pins;
+        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(en_passant_pawn, board.side_to_move)
+            & board.en_passant.get_bit()
+            & board.diagonal_pins;
         let attacked_pawn = board.en_passant ^ 8;
-        let adjusted_move_mask = Bitboard::from_raw(pawn_attack_mask.get_value() * process_en_passant_capture_pawn(attacked_pawn, en_passant_pawn));
+        let adjusted_move_mask = Bitboard::from_raw(
+            pawn_attack_mask.get_value() * process_en_passant_capture_pawn(attacked_pawn, en_passant_pawn),
+        );
         populate_pawn_moves(move_list, en_passant_pawn, adjusted_move_mask, Move::CAPTURE_MASK | Move::EN_PASSANT_MASK);
     }
 }
@@ -208,7 +251,8 @@ fn generate_knight_moves(move_list: &mut MoveList, board: &Board, move_mask: Bit
 }
 
 fn generate_bishop_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitboard) {
-    let piece_mask = board.get_piece_mask(Piece::BISHOP, board.side_to_move) | board.get_piece_mask(Piece::QUEEN, board.side_to_move);
+    let piece_mask = board.get_piece_mask(Piece::BISHOP, board.side_to_move)
+        | board.get_piece_mask(Piece::QUEEN, board.side_to_move);
     let movable_bishops = piece_mask & !board.ortographic_pins;
     let pinned_bishops = movable_bishops & board.diagonal_pins;
     for bishop_square in movable_bishops & !pinned_bishops {
@@ -216,13 +260,16 @@ fn generate_bishop_moves(move_list: &mut MoveList, board: &Board, move_mask: Bit
         populate_piece_moves(move_list, board, bishop_square, bishop_attacks);
     }
     for bishop_square in pinned_bishops {
-        let bishop_attacks = Attacks::get_bishop_attacks_for_square(bishop_square, board.get_occupancy()) & move_mask & board.diagonal_pins;
+        let bishop_attacks = Attacks::get_bishop_attacks_for_square(bishop_square, board.get_occupancy())
+            & move_mask
+            & board.diagonal_pins;
         populate_piece_moves(move_list, board, bishop_square, bishop_attacks);
     }
 }
 
 fn generate_rooks_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitboard) {
-    let piece_mask = board.get_piece_mask(Piece::ROOK, board.side_to_move) | board.get_piece_mask(Piece::QUEEN, board.side_to_move);
+    let piece_mask =
+        board.get_piece_mask(Piece::ROOK, board.side_to_move) | board.get_piece_mask(Piece::QUEEN, board.side_to_move);
     let movable_rooks = piece_mask & !board.diagonal_pins;
     let pinned_rooks = movable_rooks & board.ortographic_pins;
     for rook_square in movable_rooks & !pinned_rooks {
@@ -230,12 +277,14 @@ fn generate_rooks_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitb
         populate_piece_moves(move_list, board, rook_square, bishop_attacks);
     }
     for rook_square in pinned_rooks {
-        let bishop_attacks = Attacks::get_rook_attacks_for_square(rook_square, board.get_occupancy()) & move_mask & board.ortographic_pins;
+        let bishop_attacks = Attacks::get_rook_attacks_for_square(rook_square, board.get_occupancy())
+            & move_mask
+            & board.ortographic_pins;
         populate_piece_moves(move_list, board, rook_square, bishop_attacks);
     }
 }
 
-fn populate_pawn_promotion_moves(move_list: &mut MoveList, piece_position: Square, moves: Bitboard, move_masks: u16){
+fn populate_pawn_promotion_moves(move_list: &mut MoveList, piece_position: Square, moves: Bitboard, move_masks: u16) {
     for pawn_move in moves {
         move_list.push(Move::create_move(piece_position, pawn_move, Move::PROMOTION_KNIGHT_MASK | move_masks));
         move_list.push(Move::create_move(piece_position, pawn_move, Move::PROMOTION_BISHOP_MASK | move_masks));
@@ -244,13 +293,13 @@ fn populate_pawn_promotion_moves(move_list: &mut MoveList, piece_position: Squar
     }
 }
 
-fn populate_pawn_moves(move_list: &mut MoveList, piece_position: Square, moves: Bitboard, move_masks: u16){
+fn populate_pawn_moves(move_list: &mut MoveList, piece_position: Square, moves: Bitboard, move_masks: u16) {
     for pawn_move in moves {
         move_list.push(Move::create_move(piece_position, pawn_move, move_masks));
     }
 }
 
-fn populate_piece_moves(move_list: &mut MoveList, board: &Board, piece_position: Square, moves: Bitboard){
+fn populate_piece_moves(move_list: &mut MoveList, board: &Board, piece_position: Square, moves: Bitboard) {
     let quiet_moves = moves & !board.get_occupancy();
     let captures = moves & board.get_opponent_occupancy();
 
