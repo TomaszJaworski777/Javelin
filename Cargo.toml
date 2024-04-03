@@ -10,6 +10,10 @@ lto = true
 opt-level = 3
 codegen-units = 1
 
+[profile.linux-debug]
+inherits = "release"
+debug = true
+
 [dependencies]
 colored = "*"
 rand = "0.8"
