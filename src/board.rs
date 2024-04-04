@@ -86,6 +86,10 @@ impl Board {
         self.zobrist.update_piece_hash(piece - 1, side.current(), square)
     }
 
+    pub fn is_in_check(&self) -> bool {
+        self.checkers.is_not_empty()
+    }
+
     pub fn is_square_attacked_extended(&self, square: Square, attacker_color: Side, occupancy_mask: Bitboard) -> bool {
         let bishop_queen_mask =
             self.get_piece_mask(Piece::BISHOP, attacker_color) | self.get_piece_mask(Piece::QUEEN, attacker_color);
@@ -234,7 +238,8 @@ impl Board {
         info.push(en_passant.as_str());
         let half_moves = format!("Half Moves: {}", self.half_moves);
         info.push(half_moves.as_str());
-        info.push("");
+        let in_check = format!("In Check: {}", self.is_in_check());
+        info.push(in_check.as_str());
         info.push("");
 
         let mut result = " ------------------------\n".to_string();
@@ -314,6 +319,11 @@ pub fn create_board(fen: &str) -> Board {
         board.zobrist.update_side_to_move_hash();
     }
 
+    if board.is_square_attacked(board.get_king_square(board.side_to_move.flipped()), board.side_to_move) {
+        print!("Illegal position!\n");
+        return Board::new();
+    }
+
     if splits[2].contains('K') {
         board.castle_rights.set_right(CastleRights::WHITE_KING);
         board.zobrist.update_castle_rights_hash(CastleRights::WHITE_KING as usize);
@@ -348,7 +358,7 @@ pub fn create_board(fen: &str) -> Board {
         base_rooks.queen_side = Square::NULL;
         base_rooks.king_side = Square::NULL;
 
-        if false {
+        if false { //for chess960 that are not implemented yet
             let mut rooks = board.get_piece_mask(Piece::ROOK, Side::WHITE);
             if rooks.get_value() > 0 {
                 base_rooks.queen_side = rooks.pop_ls1b_square();

@@ -1,6 +1,6 @@
 use attacks::Attacks;
-
-use crate::perft::Perft;
+use board::create_board;
+use perft::Perft;
 
 mod attacks;
 mod bit_ops;
@@ -11,9 +11,13 @@ mod movegen;
 mod perft;
 mod rays;
 mod zobrist;
+mod mcts;
+mod eval;
 
 fn main() {
     Attacks::initialize_slider_pieces();
-    //print!("Speed {:.2} Mnps", Perft::test_speed() as f64 / 1000000f64);
+    let mut board = create_board("3r4/8/8/3k4/5b2/5P2/4RPP1/5BRK w - - 0 1");
+    board.draw_board();
+
     Perft::perft_test();
 }

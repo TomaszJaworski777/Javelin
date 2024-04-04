@@ -29,6 +29,7 @@ impl Move {
     pub const KING_CASTLE_MASK: u16 = 0b0010_000000_000000;
     pub const QUEEN_CASTLE_MASK: u16 = 0b0011_000000_000000;
     pub const EN_PASSANT_MASK: u16 = 0b0001_000000_000000;
+    pub const NULL: Self = Self { value: 0 };
 
     pub const PAWN_MOVES: [[Bitboard; 64]; 2] = {
         let mut result = [[Bitboard::EMPTY; 64]; 2];
@@ -270,6 +271,10 @@ impl Side {
 
     pub const fn flipped(&self) -> Self {
         Self { 0: 1 - self.0 }
+    }
+
+    pub const fn multiplier(&self) -> i32 {
+        (self.0 as i32 * 2) - 1
     }
 
     pub fn mut_flip(&mut self) {
