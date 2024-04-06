@@ -54,10 +54,9 @@ impl Node
     }
 
     pub fn print_node(&self, prefix: &str) {
-        let move_str = if self._move == Move::NULL { "root".to_string() } else { self._move.to_string() };
-        println!("{} {}. {} Q({:.2}%) N({}) P({:.2}%)",
+        let move_str = if self._move == Move::NULL { "root".to_string() } else { format!("{}. {}", self.index, self._move.to_string()) };
+        println!("{}{} Q({:.2}%) N({}) P({:.2}%)",
             prefix,
-            self.index,
             move_str,
             self.avg_value() * 100.0,
             self.visit_count,
@@ -117,14 +116,8 @@ impl SearchTree {
         let new_prefix = if last { "    ".to_string() } else { "│   ".to_string() };
         let connector = if last { "└─> " } else { "├─> " };
 
-        if is_root {
-            println!("root Q({:.2}%) N({}) P({:.2}%)",
-                     node.avg_value() * 100.0,
-                     node.visit_count,
-                     node.policy_value * 100.0);
-        } else {
-            node.print_node(&(prefix.clone() + connector));
-        }
+        let prefix_string = prefix.clone() + connector;
+        node.print_node(if is_root { "" } else { prefix_string.as_str() });
 
         if max_depth == 0 {
             return;
