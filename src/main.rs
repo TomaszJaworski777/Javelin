@@ -1,6 +1,7 @@
 use attacks::Attacks;
 use board::create_board;
-use perft::Perft;
+use core_structs::{Piece, Side};
+use mcts::Search;
 
 mod attacks;
 mod bit_ops;
@@ -16,8 +17,10 @@ mod eval;
 
 fn main() {
     Attacks::initialize_slider_pieces();
-    let mut board = create_board("3r4/8/8/3k4/5b2/5P2/4RPP1/5BRK w - - 0 1");
+    let board = create_board("q7/8/8/2p5/1kp5/8/2KPP3/4RN2 w - - 0 1");
     board.draw_board();
 
-    Perft::perft_test();
+    let mut search = Search::new(&board);
+    let result = search.run::<true>();
+    print!("{}\n", result.0.to_string());
 }

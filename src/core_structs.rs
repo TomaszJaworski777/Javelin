@@ -273,10 +273,6 @@ impl Side {
         Self { 0: 1 - self.0 }
     }
 
-    pub const fn multiplier(&self) -> i32 {
-        (self.0 as i32 * 2) - 1
-    }
-
     pub fn mut_flip(&mut self) {
         self.0 = 1 - self.0;
     }

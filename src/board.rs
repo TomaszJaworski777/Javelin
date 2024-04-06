@@ -123,6 +123,14 @@ impl Board {
         }
         return false;
     }
+ 
+    pub fn is_insufficient_material(&self) -> bool {
+        let pawns = self.pieces[0].is_empty();
+        let major_pieces = (self.pieces[3] | self.pieces[4]).is_empty();
+        let white_minor_pieces = (self.get_piece_mask(Piece::KNIGHT, Side::WHITE) | self.get_piece_mask(Piece::BISHOP, Side::WHITE)).pop_count() < 2;
+        let black_minor_pieces = (self.get_piece_mask(Piece::KNIGHT, Side::BLACK) | self.get_piece_mask(Piece::BISHOP, Side::BLACK)).pop_count() < 2;
+        pawns && major_pieces && white_minor_pieces && black_minor_pieces
+    }
 
     pub fn make_move(&mut self, _move: Move) {
         let from_square = _move.get_from_square();
@@ -240,7 +248,8 @@ impl Board {
         info.push(half_moves.as_str());
         let in_check = format!("In Check: {}", self.is_in_check());
         info.push(in_check.as_str());
-        info.push("");
+        let insufficient = format!("Insufficient: {}", self.is_insufficient_material());
+        info.push(insufficient.as_str());
 
         let mut result = " ------------------------\n".to_string();
         for rank in (0..8).rev() {
