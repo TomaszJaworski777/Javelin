@@ -88,22 +88,16 @@ impl SearchTree {
         let mut best_node = &self.0[0];
         let mut best_score = f32::MIN;
 
-        if RAPORT {
-            print!("Selection raport:\n");
-        }
-
         for child_index in best_node.children() {
             let child = &self.0[child_index as usize];
-
-            if RAPORT {
-                child.print_node("  ");
-            }
 
             if child.avg_value() > best_score {
                 best_score = child.avg_value();
                 best_node = &child;
             }
         }
+
+        self.draw_tree_from_root(1);
         best_node
     }
 
@@ -270,11 +264,7 @@ impl Search {
             }
         }
 
-        self.search_tree.draw_tree_from_root(1);
-        self.search_tree.draw_tree_from_node(13, 2);
-        self.search_tree.draw_tree_from_node(327, 2);
-
-        let best_node = self.search_tree.get_best_node::<true>();
+        let best_node = self.search_tree.get_best_node::<false>();
         (best_node._move, best_node.avg_value())
     }
 }
