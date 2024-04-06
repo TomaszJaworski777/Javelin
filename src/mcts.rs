@@ -52,6 +52,18 @@ impl Node
         }
         true
     }
+
+    pub fn print_node(&self, prefix: &str) {
+        let move_str = if self._move == Move::NULL { "root".to_string() } else { self._move.to_string() };
+        println!("{} {}. {} Q({:.2}%) N({}) P({:.2}%)",
+            prefix,
+            self.index,
+            move_str,
+            self.avg_value() * 100.0,
+            self.visit_count,
+            self.policy_value * 100.0
+        );
+    }
 }
 
 struct SearchTree(Vec<Node>);
@@ -85,7 +97,7 @@ impl SearchTree {
             let child = &self.0[child_index as usize];
 
             if RAPORT {
-                print!("    {} Q({:2}%) N({}) P({}) C({})\n", child._move.to_string(), child.avg_value() * 100.0, child.visit_count, child.policy_value, child.children_count);
+                child.print_node("  ");
             }
 
             if child.avg_value() > best_score {
@@ -94,6 +106,48 @@ impl SearchTree {
             }
         }
         best_node
+    }
+
+    pub fn draw_tree(&self, node_index: u32, prefix: String, last: bool, is_root: bool, max_depth: i32) {
+        if max_depth < 0 {
+            return;
+        }
+
+        let node = self.get_node(node_index);
+        let new_prefix = if last { "    ".to_string() } else { "│   ".to_string() };
+        let connector = if last { "└─> " } else { "├─> " };
+
+        if is_root {
+            println!("root Q({:.2}%) N({}) P({:.2}%)",
+                     node.avg_value() * 100.0,
+                     node.visit_count,
+                     node.policy_value * 100.0);
+        } else {
+            node.print_node(&(prefix.clone() + connector));
+        }
+
+        if max_depth == 0 {
+            return;
+        }
+
+        let children = node.children();
+        let children_count = children.end - children.start;
+        for (i, child_index) in children.enumerate() {
+            let is_last_child = i as u32 == children_count - 1;
+            self.draw_tree(child_index, prefix.clone() + if is_root { "" } else { &new_prefix }, is_last_child, false, max_depth - 1);
+        }
+    }
+
+    pub fn draw_tree_from_root(&self, max_depth: i32) {
+        if !self.0.is_empty() {
+            self.draw_tree(0, "".to_string(), false, true, max_depth);
+        }
+    }
+
+    pub fn draw_tree_from_node(&self, node_index: u32, max_depth: i32) {
+        if !self.0.is_empty() {
+            self.draw_tree(node_index, "".to_string(), false, true, max_depth);
+        }
     }
 }
 
@@ -115,11 +169,10 @@ impl Search {
 
         node.first_child_index = self.search_tree.0.len() as u32;
         node.children_count = move_list.len() as u32;
-        node.policy_value = 1.0 / node.children_count as f32;
 
         for _move in move_list {
             let mut new_node = Node::new(_move);
-            new_node.policy_value = 0.25;
+            new_node.policy_value = 1.0 / node.children_count as f32;
             self.search_tree.add_node(&mut new_node);
         }
 
@@ -129,14 +182,14 @@ impl Search {
     fn select(&self, node: &Node) -> Node{
         let mut best_node = self.search_tree.get_node(node.first_child_index);
         let mut best_puct = f32::MIN;
-        let root_node_visits = self.search_tree.get_node(0).visit_count;
+        let puct_expl = 100.0 * (node.visit_count.max(1) as f32).sqrt();
         for current_child_index in node.children() {
             let child_node = self.search_tree.get_node(current_child_index);
             if child_node.is_terminal {
                 continue;
             }
 
-            let current_puct = Search::puct(root_node_visits, child_node, 100.0);
+            let current_puct = child_node.avg_value() + (puct_expl * child_node.policy_value / (1 + child_node.visit_count) as f32);
 
             if current_puct > best_puct {
                 best_node = child_node;
@@ -144,10 +197,6 @@ impl Search {
             }
         }
         best_node
-    }
-
-    fn puct(root_visits: u32, node: Node, c_value: f32) -> f32 {
-        node.avg_value() + node.policy_value * c_value * ((root_visits as f32 + 1.000001).ln()/(node.visit_count as f32 + 0.000001)).sqrt()
     }
 
     fn simulate(&mut self, mut node: Node, current_position: &Board) -> f32 {
@@ -227,6 +276,10 @@ impl Search {
                 break;
             }
         }
+
+        self.search_tree.draw_tree_from_root(1);
+        self.search_tree.draw_tree_from_node(13, 2);
+        self.search_tree.draw_tree_from_node(327, 2);
 
         let best_node = self.search_tree.get_best_node::<true>();
         (best_node._move, best_node.avg_value())
