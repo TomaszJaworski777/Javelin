@@ -12,7 +12,7 @@ impl Evaluation {
             result = -result;
         }
 
-        if board.side_to_move == Side::WHITE { 1.0 - sigmoid(result) } else { sigmoid(result) }
+        if board.side_to_move == Side::WHITE { sigmoid(result) } else { 1.0 - sigmoid(result) }
     }
 }
 

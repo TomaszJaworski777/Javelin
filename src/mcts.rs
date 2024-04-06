@@ -205,7 +205,7 @@ impl Search {
             return score;
         }
 
-        Evaluation::evaluate(&current_position)
+        1.0 - Evaluation::evaluate(&current_position)
     }
 
     fn backpropagate(&mut self, selection_history: &mut SelectionHistory, mut result: f32) {
