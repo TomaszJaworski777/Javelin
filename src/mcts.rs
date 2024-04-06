@@ -97,7 +97,9 @@ impl SearchTree {
             }
         }
 
-        self.draw_tree_from_root(1);
+        if RAPORT {
+            self.draw_tree_from_root(1);
+        }
         best_node
     }
 
@@ -264,7 +266,7 @@ impl Search {
             }
         }
 
-        let best_node = self.search_tree.get_best_node::<false>();
+        let best_node = self.search_tree.get_best_node::<true>();
         (best_node._move, best_node.avg_value())
     }
 }

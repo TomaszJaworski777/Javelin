@@ -17,7 +17,7 @@ mod eval;
 
 fn main() {
     Attacks::initialize_slider_pieces();
-    let board = create_board("r6n/8/8/2p5/1kp5/8/2KPP3/4RN2 w - - 0 1");
+    let board = create_board("q7/8/8/2p5/1kp5/8/2KPP3/4RN2 w - - 0 1");
     board.draw_board();
 
     let mut search = Search::new(&board);
