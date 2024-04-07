@@ -1,4 +1,6 @@
 use std::ops::{Index, IndexMut};
+use crate::{board::Board, core_structs::Side};
+
 use super::node::Node;
 
 pub struct SearchTree(Vec<Node>);
@@ -31,19 +33,21 @@ impl SearchTree {
         best_node
     }
 
-    pub fn draw_tree_from_root(&self, max_depth: i32) {
+    #[allow(unused)]
+    pub fn draw_tree_from_root(&self, max_depth: i32, board: &Board) {
         if !self.0.is_empty() {
-            self.draw_tree(0, "".to_string(), false, true, max_depth);
+            self.draw_tree(0, "".to_string(), false, true, max_depth, 0, &board);
         }
     }
 
-    pub fn draw_tree_from_node(&self, node_index: u32, max_depth: i32) {
+    #[allow(unused)]
+    pub fn draw_tree_from_node(&self, node_index: u32, max_depth: i32, board: &Board) {
         if !self.0.is_empty() {
-            self.draw_tree(node_index, "".to_string(), false, true, max_depth);
+            self.draw_tree(node_index, "".to_string(), false, true, max_depth, self.depth_of_node(node_index).unwrap(), &board);
         }
     }
 
-    fn draw_tree(&self, node_index: u32, prefix: String, last: bool, is_root: bool, max_depth: i32) {
+    fn draw_tree(&self, node_index: u32, prefix: String, last: bool, is_root: bool, max_depth: i32, current_depth: u32, board: &Board) {
         if max_depth < 0 {
             return;
         }
@@ -52,8 +56,11 @@ impl SearchTree {
         let new_prefix = if last { "    ".to_string() } else { "│   ".to_string() };
         let connector = if last { "└─> " } else { "├─> " };
 
+        let is_depth_even = current_depth % 2 == 0;
+        let reverse_node_q = (board.side_to_move == Side::WHITE && is_depth_even) || (board.side_to_move == Side::BLACK && !is_depth_even);
+
         let prefix_string = prefix.clone() + connector;
-        node.print_node(if is_root { "" } else { prefix_string.as_str() });
+        node.print_node(if is_root { "" } else { prefix_string.as_str() }, reverse_node_q);
 
         if max_depth == 0 {
             return;
@@ -63,8 +70,27 @@ impl SearchTree {
         let children_count = children.end - children.start;
         for (i, child_index) in children.enumerate() {
             let is_last_child = i as u32 == children_count - 1;
-            self.draw_tree(child_index, prefix.clone() + if is_root { "" } else { &new_prefix }, is_last_child, false, max_depth - 1);
+            self.draw_tree(child_index, prefix.clone() + if is_root { "" } else { &new_prefix }, is_last_child, false, max_depth - 1, current_depth + 1, &board);
         }
+    }
+
+    fn depth_of_node(&self, target_index: u32) -> Option<u32> {
+        self.depth_of_node_recursive(target_index, 0, 0)
+    }
+
+    fn depth_of_node_recursive(&self, target_index: u32, current_index: u32, current_depth: u32) -> Option<u32> {
+        if current_index == target_index {
+            return Some(current_depth);
+        }
+
+        let node = self[current_index];
+        for child_index in node.children() {
+            if let Some(depth) = self.depth_of_node_recursive(target_index, child_index, current_depth + 1) {
+                return Some(depth);
+            }
+        }
+
+        None
     }
 }
 

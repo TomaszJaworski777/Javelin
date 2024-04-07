@@ -44,12 +44,12 @@ impl Node
         self.total_value / self.visit_count as f32
     }
 
-    pub fn print_node(&self, prefix: &str) {
+    pub fn print_node(&self, prefix: &str, reverse_q: bool) {
         let move_str = if self._move == Move::NULL { "root".to_string() } else { format!("{}. {}", self.index, self._move.to_string()) };
         println!("{}{} Q({:.2}%) N({}) P({:.2}%)",
             prefix,
             move_str,
-            self.avg_value() * 100.0,
+            if reverse_q { 1.0 - self.avg_value() } else { self.avg_value() } * 100.0,
             self.visit_count,
             self.policy_value * 100.0
         );
