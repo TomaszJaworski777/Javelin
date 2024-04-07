@@ -1,5 +1,9 @@
 use crate::{
-    core::attacks::Attacks, core::bitboard::Bitboard, core::core_structs::{BaseRookPositions, CastleRights, Move, Piece, Side, Square, BASE_ROOK_POSITIONS}, eval::Evaluation, core::zobrist::ZobristKey
+    core::attacks::Attacks,
+    core::bitboard::Bitboard,
+    core::core_structs::{BaseRookPositions, CastleRights, Move, Piece, Side, Square, BASE_ROOK_POSITIONS},
+    core::zobrist::ZobristKey,
+    eval::Evaluation,
 };
 use colored::*;
 
@@ -120,12 +124,18 @@ impl Board {
         }
         return false;
     }
- 
+
     pub fn is_insufficient_material(&self) -> bool {
         let pawns = self.pieces[0].is_empty();
         let major_pieces = (self.pieces[3] | self.pieces[4]).is_empty();
-        let white_minor_pieces = (self.get_piece_mask(Piece::KNIGHT, Side::WHITE) | self.get_piece_mask(Piece::BISHOP, Side::WHITE)).pop_count() < 2;
-        let black_minor_pieces = (self.get_piece_mask(Piece::KNIGHT, Side::BLACK) | self.get_piece_mask(Piece::BISHOP, Side::BLACK)).pop_count() < 2;
+        let white_minor_pieces = (self.get_piece_mask(Piece::KNIGHT, Side::WHITE)
+            | self.get_piece_mask(Piece::BISHOP, Side::WHITE))
+        .pop_count()
+            < 2;
+        let black_minor_pieces = (self.get_piece_mask(Piece::KNIGHT, Side::BLACK)
+            | self.get_piece_mask(Piece::BISHOP, Side::BLACK))
+        .pop_count()
+            < 2;
         pawns && major_pieces && white_minor_pieces && black_minor_pieces
     }
 
@@ -364,7 +374,8 @@ pub fn create_board(fen: &str) -> Board {
         base_rooks.queen_side = Square::NULL;
         base_rooks.king_side = Square::NULL;
 
-        if false { //for chess960 that are not implemented yet
+        if false {
+            //for chess960 that are not implemented yet
             let mut rooks = board.get_piece_mask(Piece::ROOK, Side::WHITE);
             if rooks.get_value() > 0 {
                 base_rooks.queen_side = rooks.pop_ls1b_square();

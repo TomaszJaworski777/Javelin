@@ -1,11 +1,14 @@
-mod perft;
-mod mcts;
-mod eval;
 mod core;
+mod eval;
+mod mcts;
+mod perft;
 
 use mcts::Search;
 
-use crate::{core::{create_board, Attacks}, mcts::SearchRules};
+use crate::{
+    core::{create_board, Attacks},
+    mcts::SearchRules,
+};
 
 fn main() {
     Attacks::initialize_slider_pieces();
@@ -13,7 +16,7 @@ fn main() {
     board.draw_board();
 
     let mut rules = SearchRules::new();
-    rules.max_iterations = 300_000;
+    rules.time_for_move = 1000;
 
     let mut search = Search::new(&board);
     print!("{}\n", search.run(&rules).to_string());

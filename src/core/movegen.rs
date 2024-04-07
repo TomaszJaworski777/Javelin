@@ -44,7 +44,7 @@ fn generate_king_moves(move_list: &mut MoveList, board: &Board) {
     //can prune obviously illegal moves prior to this loop (king in check by slider piece can cut potential escape squares)
 
     for king_move in king_move_mask {
-        if !board.is_square_attacked_extended(king_move,board.side_to_move.flipped(), occupnacy_mask) {
+        if !board.is_square_attacked_extended(king_move, board.side_to_move.flipped(), occupnacy_mask) {
             let is_capture = opponent_occupancy.get_bit(king_move);
             let move_mask = if is_capture { Move::CAPTURE_MASK } else { 0 };
             move_list.push(Move::create_move(king_square, king_move, move_mask));
@@ -69,18 +69,19 @@ fn generate_casting_moves(move_list: &mut MoveList, board: &Board) {
     };
 
     let king_destination = Square::G1 + square_offset;
-    if board.castle_rights.get_right(CastleRights::WHITE_KING + side_multiplier) && 
-       is_castle_path_clear(king_destination, king_side_rook_position) {
+    if board.castle_rights.get_right(CastleRights::WHITE_KING + side_multiplier)
+        && is_castle_path_clear(king_destination, king_side_rook_position)
+    {
         move_list.push(Move::create_move(king_position, king_destination, Move::KING_CASTLE_MASK));
     }
 
     let king_destination = Square::C1 + square_offset;
-    if board.castle_rights.get_right(CastleRights::WHITE_QUEEN + side_multiplier) &&
-       is_castle_path_clear(king_destination, queen_side_rook_position) {
+    if board.castle_rights.get_right(CastleRights::WHITE_QUEEN + side_multiplier)
+        && is_castle_path_clear(king_destination, queen_side_rook_position)
+    {
         move_list.push(Move::create_move(king_position, king_destination, Move::QUEEN_CASTLE_MASK));
     }
 }
-
 
 fn generate_pawn_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitboard) {
     let promotion_rank = Bitboard::RANK_7 >> (board.side_to_move.current() * 40) as u32;

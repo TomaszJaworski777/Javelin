@@ -11,12 +11,11 @@ pub struct Node {
     pub children_count: u32,
     pub policy_value: f32,
     pub is_terminal: bool,
-    pub _move: Move
+    pub _move: Move,
 }
-impl Node 
-{
-    pub fn new(_move: Move) -> Self{
-        Self{
+impl Node {
+    pub fn new(_move: Move) -> Self {
+        Self {
             index: 0,
             total_value: 0.0,
             visit_count: 0,
@@ -24,7 +23,7 @@ impl Node
             children_count: 0,
             policy_value: 0.0,
             is_terminal: false,
-            _move: _move
+            _move: _move,
         }
     }
 
@@ -38,15 +37,20 @@ impl Node
     }
 
     pub fn avg_value(&self) -> f32 {
-        if self.visit_count == 0{
+        if self.visit_count == 0 {
             return 0.5;
         }
         self.total_value / self.visit_count as f32
     }
 
     pub fn print_node(&self, prefix: &str, reverse_q: bool) {
-        let move_str = if self._move == Move::NULL { "root".to_string() } else { format!("{}. {}", self.index, self._move.to_string()) };
-        println!("{}{} Q({:.2}%) N({}) P({:.2}%)",
+        let move_str = if self._move == Move::NULL {
+            "root".to_string()
+        } else {
+            format!("{}. {}", self.index, self._move.to_string())
+        };
+        println!(
+            "{}{} Q({:.2}%) N({}) P({:.2}%)",
             prefix,
             move_str,
             if reverse_q { 1.0 - self.avg_value() } else { self.avg_value() } * 100.0,

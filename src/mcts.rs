@@ -1,31 +1,31 @@
-mod search_tree;
 mod node;
-mod search_rules;
 mod search_params;
+mod search_rules;
+mod search_tree;
 
 pub use search_rules::SearchRules;
 
-use std::time::Instant;
-use arrayvec::ArrayVec;
-use crate::{core::{Board, Move, MoveList, MoveProvider}, eval::Evaluation};
 use self::{node::Node, search_params::SearchParams, search_tree::SearchTree};
+use crate::{
+    core::{Board, Move, MoveList, MoveProvider},
+    eval::Evaluation,
+};
+use arrayvec::ArrayVec;
+use std::time::Instant;
 
 type NodeIndex = u32;
 type SelectionHistory = ArrayVec<NodeIndex, 128>;
 
 pub struct Search {
     search_tree: SearchTree,
-    root_position: Board
+    root_position: Board,
 }
 impl Search {
-    pub fn new( board: &Board ) -> Self{
-        Self { 
-            search_tree: SearchTree::new(),
-            root_position: *board
-        } 
+    pub fn new(board: &Board) -> Self {
+        Self { search_tree: SearchTree::new(), root_position: *board }
     }
 
-    pub fn run(&mut self, search_rules: &SearchRules) -> Move{
+    pub fn run(&mut self, search_rules: &SearchRules) -> Move {
         let timer = Instant::now();
         let mut selection_history = SelectionHistory::new();
         let mut search_params = SearchParams::new();
@@ -34,8 +34,7 @@ impl Search {
         let board = self.root_position;
         self.expand(0, &board);
 
-        while search_rules.continue_search(&search_params)
-        {
+        while search_rules.continue_search(&search_params) {
             selection_history.clear();
 
             let mut current_node_index = root_node.index;
@@ -127,7 +126,7 @@ impl Search {
 }
 
 //PUCT formula V + C * P * (N.max(1).sqrt()/n + 1) where N = number of visits to parent node, n = number of visits to a child
-fn puct( search_tree: &SearchTree, parent_index: NodeIndex, child_index: NodeIndex, c: f32 ) -> f32{
+fn puct(search_tree: &SearchTree, parent_index: NodeIndex, child_index: NodeIndex, c: f32) -> f32 {
     let parent_node = &search_tree[parent_index];
     let child_node = &search_tree[child_index];
     let n = parent_node.visit_count;
@@ -137,5 +136,5 @@ fn puct( search_tree: &SearchTree, parent_index: NodeIndex, child_index: NodeInd
 
     let numerator = (n.max(1) as f32).sqrt();
     let denominator = ni as f32 + 1.0;
-    v + c * p * (numerator/denominator)
+    v + c * p * (numerator / denominator)
 }

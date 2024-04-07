@@ -2,7 +2,7 @@ use crate::core::{Board, Side};
 
 pub struct Evaluation;
 impl Evaluation {
-    pub fn evaluate( board: &Board ) -> f32 {
+    pub fn evaluate(board: &Board) -> f32 {
         let mut result = 0;
         let values = [100, 300, 300, 500, 800];
         for side in [Side::BLACK, Side::WHITE] {
@@ -13,11 +13,14 @@ impl Evaluation {
             }
         }
 
-        if board.side_to_move == Side::WHITE { sigmoid(result) } else { 1.0 - sigmoid(result) }
+        if board.side_to_move == Side::WHITE {
+            sigmoid(result)
+        } else {
+            1.0 - sigmoid(result)
+        }
     }
 }
 
-
-pub fn sigmoid(input: i32) -> f32{
+pub fn sigmoid(input: i32) -> f32 {
     1.0 / (1.0 + (-input as f32 / 400.0).exp())
 }

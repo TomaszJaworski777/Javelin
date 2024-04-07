@@ -1,11 +1,11 @@
-use std::ops::{Index, IndexMut};
 use crate::core::{Board, Side};
+use std::ops::{Index, IndexMut};
 
 use super::node::Node;
 
 pub struct SearchTree(Vec<Node>);
 impl SearchTree {
-    pub fn new() -> Self{
+    pub fn new() -> Self {
         Self(Vec::new())
     }
 
@@ -17,7 +17,7 @@ impl SearchTree {
         self.0.len() as u32
     }
 
-    pub fn get_best_node(&self) -> &Node{
+    pub fn get_best_node(&self) -> &Node {
         let mut best_node = &self[0];
         let mut best_score = f32::MIN;
 
@@ -43,11 +43,28 @@ impl SearchTree {
     #[allow(unused)]
     pub fn draw_tree_from_node(&self, node_index: u32, max_depth: i32, board: &Board) {
         if !self.0.is_empty() {
-            self.draw_tree(node_index, "".to_string(), false, true, max_depth, self.depth_of_node(node_index).unwrap(), &board);
+            self.draw_tree(
+                node_index,
+                "".to_string(),
+                false,
+                true,
+                max_depth,
+                self.depth_of_node(node_index).unwrap(),
+                &board,
+            );
         }
     }
 
-    fn draw_tree(&self, node_index: u32, prefix: String, last: bool, is_root: bool, max_depth: i32, current_depth: u32, board: &Board) {
+    fn draw_tree(
+        &self,
+        node_index: u32,
+        prefix: String,
+        last: bool,
+        is_root: bool,
+        max_depth: i32,
+        current_depth: u32,
+        board: &Board,
+    ) {
         if max_depth < 0 {
             return;
         }
@@ -57,7 +74,8 @@ impl SearchTree {
         let connector = if last { "└─> " } else { "├─> " };
 
         let is_depth_even = current_depth % 2 == 0;
-        let reverse_node_q = (board.side_to_move == Side::WHITE && is_depth_even) || (board.side_to_move == Side::BLACK && !is_depth_even);
+        let reverse_node_q = (board.side_to_move == Side::WHITE && is_depth_even)
+            || (board.side_to_move == Side::BLACK && !is_depth_even);
 
         let prefix_string = prefix.clone() + connector;
         node.print_node(if is_root { "" } else { prefix_string.as_str() }, reverse_node_q);
@@ -70,7 +88,15 @@ impl SearchTree {
         let children_count = children.end - children.start;
         for (i, child_index) in children.enumerate() {
             let is_last_child = i as u32 == children_count - 1;
-            self.draw_tree(child_index, prefix.clone() + if is_root { "" } else { &new_prefix }, is_last_child, false, max_depth - 1, current_depth + 1, &board);
+            self.draw_tree(
+                child_index,
+                prefix.clone() + if is_root { "" } else { &new_prefix },
+                is_last_child,
+                false,
+                max_depth - 1,
+                current_depth + 1,
+                &board,
+            );
         }
     }
 
