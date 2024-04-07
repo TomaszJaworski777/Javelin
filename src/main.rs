@@ -16,8 +16,9 @@ use mcts::Search;
 
 fn main() {
     Attacks::initialize_slider_pieces();
-    let board = create_board("8/8/8/5K2/8/2kQ4/8/8 b - - 0 1");
+    let board = create_board("3Q4/8/8/5K2/2k5/8/8/2q5 w - - 0 1");
     board.draw_board();
 
     let mut search = Search::new(&board);
+    print!("{}\n", search.run().to_string());
 }
