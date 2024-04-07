@@ -2,22 +2,16 @@ mod core;
 mod eval;
 mod mcts;
 mod perft;
+mod uci;
 
-use mcts::Search;
-
-use crate::{
-    core::{create_board, Attacks},
-    mcts::SearchRules,
-};
+use core::create_board;
+use perft::Perft;
+use uci::Uci;
 
 fn main() {
-    Attacks::initialize_slider_pieces();
-    let board = create_board("4r1k1/p3qpbp/1p1p2n1/2pB2B1/7r/5Q2/PPP2P2/2KR2R1 b - - 3 25");
-    board.draw_board();
+    let mut uci = Uci::new();
+    uci.execute_command("uci", &[]);
 
-    let mut rules = SearchRules::new();
-    rules.time_for_move = 1000;
-
-    let mut search = Search::new(&board);
-    print!("{}\n", search.run(&rules).to_string());
+    Perft::execute::<false>(&create_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), 6, true);
 }
+ 

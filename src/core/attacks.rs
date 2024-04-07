@@ -8,75 +8,35 @@ use crate::core::{
 extern crate rand;
 use once_cell::sync::Lazy;
 use rand::Rng;
-use std::sync::Mutex;
 
 pub struct Attacks;
 impl Attacks {
     pub fn get_pawn_attacks_for_square(square: Square, color: Side) -> Bitboard {
-        ATTACK_TABLES.lock().unwrap().pawn_attacks[color.current()][square.get_value()]
+        ATTACK_TABLES.pawn_attacks[color.current()][square.get_value()]
     }
 
     pub fn get_knight_attacks_for_square(square: Square) -> Bitboard {
-        ATTACK_TABLES.lock().unwrap().knight_attacks[square.get_value()]
+        ATTACK_TABLES.knight_attacks[square.get_value()]
     }
 
     pub fn get_king_attacks_for_square(square: Square) -> Bitboard {
-        ATTACK_TABLES.lock().unwrap().king_attacks[square.get_value()]
+        ATTACK_TABLES.king_attacks[square.get_value()]
     }
 
     pub fn get_bishop_attacks_for_square(square: Square, occupancy: Bitboard) -> Bitboard {
-        let attack_tables = ATTACK_TABLES.lock().unwrap();
         let mut occ = occupancy;
-        occ &= attack_tables.bishop_masks[square.get_value()];
+        occ &= ATTACK_TABLES.bishop_masks[square.get_value()];
         occ = occ.wrapping_mul(MAGIC_NUMBERS_BISHOP[square.get_value()].into());
         occ >>= 64 - BISHOP_OCCUPANCY_COUNT[square.get_value()] as u32;
-        attack_tables.bishop_attacks[square.get_value()][occ.get_value() as usize]
+        ATTACK_TABLES.bishop_attacks[square.get_value()][occ.get_value() as usize]
     }
 
     pub fn get_rook_attacks_for_square(square: Square, occupancy: Bitboard) -> Bitboard {
-        let attack_tables = ATTACK_TABLES.lock().unwrap();
         let mut occ = occupancy;
-        occ &= attack_tables.rook_masks[square.get_value()];
+        occ &= ATTACK_TABLES.rook_masks[square.get_value()];
         occ = occ.wrapping_mul(MAGIC_NUMBERS_ROOK[square.get_value()].into());
         occ >>= 64 - ROOK_OCCUPANCY_COUNT[square.get_value()] as u32;
-        attack_tables.rook_attacks[square.get_value()][occ.get_value() as usize]
-    }
-
-    pub fn initialize_slider_pieces() {
-        let mut attack_tables = ATTACK_TABLES.lock().unwrap();
-
-        for square_index in 0..64 {
-            let square = Square::from_raw(square_index);
-            {
-                let attack_mask = mask_bishop_attacks(square);
-                let relevant_bit_count = attack_mask.pop_count();
-                let mut index = 0;
-                while index < 1 << relevant_bit_count {
-                    let occupancy = generate_occupancy(index, relevant_bit_count as usize, attack_mask);
-                    let magic_index: u64 = (occupancy.wrapping_mul(MAGIC_NUMBERS_BISHOP[square_index].into())
-                        >> (64 - relevant_bit_count))
-                        .into();
-                    attack_tables.bishop_attacks[square_index][magic_index as usize] =
-                        generate_bishop_attacks(square, occupancy);
-                    index += 1;
-                }
-            }
-
-            {
-                let attack_mask = mask_rook_attacks(square);
-                let relevant_bit_count = attack_mask.pop_count();
-                let mut index = 0;
-                while index < 1 << relevant_bit_count {
-                    let occupancy = generate_occupancy(index, relevant_bit_count as usize, attack_mask);
-                    let magic_index: u64 = (occupancy.wrapping_mul(MAGIC_NUMBERS_ROOK[square_index].into())
-                        >> (64 - relevant_bit_count))
-                        .into();
-                    attack_tables.rook_attacks[square_index][magic_index as usize] =
-                        generate_rook_attacks(square, occupancy);
-                    index += 1;
-                }
-            }
-        }
+        ATTACK_TABLES.rook_attacks[square.get_value()][occ.get_value() as usize]
     }
 
     pub fn generate_checkers_mask(board: &Board) -> Bitboard {
@@ -141,16 +101,52 @@ struct AttackTables {
     rook_attacks: Vec<Vec<Bitboard>>,
 }
 
-static ATTACK_TABLES: Lazy<Mutex<AttackTables>> = Lazy::new(|| {
-    Mutex::new(AttackTables {
+static ATTACK_TABLES: Lazy<AttackTables> = Lazy::new(|| {
+    let mut bishop_attacks = vec![vec![Bitboard::EMPTY; 512]; 64];
+    let mut rook_attacks = vec![vec![Bitboard::EMPTY; 4096]; 64];
+
+    for square_index in 0..64 {
+        let square = Square::from_raw(square_index);
+        {
+            let attack_mask = mask_bishop_attacks(square);
+            let relevant_bit_count = attack_mask.pop_count();
+            let mut index = 0;
+            while index < 1 << relevant_bit_count {
+                let occupancy = generate_occupancy(index, relevant_bit_count as usize, attack_mask);
+                let magic_index: u64 = (occupancy.wrapping_mul(MAGIC_NUMBERS_BISHOP[square_index].into())
+                    >> (64 - relevant_bit_count))
+                    .into();
+                bishop_attacks[square_index][magic_index as usize] =
+                    generate_bishop_attacks(square, occupancy);
+                index += 1;
+            }
+        }
+
+        {
+            let attack_mask = mask_rook_attacks(square);
+            let relevant_bit_count = attack_mask.pop_count();
+            let mut index = 0;
+            while index < 1 << relevant_bit_count {
+                let occupancy = generate_occupancy(index, relevant_bit_count as usize, attack_mask);
+                let magic_index: u64 = (occupancy.wrapping_mul(MAGIC_NUMBERS_ROOK[square_index].into())
+                    >> (64 - relevant_bit_count))
+                    .into();
+                rook_attacks[square_index][magic_index as usize] =
+                    generate_rook_attacks(square, occupancy);
+                index += 1;
+            }
+        }
+    }
+
+    AttackTables {
         pawn_attacks: AttackTables::PAWN_ATTACKS,
         knight_attacks: AttackTables::KNIGHT_ATTACKS,
         king_attacks: AttackTables::KING_ATTACKS,
         bishop_masks: AttackTables::BISHOP_MASKS,
-        bishop_attacks: vec![vec![Bitboard::EMPTY; 512]; 64],
+        bishop_attacks: bishop_attacks,
         rook_masks: AttackTables::ROOK_MASKS,
-        rook_attacks: vec![vec![Bitboard::EMPTY; 4096]; 64],
-    })
+        rook_attacks: rook_attacks,
+    }
 });
 
 impl AttackTables {

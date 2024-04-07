@@ -7,7 +7,6 @@ mod movegen;
 mod rays;
 mod zobrist;
 
-pub use attacks::Attacks;
 pub use board::{create_board, Board};
 pub use core_structs::{Move, MoveList, Side, Square};
 pub use movegen::MoveProvider;
