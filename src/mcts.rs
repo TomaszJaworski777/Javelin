@@ -3,11 +3,12 @@ mod node;
 mod search_rules;
 mod search_params;
 
+pub use search_rules::SearchRules;
+
+use std::time::Instant;
 use arrayvec::ArrayVec;
-
 use crate::{core::{Board, Move, MoveList, MoveProvider}, eval::Evaluation};
-
-use self::{node::Node, search_tree::SearchTree};
+use self::{node::Node, search_params::SearchParams, search_tree::SearchTree};
 
 type NodeIndex = u32;
 type SelectionHistory = ArrayVec<NodeIndex, 128>;
@@ -24,14 +25,16 @@ impl Search {
         } 
     }
 
-    pub fn run(&mut self) -> Move{
+    pub fn run(&mut self, search_rules: &SearchRules) -> Move{
+        let timer = Instant::now();
         let mut selection_history = SelectionHistory::new();
+        let mut search_params = SearchParams::new();
         let root_node = Node::new(Move::NULL);
         self.search_tree.push(&root_node);
         let board = self.root_position;
         self.expand(0, &board);
 
-        for _ in 0..500000
+        while search_rules.continue_search(&search_params)
         {
             selection_history.clear();
 
@@ -39,10 +42,12 @@ impl Search {
             let mut current_board = self.root_position;
             selection_history.push(current_node_index);
 
+            let mut depth = 0u32;
             while !self.search_tree[current_node_index].is_leaf() {
                 current_node_index = self.select(current_node_index);
                 selection_history.push(current_node_index);
                 current_board.make_move(self.search_tree[current_node_index]._move);
+                depth += 1;
             }
 
             let node_score = self.simulate(current_node_index, &current_board);
@@ -52,6 +57,15 @@ impl Search {
             }
 
             self.backpropagate(&mut selection_history, node_score);
+
+            if search_params.curernt_iterations % 128 == 0 {
+                search_params.time_passed = timer.elapsed().as_millis();
+            }
+
+            search_params.max_depth = search_params.max_depth.max(depth);
+            search_params.total_depth += depth;
+            search_params.curernt_iterations += 1;
+            search_params.nodes = self.search_tree.node_count();
         }
 
         self.search_tree.get_best_node()._move
