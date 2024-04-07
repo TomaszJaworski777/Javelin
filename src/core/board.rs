@@ -1,7 +1,7 @@
 use crate::{
     core::attacks::Attacks,
     core::bitboard::Bitboard,
-    core::core_structs::{BaseRookPositions, CastleRights, Move, Piece, Side, Square, BASE_ROOK_POSITIONS},
+    core::core_structs::{CastleRights, Move, Piece, Side, Square},
     core::zobrist::ZobristKey,
     eval::Evaluation,
 };
@@ -164,14 +164,14 @@ impl Board {
         };
 
         if _move.is_king_castle() {
-            let rook_position = BaseRookPositions::get_king_side() + square_value_offset;
+            let rook_position = Square::H1 + square_value_offset;
             let rook_destination = Square::F1 + square_value_offset;
             self.remove_piece_on_square(rook_position, moving_piece.1, Piece::ROOK);
             self.set_piece_on_square(rook_destination, moving_piece.1, Piece::ROOK);
 
             remove_castle_rights(self);
         } else if _move.is_queen_castle() {
-            let rook_position = BaseRookPositions::get_queen_side() + square_value_offset;
+            let rook_position = Square::A1 + square_value_offset;
             let rook_destination = Square::D1 + square_value_offset;
             self.remove_piece_on_square(rook_position, moving_piece.1, Piece::ROOK);
             self.set_piece_on_square(rook_destination, moving_piece.1, Piece::ROOK);
@@ -182,8 +182,8 @@ impl Board {
         if moving_piece.0 == Piece::KING {
             remove_castle_rights(self);
         } else if moving_piece.0 == Piece::ROOK {
-            let king_rook_position = BaseRookPositions::get_king_side() + square_value_offset;
-            let queen_rook_position = BaseRookPositions::get_queen_side() + square_value_offset;
+            let king_rook_position = Square::H1 + square_value_offset;
+            let queen_rook_position = Square::A1 + square_value_offset;
 
             if from_square == king_rook_position {
                 self.castle_rights.remove_right(CastleRights::WHITE_KING + castle_rights_offset);
@@ -194,8 +194,8 @@ impl Board {
             }
         }
         if target_piece.0 == Piece::ROOK {
-            let king_rook_position = BaseRookPositions::get_king_side() + (self.side_to_move.opposite() * 56);
-            let queen_rook_position = BaseRookPositions::get_queen_side() + (self.side_to_move.opposite() * 56);
+            let king_rook_position = Square::H1 + (self.side_to_move.opposite() * 56);
+            let queen_rook_position = Square::A1 + (self.side_to_move.opposite() * 56);
 
             if to_square == king_rook_position {
                 self.castle_rights.remove_right(CastleRights::WHITE_KING + (self.side_to_move.opposite() * 2) as u8);
@@ -367,26 +367,6 @@ pub fn create_board(fen: &str) -> Board {
 
     if splits.len() > 5 {
         board.half_moves = splits[5].parse().unwrap();
-    }
-
-    {
-        let mut base_rooks = BASE_ROOK_POSITIONS.write().unwrap();
-        base_rooks.queen_side = Square::NULL;
-        base_rooks.king_side = Square::NULL;
-
-        if false {
-            //for chess960 that are not implemented yet
-            let mut rooks = board.get_piece_mask(Piece::ROOK, Side::WHITE);
-            if rooks.get_value() > 0 {
-                base_rooks.queen_side = rooks.pop_ls1b_square();
-            }
-            if rooks.get_value() > 0 {
-                base_rooks.king_side = rooks.pop_ls1b_square();
-            }
-        } else {
-            base_rooks.queen_side = Square::A1;
-            base_rooks.king_side = Square::H1;
-        }
     }
 
     board.checkers = Attacks::generate_checkers_mask(&board);

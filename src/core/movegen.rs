@@ -2,7 +2,7 @@ use crate::core::{
     attacks::Attacks,
     bitboard::Bitboard,
     board::Board,
-    core_structs::{BaseRookPositions, CastleRights, Move, MoveList, Piece, Square},
+    core_structs::{CastleRights, Move, MoveList, Piece, Square},
     rays::Ray,
 };
 
@@ -56,8 +56,8 @@ fn generate_casting_moves(move_list: &mut MoveList, board: &Board) {
     let king_position = board.get_king_square(board.side_to_move);
     let side_multiplier = board.side_to_move.current() as u8 * 2;
     let square_offset = board.side_to_move.current() * 56;
-    let king_side_rook_position = BaseRookPositions::get_king_side() + square_offset;
-    let queen_side_rook_position = BaseRookPositions::get_queen_side() + square_offset;
+    let king_side_rook_position = Square::H1 + square_offset;
+    let queen_side_rook_position = Square::A1 + square_offset;
     let occupancy = board.get_occupancy();
 
     // Helper to check if path is clear and not under attack

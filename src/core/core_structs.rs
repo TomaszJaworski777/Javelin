@@ -1,8 +1,6 @@
 use arrayvec::ArrayVec;
-use once_cell::sync::Lazy;
 use std::ops::Add;
 use std::ops::BitXor;
-use std::sync::RwLock;
 
 use crate::core::bit_ops::get_bit;
 use crate::core::bit_ops::set_bit_to_one;
@@ -275,21 +273,6 @@ impl Side {
 
     pub fn mut_flip(&mut self) {
         self.0 = 1 - self.0;
-    }
-}
-
-pub struct BaseRookPositions {
-    pub queen_side: Square,
-    pub king_side: Square,
-}
-pub static BASE_ROOK_POSITIONS: Lazy<RwLock<BaseRookPositions>> =
-    Lazy::new(|| RwLock::new(BaseRookPositions { queen_side: Square::NULL, king_side: Square::NULL }));
-impl BaseRookPositions {
-    pub fn get_queen_side() -> Square {
-        BASE_ROOK_POSITIONS.read().unwrap().queen_side
-    }
-    pub fn get_king_side() -> Square {
-        BASE_ROOK_POSITIONS.read().unwrap().king_side
     }
 }
 
