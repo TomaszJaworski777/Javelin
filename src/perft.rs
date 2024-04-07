@@ -1,10 +1,6 @@
 use std::time::Instant;
 
-use crate::{
-    board::{create_board, Board},
-    core_structs::MoveList,
-    movegen::MoveProvider,
-};
+use crate::core::{create_board, Board, MoveList, MoveProvider};
 
 pub struct Perft;
 impl Perft {

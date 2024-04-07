@@ -1,18 +1,11 @@
-mod attacks;
-mod bit_ops;
-mod bitboard;
-mod board;
-mod core_structs;
-mod movegen;
 mod perft;
-mod rays;
-mod zobrist;
 mod mcts;
 mod eval;
+mod core;
 
-use attacks::Attacks;
-use board::create_board;
 use mcts::Search;
+
+use crate::core::{create_board, Attacks};
 
 fn main() {
     Attacks::initialize_slider_pieces();

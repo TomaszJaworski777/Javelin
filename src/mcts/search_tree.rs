@@ -1,5 +1,5 @@
 use std::ops::{Index, IndexMut};
-use crate::{board::Board, core_structs::Side};
+use crate::core::{Board, Side};
 
 use super::node::Node;
 

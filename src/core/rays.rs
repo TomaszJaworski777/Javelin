@@ -1,4 +1,4 @@
-use crate::{bitboard::Bitboard, core_structs::Square};
+use crate::core::{bitboard::Bitboard, core_structs::Square};
 
 pub struct Ray;
 impl Ray {

@@ -1,4 +1,4 @@
-use crate::core_structs::Square;
+use crate::core::Square;
 use colored::*;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, Not, Shl, ShlAssign, Shr, ShrAssign};
 

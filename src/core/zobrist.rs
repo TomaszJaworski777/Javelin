@@ -1,4 +1,4 @@
-use crate::core_structs::Square;
+use crate::core::Square;
 
 #[derive(Copy, Clone)]
 pub struct ZobristKey {

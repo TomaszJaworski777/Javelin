@@ -1,4 +1,4 @@
-use crate::{board::Board, core_structs::Side};
+use crate::core::{Board, Side};
 
 pub struct Evaluation;
 impl Evaluation {

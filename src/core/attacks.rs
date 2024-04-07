@@ -1,5 +1,5 @@
 #[allow(dead_code)]
-use crate::{
+use crate::core::{
     bitboard::Bitboard,
     board::Board,
     core_structs::{Piece, Side, Square},

@@ -4,10 +4,10 @@ use std::ops::Add;
 use std::ops::BitXor;
 use std::sync::RwLock;
 
-use crate::bit_ops::get_bit;
-use crate::bit_ops::set_bit_to_one;
-use crate::bit_ops::set_bit_to_zero;
-use crate::{
+use crate::core::bit_ops::get_bit;
+use crate::core::bit_ops::set_bit_to_one;
+use crate::core::bit_ops::set_bit_to_zero;
+use crate::core::{
     bit_ops::{get_bit_chunk, set_bit_chunk},
     bitboard::Bitboard,
 };

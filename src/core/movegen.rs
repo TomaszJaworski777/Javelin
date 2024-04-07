@@ -1,4 +1,4 @@
-use crate::{
+use crate::core::{
     attacks::Attacks,
     bitboard::Bitboard,
     board::Board,

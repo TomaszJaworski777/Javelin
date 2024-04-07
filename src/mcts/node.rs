@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use crate::core_structs::Move;
+use crate::core::Move;
 
 #[derive(Clone, Copy)]
 pub struct Node {

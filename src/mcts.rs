@@ -1,8 +1,11 @@
 mod search_tree;
 mod node;
+mod search_rules;
+mod search_params;
 
 use arrayvec::ArrayVec;
-use crate::{board::Board, core_structs::{Move, MoveList}, eval::Evaluation, movegen::MoveProvider};
+
+use crate::{core::{Board, Move, MoveList, MoveProvider}, eval::Evaluation};
 
 use self::{node::Node, search_tree::SearchTree};
 
@@ -22,46 +25,35 @@ impl Search {
     }
 
     pub fn run(&mut self) -> Move{
-        //Initialize the search
         let mut selection_history = SelectionHistory::new();
-        //add root node to the tree
         let root_node = Node::new(Move::NULL);
         self.search_tree.push(&root_node);
-        //expand root node
         let board = self.root_position;
         self.expand(0, &board);
-        
 
-        //iterate
         for _ in 0..500000
         {
             selection_history.clear();
 
-            //prepare current_node and current_board
             let mut current_node_index = root_node.index;
             let mut current_board = self.root_position;
             selection_history.push(current_node_index);
 
-            //select new node based on the best uct
             while !self.search_tree[current_node_index].is_leaf() {
                 current_node_index = self.select(current_node_index);
                 selection_history.push(current_node_index);
                 current_board.make_move(self.search_tree[current_node_index]._move);
             }
-            //simulate the node
+
             let node_score = self.simulate(current_node_index, &current_board);
 
-            //expand the node but dont simulate any new children
             if !self.search_tree[current_node_index].is_terminal {
                 self.expand(current_node_index, &current_board);
             }
 
-            //backpropagate the value from the node up the tree
             self.backpropagate(&mut selection_history, node_score);
         }
 
-        //get best move based on avg_value
-        self.search_tree.draw_tree_from_root(1, &self.root_position);
         self.search_tree.get_best_node()._move
     }
 
