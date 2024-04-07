@@ -107,7 +107,7 @@ impl Search {
             return score;
         }
 
-        1.0 - Evaluation::evaluate(&board)
+        Evaluation::evaluate(&board)
     }
 
     fn backpropagate(&mut self, selection_history: &mut SelectionHistory, mut result: f32) {
