@@ -38,7 +38,10 @@ impl Node
     }
 
     pub fn avg_value(&self) -> f32 {
-        self.total_value / (self.visit_count as f32).max(1.0)
+        if self.visit_count == 0{
+            return 0.5;
+        }
+        self.total_value / self.visit_count as f32
     }
 
     pub fn print_node(&self, prefix: &str) {

@@ -62,6 +62,7 @@ impl Search {
 
         //get best move based on avg_value
         self.search_tree.draw_tree_from_root(1);
+        //self.search_tree.draw_tree_from_node(16, 1);
         self.search_tree.get_best_node()._move
     }
 
@@ -83,7 +84,7 @@ impl Search {
         let mut best_index = 0;
         let mut best_value = f32::MIN;
         for child_index in self.search_tree[parent_index].children() {
-            let current_value = uct(&self.search_tree, parent_index, child_index, 77.7);
+            let current_value = uct(&self.search_tree, parent_index, child_index, 1.41);
             if current_value > best_value {
                 best_index = child_index;
                 best_value = current_value;
@@ -129,6 +130,6 @@ fn uct( search_tree: &SearchTree, parent_index: NodeIndex, child_index: NodeInde
     let v = child_node.avg_value();
 
     let numerator = (n.max(1) as f32).ln();
-    let denominator = (ni as f32).max(0.0000001);
+    let denominator = (ni as f32).max(1.0);
     v + c * (numerator/denominator).sqrt()
 }
