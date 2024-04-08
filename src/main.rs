@@ -5,6 +5,7 @@ mod perft;
 mod uci;
 
 use std::io::stdin;
+use console::Term;
 use uci::Uci;
 
 fn main() {
@@ -34,7 +35,10 @@ fn main() {
         }
 
         if command == "clean" || command == "clear" || command == "cln" || command == "cls" {
-            clearscreen::clear().unwrap();
+            let term = Term::stdout();
+            if let Err(e) = term.clear_screen() {
+                eprintln!("Failed to clear screen: {}", e);
+            }
             continue;
         }
 

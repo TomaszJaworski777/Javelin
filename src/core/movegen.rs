@@ -8,26 +8,39 @@ use crate::core::{
 
 pub struct MoveProvider;
 impl MoveProvider {
-    pub fn generate_moves(move_list: &mut MoveList, board: &Board) {
-        generate_king_moves(move_list, &board);
+    pub fn generate_moves<const ONLY_CAPTURE: bool>(move_list: &mut MoveList, board: &Board) {
+        if ONLY_CAPTURE {
+            generate_king_captures(move_list, &board);
+        } else {
+            generate_king_moves(move_list, &board);
+        }
 
         let checkers = board.checkers;
         let no_checks = checkers.is_empty();
 
         if checkers.multiple_one_bits() {
             return;
-        } else if no_checks {
+        } else if !ONLY_CAPTURE && no_checks {
             generate_casting_moves(move_list, &board);
         }
 
         let move_mask = if no_checks {
-            !board.get_allied_occupancy()
+            if ONLY_CAPTURE { board.get_opponent_occupancy() } else { !board.get_allied_occupancy() }
         } else {
-            let checker = checkers.ls1b_square();
-            Ray::get_ray(board.get_king_square(board.side_to_move), checker).include(checker)
+            if ONLY_CAPTURE {
+                checkers
+            }
+            else {
+                let checker = checkers.ls1b_square();
+                Ray::get_ray(board.get_king_square(board.side_to_move), checker).include(checker)
+            }
         };
 
-        generate_pawn_moves(move_list, board, move_mask);
+        if ONLY_CAPTURE {
+            generate_pawn_captures(move_list, board, move_mask);
+        } else {
+            generate_pawn_moves(move_list, board, move_mask);
+        }
         generate_knight_moves(move_list, board, move_mask);
         generate_bishop_moves(move_list, board, move_mask);
         generate_rooks_moves(move_list, board, move_mask);
@@ -48,6 +61,19 @@ fn generate_king_moves(move_list: &mut MoveList, board: &Board) {
             let is_capture = opponent_occupancy.get_bit(king_move);
             let move_mask = if is_capture { Move::CAPTURE_MASK } else { 0 };
             move_list.push(Move::create_move(king_square, king_move, move_mask));
+        }
+    }
+}
+
+fn generate_king_captures(move_list: &mut MoveList, board: &Board) {
+    let king_square = board.get_king_square(board.side_to_move);
+    let king_moves = Attacks::get_king_attacks_for_square(king_square);
+    let occupnacy_mask = board.get_occupancy().exclude(king_square);
+    let king_move_mask = king_moves & !board.get_allied_occupancy() & board.get_opponent_occupancy();
+
+    for king_move in king_move_mask {
+        if !board.is_square_attacked_extended(king_move, board.side_to_move.flipped(), occupnacy_mask) {
+            move_list.push(Move::create_move(king_square, king_move, Move::CAPTURE_MASK));
         }
     }
 }
@@ -143,6 +169,104 @@ fn generate_pawn_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitbo
             & !board.get_opponent_occupancy();
         populate_pawn_moves(move_list, double_push_pawn, pawn_move_mask & move_mask, Move::DOUBLE_PUSH_MASK);
     }
+
+    //capture, not pinned, not promotion
+    for not_pinned_capture in agressive_pawns & !agressive_pinned_pawns & !promotion_rank {
+        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(not_pinned_capture, board.side_to_move)
+            & board.get_opponent_occupancy();
+        populate_pawn_moves(move_list, not_pinned_capture, pawn_attack_mask & move_mask, Move::CAPTURE_MASK);
+    }
+
+    //capture, pinned, not promotion
+    for pinned_capture in agressive_pinned_pawns & !promotion_rank {
+        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(pinned_capture, board.side_to_move)
+            & board.get_opponent_occupancy()
+            & board.diagonal_pins;
+        populate_pawn_moves(move_list, pinned_capture, pawn_attack_mask & move_mask, Move::CAPTURE_MASK);
+    }
+
+    //capture, not pinned, promotion
+    for not_pinned_capture in agressive_pawns & !agressive_pinned_pawns & promotion_rank {
+        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(not_pinned_capture, board.side_to_move)
+            & board.get_opponent_occupancy();
+        populate_pawn_promotion_moves(move_list, not_pinned_capture, pawn_attack_mask & move_mask, Move::CAPTURE_MASK);
+    }
+
+    //capture, pinned, promotion
+    for pinned_capture in agressive_pinned_pawns & promotion_rank {
+        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(pinned_capture, board.side_to_move)
+            & board.get_opponent_occupancy()
+            & board.diagonal_pins;
+        populate_pawn_promotion_moves(move_list, pinned_capture, pawn_attack_mask & move_mask, Move::CAPTURE_MASK);
+    }
+
+    if board.en_passant == Square::NULL {
+        return;
+    }
+
+    let process_en_passant_capture_pawn = |target: Square, attacker: Square| -> u64 {
+        if (target.get_bit() & move_mask).is_empty() {
+            return 0;
+        }
+
+        assert_ne!(board.get_king_square(board.side_to_move).get_value(), Square::NULL.get_value());
+        let diagonal_xray = Attacks::get_bishop_attacks_for_square(
+            board.get_king_square(board.side_to_move),
+            board.get_occupancy().exclude(target).exclude(attacker).include(board.en_passant),
+        );
+        let ortographic_xray = Attacks::get_rook_attacks_for_square(
+            board.get_king_square(board.side_to_move),
+            board.get_occupancy().exclude(target).exclude(attacker).include(board.en_passant),
+        );
+
+        if ((diagonal_xray | ortographic_xray) & target.get_bit()).is_empty() {
+            return 1;
+        }
+
+        let mut piece_mask = board.get_piece_mask(Piece::BISHOP, board.side_to_move.flipped())
+            | board.get_piece_mask(Piece::QUEEN, board.side_to_move.flipped());
+        if (diagonal_xray & target.get_bit()).is_not_empty() && (diagonal_xray & piece_mask).is_not_empty() {
+            return 0;
+        }
+
+        piece_mask = board.get_piece_mask(Piece::ROOK, board.side_to_move.flipped())
+            | board.get_piece_mask(Piece::QUEEN, board.side_to_move.flipped());
+        if (ortographic_xray & target.get_bit()).is_not_empty() && (ortographic_xray & piece_mask).is_not_empty() {
+            return 0;
+        }
+
+        1
+    };
+
+    //en passant not pinned
+    for en_passant_pawn in agressive_pawns & !agressive_pinned_pawns {
+        let pawn_attack_mask =
+            Attacks::get_pawn_attacks_for_square(en_passant_pawn, board.side_to_move) & board.en_passant.get_bit();
+        let attacked_pawn = board.en_passant ^ 8;
+        let adjusted_move_mask = Bitboard::from_raw(
+            pawn_attack_mask.get_value() * process_en_passant_capture_pawn(attacked_pawn, en_passant_pawn),
+        );
+        populate_pawn_moves(move_list, en_passant_pawn, adjusted_move_mask, Move::CAPTURE_MASK | Move::EN_PASSANT_MASK);
+    }
+
+    //en passant pinned
+    for en_passant_pawn in agressive_pinned_pawns {
+        let pawn_attack_mask = Attacks::get_pawn_attacks_for_square(en_passant_pawn, board.side_to_move)
+            & board.en_passant.get_bit()
+            & board.diagonal_pins;
+        let attacked_pawn = board.en_passant ^ 8;
+        let adjusted_move_mask = Bitboard::from_raw(
+            pawn_attack_mask.get_value() * process_en_passant_capture_pawn(attacked_pawn, en_passant_pawn),
+        );
+        populate_pawn_moves(move_list, en_passant_pawn, adjusted_move_mask, Move::CAPTURE_MASK | Move::EN_PASSANT_MASK);
+    }
+}
+
+fn generate_pawn_captures(move_list: &mut MoveList, board: &Board, move_mask: Bitboard) {
+    let promotion_rank = Bitboard::RANK_7 >> (board.side_to_move.current() * 40) as u32;
+    let pawns = board.get_piece_mask(Piece::PAWN, board.side_to_move);
+    let agressive_pawns = pawns & !board.ortographic_pins;
+    let agressive_pinned_pawns = agressive_pawns & board.diagonal_pins;
 
     //capture, not pinned, not promotion
     for not_pinned_capture in agressive_pawns & !agressive_pinned_pawns & !promotion_rank {

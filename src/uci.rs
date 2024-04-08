@@ -95,7 +95,7 @@ impl Uci {
             if let Some(start_index) = moves.iter().position(|x| x == "moves") {
                 for move_str in &moves[start_index + 1..] {
                     let mut move_list = MoveList::new();
-                    MoveProvider::generate_moves(&mut move_list, board);
+                    MoveProvider::generate_moves::<false>(&mut move_list, board);
 
                     if let Some(mv) = move_list.iter().find(|&m| m.to_string() == *move_str) {
                         board.make_move(*mv);
@@ -147,8 +147,7 @@ impl Uci {
                         "binc" => timers.3 = value,
                         "movestogo" => timers.4 = value,
                         "depth" => rules.max_depth = value as u32,
-                        "nodes" => rules.max_nodes = value as u32,
-                        "iterations" => rules.max_iterations = value as u32,
+                        "nodes" => rules.max_iterations = value as u32,
                         "movetime" => rules.time_for_move = value,
                         _ => {}
                     }
