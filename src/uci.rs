@@ -54,13 +54,21 @@ impl Uci {
         uci
     }
 
-    pub fn print_raport(search_params: &SearchParams, pv_line: String) {
+    pub fn print_raport(search_params: &SearchParams, pv_line: String, best_score: f32) {
         let depth = search_params.get_avg_depth();
         let seldepth = search_params.max_depth;
         let time = search_params.time_passed;
         let nodes = search_params.nodes;
         let nps = (nodes as u128) * 1000 / time.max(1);
-        println!("info depth {depth} seldepth {seldepth} score cp 0 time {time} nodes {nodes} nps {nps} pv {pv_line}");
+        let cp: i32;
+        if best_score >= 1.0 {
+            cp = 30000;
+        } else if best_score <= 0.0 {
+            cp = -30000;
+        } else {
+            cp = (-400.0 * (1.0 / best_score.clamp(0.0, 1.0) - 1.0).ln()) as i32;
+        }
+        println!("info depth {depth} seldepth {seldepth} score cp {cp} time {time} nodes {nodes} nps {nps} pv {pv_line}");
     }
 
     pub fn execute_command(&mut self, command_name: &str, args: &[String]) {
