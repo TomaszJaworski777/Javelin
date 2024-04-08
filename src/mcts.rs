@@ -60,27 +60,29 @@ impl<'a> Search<'a> {
                 self.expand(current_node_index, &current_board);
             }
 
-            self.backpropagate(&mut selection_history, node_score);
+            {
+                self.backpropagate(&mut selection_history, node_score);
 
-            if search_params.curernt_iterations % 128 == 0 {
-                search_params.time_passed = timer.elapsed().as_millis();
-            }
-
-            search_params.max_depth = search_params.max_depth.max(depth);
-            search_params.total_depth += depth;
-            search_params.curernt_iterations += 1;
-            search_params.nodes = self.search_tree.node_count();
-
-            if let Ok(_) = self.interruption_channel.try_recv() {
-                search_params.time_passed = timer.elapsed().as_millis();
-                Uci::print_raport(&search_params, self.search_tree.get_pv_line());
-                break;
-            }
-
-            if search_params.get_avg_depth() > current_avg_depth {
-                search_params.time_passed = timer.elapsed().as_millis();
-                Uci::print_raport(&search_params, self.search_tree.get_pv_line());
-                current_avg_depth = search_params.get_avg_depth();
+                if search_params.curernt_iterations % 128 == 0 {
+                    search_params.time_passed = timer.elapsed().as_millis();
+                }
+    
+                search_params.max_depth = search_params.max_depth.max(depth);
+                search_params.total_depth += depth;
+                search_params.curernt_iterations += 1;
+                search_params.nodes = self.search_tree.node_count();
+    
+                if let Ok(_) = self.interruption_channel.try_recv() {
+                    search_params.time_passed = timer.elapsed().as_millis();
+                    Uci::print_raport(&search_params, self.search_tree.get_pv_line());
+                    break;
+                }
+    
+                if search_params.get_avg_depth() > current_avg_depth {
+                    search_params.time_passed = timer.elapsed().as_millis();
+                    Uci::print_raport(&search_params, self.search_tree.get_pv_line());
+                    current_avg_depth = search_params.get_avg_depth();
+                }
             }
         }
 
