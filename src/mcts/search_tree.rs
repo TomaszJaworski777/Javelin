@@ -1,4 +1,4 @@
-use crate::core::{Board, Side};
+use crate::core::Board;
 use std::ops::{Index, IndexMut};
 
 use super::node::Node;
@@ -91,12 +91,8 @@ impl SearchTree {
         let new_prefix = if last { "    ".to_string() } else { "│   ".to_string() };
         let connector = if last { "└─> " } else { "├─> " };
 
-        let is_depth_even = current_depth % 2 == 0;
-        let reverse_node_q = (board.side_to_move == Side::WHITE && is_depth_even)
-            || (board.side_to_move == Side::BLACK && !is_depth_even);
-
         let prefix_string = prefix.clone() + connector;
-        node.print_node(if is_root { "" } else { prefix_string.as_str() }, reverse_node_q);
+        node.print_node(if is_root { "" } else { prefix_string.as_str() }, current_depth % 2 == 0);
 
         if max_depth == 0 {
             return;

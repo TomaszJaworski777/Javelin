@@ -74,13 +74,13 @@ impl<'a> Search<'a> {
     
                 if let Ok(_) = self.interruption_channel.try_recv() {
                     search_params.time_passed = timer.elapsed().as_millis();
-                    Uci::print_raport(&search_params, self.search_tree.get_pv_line());
+                    Uci::print_raport(&search_params, self.search_tree.get_pv_line(), self.search_tree.get_best_node().avg_value());
                     break;
                 }
     
                 if search_params.get_avg_depth() > current_avg_depth {
                     search_params.time_passed = timer.elapsed().as_millis();
-                    Uci::print_raport(&search_params, self.search_tree.get_pv_line());
+                    Uci::print_raport(&search_params, self.search_tree.get_pv_line(), self.search_tree.get_best_node().avg_value());
                     current_avg_depth = search_params.get_avg_depth();
                 }
             }
