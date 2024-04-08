@@ -3,6 +3,7 @@ mod bit_ops;
 mod bitboard;
 mod board;
 mod core_structs;
+mod move_history;
 mod movegen;
 mod rays;
 mod zobrist;

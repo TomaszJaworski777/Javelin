@@ -41,7 +41,6 @@ impl Perft {
 
             if first_iteration {
                 print!("{} - {}\n", _move.to_string(), new_nodes);
-                //new_board.draw_board();
             }
         }
 

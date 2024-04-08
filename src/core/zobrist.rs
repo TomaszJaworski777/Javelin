@@ -1,6 +1,6 @@
 use crate::core::Square;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct ZobristKey {
     pub key: u64,
 }

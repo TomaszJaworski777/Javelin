@@ -5,8 +5,9 @@ mod search_tree;
 
 pub use search_params::SearchParams;
 pub use search_rules::SearchRules;
+pub use search_tree::SearchTree;
 
-use self::{node::Node, search_tree::SearchTree};
+use self::node::Node;
 use crate::{
     core::{Board, Move, MoveList, MoveProvider},
     eval::Evaluation,
@@ -28,7 +29,7 @@ impl<'a> Search<'a> {
         Self { search_tree: SearchTree::new(), root_position: *board, interruption_channel }
     }
 
-    pub fn run(&mut self, search_rules: &SearchRules) -> Move {
+    pub fn run(&mut self, search_rules: &SearchRules) -> (Move, &SearchTree) {
         let timer = Instant::now();
         let mut selection_history = SelectionHistory::new();
         let mut search_params = SearchParams::new();
@@ -83,7 +84,7 @@ impl<'a> Search<'a> {
             }
         }
 
-        self.search_tree.get_best_node().mv
+        (self.search_tree.get_best_node().mv, &self.search_tree)
     }
 
     fn expand(&mut self, node_index: NodeIndex, board: &Board) {
@@ -115,7 +116,7 @@ impl<'a> Search<'a> {
     }
 
     fn simulate(&mut self, node_index: NodeIndex, board: &Board) -> f32 {
-        if board.is_insufficient_material() {
+        if board.is_insufficient_material() || board.three_fold() || board.half_moves >= 100 {
             self.search_tree[node_index].is_terminal = true;
             return 0.5;
         }

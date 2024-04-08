@@ -33,6 +33,11 @@ fn main() {
             break;
         }
 
+        if command == "clean" || command == "clear" || command == "cln" || command == "cls" {
+            clearscreen::clear().unwrap();
+            continue;
+        }
+
         uci.execute_command(command, args);
     }
 }

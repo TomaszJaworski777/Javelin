@@ -3,6 +3,7 @@ use std::ops::{Index, IndexMut};
 
 use super::node::Node;
 
+#[derive(Clone)]
 pub struct SearchTree(Vec<Node>);
 impl SearchTree {
     pub fn new() -> Self {

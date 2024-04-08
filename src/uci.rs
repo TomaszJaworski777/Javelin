@@ -9,7 +9,7 @@ use std::{
 
 use crate::{
     core::{create_board, Board, MoveList, MoveProvider, Side},
-    mcts::{Search, SearchParams, SearchRules},
+    mcts::{Search, SearchParams, SearchRules, SearchTree},
 };
 
 type CommandFn = Box<dyn Fn(&mut ContextVariables, &[String]) + Send + Sync + 'static>;
@@ -18,6 +18,7 @@ struct ContextVariables {
     board: Board,
     interruption_channel: Option<Sender<()>>,
     search_active: Arc<Mutex<bool>>,
+    search_tree: Arc<Mutex<SearchTree>>,
 }
 
 impl ContextVariables {
@@ -26,6 +27,7 @@ impl ContextVariables {
             board: create_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
             interruption_channel: None,
             search_active: Arc::new(Mutex::new(false)),
+            search_tree: Arc::new(Mutex::new(SearchTree::new())),
         }
     }
 }
@@ -47,6 +49,7 @@ impl Uci {
         uci.add_command("draw", Uci::draw_board_command);
         uci.add_command("go", Uci::go_command);
         uci.add_command("stop", Uci::stop_search_command);
+        uci.add_command("tree", Uci::tree_command);
 
         uci
     }
@@ -56,7 +59,7 @@ impl Uci {
         let seldepth = search_params.max_depth;
         let time = search_params.time_passed;
         let nodes = search_params.nodes;
-        let nps = (((nodes as u64) * 1000) as f64 / (time as f64).max(0.482)) as u64;
+        let nps = (nodes as u128) * 1000 / time.max(1);
         println!("info depth {depth} seldepth {seldepth} score cp 0 time {time} nodes {nodes} nps {nps} pv {pv_line}");
     }
 
@@ -170,20 +173,38 @@ impl Uci {
         let rules_final = rules;
         *context.search_active.lock().unwrap() = true;
         let search_active_clone = Arc::clone(&context.search_active);
+        let tree_clone = Arc::clone(&context.search_tree);
         thread::spawn(move || {
-            let best_move = Search::new(&board, &reciever).run(&rules_final);
-            println!("bestmove {}", best_move.to_string());
+            let mut search = Search::new(&board, &reciever);
+            let result = search.run(&rules_final);
+            println!("bestmove {}", result.0.to_string());
+            *tree_clone.lock().unwrap() = result.1.clone();
             *search_active_clone.lock().unwrap() = false;
         });
     }
 
-    fn stop_search_command(context: &mut ContextVariables, _args: &[String]) {
+    fn stop_search_command(context: &mut ContextVariables, args: &[String]) {
         if !*context.search_active.lock().unwrap() {
             return;
         }
 
         if let Some(sender) = &context.interruption_channel {
             sender.send(()).expect("Failed to send stop signal");
+        }
+    }
+
+    fn tree_command(context: &mut ContextVariables, args: &[String]) {
+        match args.len() {
+            0 => context.search_tree.lock().unwrap().draw_tree_from_root(1, &context.board),
+            1 => {
+                context.search_tree.lock().unwrap().draw_tree_from_root(args[0].parse::<i32>().unwrap(), &context.board)
+            }
+            2 => context.search_tree.lock().unwrap().draw_tree_from_node(
+                args[0].parse::<u32>().unwrap(),
+                args[1].parse::<i32>().unwrap(),
+                &context.board,
+            ),
+            _ => return,
         }
     }
 }

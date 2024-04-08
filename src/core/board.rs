@@ -7,6 +7,8 @@ use crate::{
 };
 use colored::*;
 
+use super::move_history::MoveHistory;
+
 #[derive(Copy, Clone)]
 pub struct Board {
     pieces: [Bitboard; 6],
@@ -19,6 +21,7 @@ pub struct Board {
     pub en_passant: Square,
     pub side_to_move: Side,
     pub zobrist: ZobristKey,
+    move_history: MoveHistory,
 }
 
 impl Board {
@@ -34,6 +37,7 @@ impl Board {
             en_passant: Square::NULL,
             side_to_move: Side::WHITE,
             zobrist: ZobristKey::NULL,
+            move_history: MoveHistory::new(),
         }
     }
 
@@ -139,6 +143,16 @@ impl Board {
         pawns && major_pieces && white_minor_pieces && black_minor_pieces
     }
 
+    pub fn three_fold(&self) -> bool {
+        let mut appearance_count = 0;
+        for mv_key in self.move_history.range().rev() {
+            if self.move_history[mv_key] == self.zobrist.key {
+                appearance_count += 1;
+            }
+        }
+        appearance_count >= 3
+    }
+
     pub fn make_move(&mut self, mv: Move) {
         let from_square = mv.get_from_square();
         let to_square = mv.get_to_square();
@@ -221,6 +235,7 @@ impl Board {
         self.half_moves += 1;
         if mv.is_capture() || moving_piece.0 == Piece::PAWN {
             self.half_moves = 0;
+            self.move_history.clear();
         }
 
         self.side_to_move.mut_flip();
@@ -229,6 +244,8 @@ impl Board {
         self.checkers = Attacks::generate_checkers_mask(&self);
         self.ortographic_pins = Attacks::generate_ortographic_pins_mask(&self);
         self.diagonal_pins = Attacks::generate_diagonal_pins_mask(&self);
+
+        self.move_history.push(&self.zobrist);
     }
 
     #[allow(dead_code)]
@@ -372,6 +389,9 @@ pub fn create_board(fen: &str) -> Board {
     board.checkers = Attacks::generate_checkers_mask(&board);
     board.ortographic_pins = Attacks::generate_ortographic_pins_mask(&board);
     board.diagonal_pins = Attacks::generate_diagonal_pins_mask(&board);
+
+    board.move_history = MoveHistory::new();
+    board.move_history.push(&board.zobrist);
 
     return board;
 }
