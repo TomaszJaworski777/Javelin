@@ -139,11 +139,11 @@ impl Board {
         pawns && major_pieces && white_minor_pieces && black_minor_pieces
     }
 
-    pub fn make_move(&mut self, _move: Move) {
-        let from_square = _move.get_from_square();
-        let to_square = _move.get_to_square();
+    pub fn make_move(&mut self, mv: Move) {
+        let from_square = mv.get_from_square();
+        let to_square = mv.get_to_square();
         let moving_piece = self.get_piece_on_square(from_square);
-        let target_piece_square = if _move.is_en_passant() { to_square ^ 8 } else { to_square };
+        let target_piece_square = if mv.is_en_passant() { to_square ^ 8 } else { to_square };
         let target_piece = self.get_piece_on_square(target_piece_square);
         let castle_rights_offset = (self.side_to_move.current() * 2) as u8;
         let square_value_offset = self.side_to_move.current() * 56;
@@ -153,7 +153,7 @@ impl Board {
             self.remove_piece_on_square(target_piece_square, target_piece.1, target_piece.0);
         }
 
-        let destination_piece = if _move.is_promotion() { _move.get_promotion_piece() } else { moving_piece.0 };
+        let destination_piece = if mv.is_promotion() { mv.get_promotion_piece() } else { moving_piece.0 };
         self.set_piece_on_square(to_square, moving_piece.1, destination_piece);
 
         let remove_castle_rights = |board: &mut Board| {
@@ -163,14 +163,14 @@ impl Board {
             board.zobrist.update_castle_rights_hash((CastleRights::WHITE_QUEEN + castle_rights_offset) as usize);
         };
 
-        if _move.is_king_castle() {
+        if mv.is_king_castle() {
             let rook_position = Square::H1 + square_value_offset;
             let rook_destination = Square::F1 + square_value_offset;
             self.remove_piece_on_square(rook_position, moving_piece.1, Piece::ROOK);
             self.set_piece_on_square(rook_destination, moving_piece.1, Piece::ROOK);
 
             remove_castle_rights(self);
-        } else if _move.is_queen_castle() {
+        } else if mv.is_queen_castle() {
             let rook_position = Square::A1 + square_value_offset;
             let rook_destination = Square::D1 + square_value_offset;
             self.remove_piece_on_square(rook_position, moving_piece.1, Piece::ROOK);
@@ -210,7 +210,7 @@ impl Board {
             }
         }
 
-        if _move.is_double_push() {
+        if mv.is_double_push() {
             self.en_passant = from_square ^ 24;
             self.zobrist.update_en_passant_hash(self.en_passant);
         } else if self.en_passant != Square::NULL {
@@ -219,7 +219,7 @@ impl Board {
         }
 
         self.half_moves += 1;
-        if _move.is_capture() || moving_piece.0 == Piece::PAWN {
+        if mv.is_capture() || moving_piece.0 == Piece::PAWN {
             self.half_moves = 0;
         }
 

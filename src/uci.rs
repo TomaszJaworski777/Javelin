@@ -49,7 +49,7 @@ impl Uci {
         let seldepth = search_params.max_depth;
         let time = search_params.time_passed;
         let nodes = search_params.nodes;
-        let nps = ((nodes * 1000) as f64 / (time as f64).max(0.482)) as u64;
+        let nps = (((nodes as u64) * 1000) as f64 / (time as f64).max(0.482)) as u64;
         println!("info depth {depth} seldepth {seldepth} score cp 0 time {time} nodes {nodes} nps {nps} pv {pv_line}");
     }
 
@@ -87,8 +87,8 @@ impl Uci {
                     let mut move_list = MoveList::new();
                     MoveProvider::generate_moves(&mut move_list, board);
 
-                    if let Some(_move) = move_list.iter().find(|&m| m.to_string() == *move_str) {
-                        board.make_move(*_move);
+                    if let Some(mv) = move_list.iter().find(|&m| m.to_string() == *move_str) {
+                        board.make_move(*mv);
                     }
                 }
             }

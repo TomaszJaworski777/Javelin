@@ -11,10 +11,10 @@ pub struct Node {
     pub children_count: u32,
     pub policy_value: f32,
     pub is_terminal: bool,
-    pub _move: Move,
+    pub mv: Move,
 }
 impl Node {
-    pub fn new(_move: Move) -> Self {
+    pub fn new(mv: Move) -> Self {
         Self {
             index: 0,
             total_value: 0.0,
@@ -23,7 +23,7 @@ impl Node {
             children_count: 0,
             policy_value: 0.0,
             is_terminal: false,
-            _move: _move,
+            mv,
         }
     }
 
@@ -44,10 +44,10 @@ impl Node {
     }
 
     pub fn print_node(&self, prefix: &str, reverse_q: bool) {
-        let move_str = if self._move == Move::NULL {
+        let move_str = if self.mv == Move::NULL {
             "root".to_string()
         } else {
-            format!("{}. {}", self.index, self._move.to_string())
+            format!("{}. {}", self.index, self.mv.to_string())
         };
         println!(
             "{}{} Q({:.2}%) N({}) P({:.2}%)",

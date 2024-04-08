@@ -24,11 +24,11 @@ impl SearchTree {
     pub fn get_pv_line(&self) -> String {
         let mut pv_line: Vec<String> = Vec::new();
         let mut current_best_node = self.get_best_child_for_node(0);
-        pv_line.push(current_best_node._move.to_string());
+        pv_line.push(current_best_node.mv.to_string());
 
         while !current_best_node.is_leaf() && !current_best_node.is_terminal {
             current_best_node = self.get_best_child_for_node(current_best_node.index);
-            pv_line.push(current_best_node._move.to_string());
+            pv_line.push(current_best_node.mv.to_string());
         }
 
         pv_line.join(" ")

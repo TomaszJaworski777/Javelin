@@ -24,7 +24,7 @@ pub struct Search<'a> {
 }
 impl<'a> Search<'a> {
     pub fn new(board: &Board, interruption_channel: &'a Receiver<()>) -> Self {
-        Self { search_tree: SearchTree::new(), root_position: *board, interruption_channel: interruption_channel }
+        Self { search_tree: SearchTree::new(), root_position: *board, interruption_channel }
     }
 
     pub fn run(&mut self, search_rules: &SearchRules) -> Move {
@@ -48,7 +48,7 @@ impl<'a> Search<'a> {
             while !self.search_tree[current_node_index].is_leaf() {
                 current_node_index = self.select(current_node_index);
                 selection_history.push(current_node_index);
-                current_board.make_move(self.search_tree[current_node_index]._move);
+                current_board.make_move(self.search_tree[current_node_index].mv);
                 depth += 1;
             }
 
@@ -82,7 +82,7 @@ impl<'a> Search<'a> {
             }
         }
 
-        self.search_tree.get_best_node()._move
+        self.search_tree.get_best_node().mv
     }
 
     fn expand(&mut self, node_index: NodeIndex, board: &Board) {
