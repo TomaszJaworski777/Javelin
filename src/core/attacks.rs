@@ -116,8 +116,7 @@ static ATTACK_TABLES: Lazy<AttackTables> = Lazy::new(|| {
                 let magic_index: u64 = (occupancy.wrapping_mul(MAGIC_NUMBERS_BISHOP[square_index].into())
                     >> (64 - relevant_bit_count))
                     .into();
-                bishop_attacks[square_index][magic_index as usize] =
-                    generate_bishop_attacks(square, occupancy);
+                bishop_attacks[square_index][magic_index as usize] = generate_bishop_attacks(square, occupancy);
                 index += 1;
             }
         }
@@ -131,8 +130,7 @@ static ATTACK_TABLES: Lazy<AttackTables> = Lazy::new(|| {
                 let magic_index: u64 = (occupancy.wrapping_mul(MAGIC_NUMBERS_ROOK[square_index].into())
                     >> (64 - relevant_bit_count))
                     .into();
-                rook_attacks[square_index][magic_index as usize] =
-                    generate_rook_attacks(square, occupancy);
+                rook_attacks[square_index][magic_index as usize] = generate_rook_attacks(square, occupancy);
                 index += 1;
             }
         }

@@ -3,13 +3,14 @@ mod search_params;
 mod search_rules;
 mod search_tree;
 
-pub use search_rules::SearchRules;
 pub use search_params::SearchParams;
+pub use search_rules::SearchRules;
 
 use self::{node::Node, search_tree::SearchTree};
 use crate::{
     core::{Board, Move, MoveList, MoveProvider},
-    eval::Evaluation, uci::Uci,
+    eval::Evaluation,
+    uci::Uci,
 };
 use arrayvec::ArrayVec;
 use std::{sync::mpsc::Receiver, time::Instant};
@@ -20,7 +21,7 @@ type SelectionHistory = ArrayVec<NodeIndex, 128>;
 pub struct Search<'a> {
     search_tree: SearchTree,
     root_position: Board,
-    interruption_channel: &'a Receiver<()>
+    interruption_channel: &'a Receiver<()>,
 }
 impl<'a> Search<'a> {
     pub fn new(board: &Board, interruption_channel: &'a Receiver<()>) -> Self {
@@ -37,7 +38,7 @@ impl<'a> Search<'a> {
         self.expand(0, &board);
 
         let mut current_avg_depth = 0;
-        while search_rules.continue_search(&search_params) {
+        while search_rules.continue_search(&search_params) && search_params.nodes + 256 < u32::MAX {
             selection_history.clear();
 
             let mut current_node_index = root_node.index;

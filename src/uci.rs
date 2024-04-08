@@ -1,13 +1,23 @@
-use std::{collections::HashMap, sync::{mpsc::{self, Sender}, Arc, Mutex}, thread};
+use std::{
+    collections::HashMap,
+    sync::{
+        mpsc::{self, Sender},
+        Arc, Mutex,
+    },
+    thread,
+};
 
-use crate::{core::{create_board, Board, MoveList, MoveProvider, Side}, mcts::{Search, SearchParams, SearchRules}};
+use crate::{
+    core::{create_board, Board, MoveList, MoveProvider, Side},
+    mcts::{Search, SearchParams, SearchRules},
+};
 
 type CommandFn = Box<dyn Fn(&mut ContextVariables, &[String]) + Send + Sync + 'static>;
 
 struct ContextVariables {
     board: Board,
     interruption_channel: Option<Sender<()>>,
-    search_active: Arc<Mutex<bool>>
+    search_active: Arc<Mutex<bool>>,
 }
 
 impl ContextVariables {
@@ -15,7 +25,7 @@ impl ContextVariables {
         ContextVariables {
             board: create_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
             interruption_channel: None,
-            search_active: Arc::new(Mutex::new(false))
+            search_active: Arc::new(Mutex::new(false)),
         }
     }
 }
@@ -28,10 +38,7 @@ pub struct Uci {
 #[allow(unused_variables)]
 impl Uci {
     pub fn new() -> Self {
-        let mut uci = Uci { 
-            commands: HashMap::new(),
-            context: ContextVariables::new(),
-        };
+        let mut uci = Uci { commands: HashMap::new(), context: ContextVariables::new() };
 
         uci.add_command("uci", Uci::uci_command);
         uci.add_command("isready", Uci::is_ready_command);
@@ -44,7 +51,7 @@ impl Uci {
         uci
     }
 
-    pub fn print_raport(search_params: &SearchParams, pv_line: String){
+    pub fn print_raport(search_params: &SearchParams, pv_line: String) {
         let depth = search_params.get_avg_depth();
         let seldepth = search_params.max_depth;
         let time = search_params.time_passed;
@@ -81,7 +88,7 @@ impl Uci {
     }
 
     fn position_command(context: &mut ContextVariables, args: &[String]) {
-        let apply_moves = |moves: &[String], board: &mut Board| {   
+        let apply_moves = |moves: &[String], board: &mut Board| {
             if let Some(start_index) = moves.iter().position(|x| x == "moves") {
                 for move_str in &moves[start_index + 1..] {
                     let mut move_list = MoveList::new();
@@ -99,17 +106,17 @@ impl Uci {
                 let mut new_board = create_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
                 apply_moves(rest, &mut new_board);
                 context.board = new_board;
-            },
+            }
             Some((first, rest)) if first.as_str() == "fen" && rest.len() >= 6 => {
                 let fen = rest[..6].join(" ");
                 let mut new_board = create_board(&fen);
-    
+
                 if rest.len() > 6 {
                     apply_moves(&rest[6..], &mut new_board);
                 }
 
                 context.board = new_board;
-            },
+            }
             _ => return,
         }
     }
@@ -121,13 +128,15 @@ impl Uci {
     fn go_command(context: &mut ContextVariables, args: &[String]) {
         let mut rules = SearchRules::new();
         let mut timers = (0u64, 0u64, 0u64, 0u64, 0u64);
-        
+
         let mut i = 0;
         while i < args.len() {
             match args[i].as_str() {
                 "infinite" => rules.infinite = true,
-                "wtime" | "btime" | "winc" | "binc" | "movestogo" | "depth" | "nodes" | "iterations" | "movetime" if i + 1 < args.len() => {
-                    let value = args[i+1].parse().unwrap_or_default();
+                "wtime" | "btime" | "winc" | "binc" | "movestogo" | "depth" | "nodes" | "iterations" | "movetime"
+                    if i + 1 < args.len() =>
+                {
+                    let value = args[i + 1].parse().unwrap_or_default();
                     match args[i].as_str() {
                         "wtime" => timers.0 = value,
                         "btime" => timers.1 = value,
@@ -138,16 +147,19 @@ impl Uci {
                         "nodes" => rules.max_nodes = value as u32,
                         "iterations" => rules.max_iterations = value as u32,
                         "movetime" => rules.time_for_move = value,
-                        _ => {},
+                        _ => {}
                     }
                     i += 1;
-                },
-                _ => {},
+                }
+                _ => {}
             }
             i += 1;
         }
-        let (time, increment, moves_to_go) = if context.board.side_to_move == Side::WHITE { 
-            (timers.0, timers.2, timers.4) } else { (timers.1, timers.3, timers.4) };
+        let (time, increment, moves_to_go) = if context.board.side_to_move == Side::WHITE {
+            (timers.0, timers.2, timers.4)
+        } else {
+            (timers.1, timers.3, timers.4)
+        };
         if time > 0 {
             rules.time_for_move = SearchRules::calculate_time(time, increment, moves_to_go)
         }

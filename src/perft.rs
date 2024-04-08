@@ -82,7 +82,10 @@ impl Perft {
             let fen = "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8";
             let brd = create_board(fen);
             print!("{}\n", fen);
-            print!("{}\n\n", if Perft::execute::<true>(&brd, 6, false) == 3048196529 { "passed" } else { "not passed" });
+            print!(
+                "{}\n\n",
+                if Perft::execute::<true>(&brd, 6, false) == 3048196529 { "passed" } else { "not passed" }
+            );
         }
 
         {
