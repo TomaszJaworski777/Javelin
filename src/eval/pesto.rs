@@ -137,7 +137,7 @@ const ENDGAME_KING_TABLE: [i32;64] = [
     -53, -34, -21, -11, -28, -14, -24, -43
  ];
 
-const MIDGAME_PIECE_TABLE: [[i32; 64]; 6] = [
+static MIDGAME_PIECE_TABLE: [[i32; 64]; 6] = [
     MIDGAME_PAWN_TABLE,
     MIDGAME_KNIGHT_TABLE,
     MIDGAME_BISHOP_TABLE,
@@ -146,7 +146,7 @@ const MIDGAME_PIECE_TABLE: [[i32; 64]; 6] = [
     MIDGAME_KING_TABLE
  ];
 
-const ENDGAME_PIECE_TABLE: [[i32; 64]; 6] = [
+static ENDGAME_PIECE_TABLE: [[i32; 64]; 6] = [
     ENDGAME_PAWN_TABLE,
     ENDGAME_KNIGHT_TABLE,
     ENDGAME_BISHOP_TABLE,
@@ -165,7 +165,7 @@ const ENDGAME_PIECE_TABLE: [[i32; 64]; 6] = [
    
        for square in board.get_occupancy() {
            let (piece_index, side) = board.get_piece_on_square(square);
-           let piece_table_index = if side == Side::WHITE { square.get_value() } else { square.get_value() ^ 56 };
+           let piece_table_index = if side == Side::WHITE { square.get_value() ^ 56 } else { square.get_value() };
            let multiplier = (side.current() as i32 * -2) + 1;
            midgame_score += multiplier * (MIDGAME_PIECE_TABLE[piece_index-1][piece_table_index] + MIDGAME_PIECE_VALUE[piece_index-1]);
            endgame_score += multiplier * (ENDGAME_PIECE_TABLE[piece_index-1][piece_table_index] + ENDGAME_PIECE_VALUE[piece_index-1]);
