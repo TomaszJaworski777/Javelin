@@ -4,25 +4,27 @@ mod search_rules;
 mod search_tree;
 
 pub use search_rules::SearchRules;
+pub use search_params::SearchParams;
 
-use self::{node::Node, search_params::SearchParams, search_tree::SearchTree};
+use self::{node::Node, search_tree::SearchTree};
 use crate::{
     core::{Board, Move, MoveList, MoveProvider},
-    eval::Evaluation,
+    eval::Evaluation, uci::Uci,
 };
 use arrayvec::ArrayVec;
-use std::time::Instant;
+use std::{sync::mpsc::Receiver, time::Instant};
 
 type NodeIndex = u32;
 type SelectionHistory = ArrayVec<NodeIndex, 128>;
 
-pub struct Search {
+pub struct Search<'a> {
     search_tree: SearchTree,
     root_position: Board,
+    interruption_channel: &'a Receiver<()>
 }
-impl Search {
-    pub fn new(board: &Board) -> Self {
-        Self { search_tree: SearchTree::new(), root_position: *board }
+impl<'a> Search<'a> {
+    pub fn new(board: &Board, interruption_channel: &'a Receiver<()>) -> Self {
+        Self { search_tree: SearchTree::new(), root_position: *board, interruption_channel: interruption_channel }
     }
 
     pub fn run(&mut self, search_rules: &SearchRules) -> Move {
@@ -34,6 +36,7 @@ impl Search {
         let board = self.root_position;
         self.expand(0, &board);
 
+        let mut current_avg_depth = 0;
         while search_rules.continue_search(&search_params) {
             selection_history.clear();
 
@@ -65,6 +68,18 @@ impl Search {
             search_params.total_depth += depth;
             search_params.curernt_iterations += 1;
             search_params.nodes = self.search_tree.node_count();
+
+            if let Ok(_) = self.interruption_channel.try_recv() {
+                search_params.time_passed = timer.elapsed().as_millis();
+                Uci::print_raport(&search_params, self.search_tree.get_pv_line());
+                break;
+            }
+
+            if search_params.get_avg_depth() > current_avg_depth {
+                search_params.time_passed = timer.elapsed().as_millis();
+                Uci::print_raport(&search_params, self.search_tree.get_pv_line());
+                current_avg_depth = search_params.get_avg_depth();
+            }
         }
 
         self.search_tree.get_best_node()._move

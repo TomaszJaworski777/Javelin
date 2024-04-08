@@ -18,10 +18,27 @@ impl SearchTree {
     }
 
     pub fn get_best_node(&self) -> &Node {
-        let mut best_node = &self[0];
+        self.get_best_child_for_node(0)
+    }
+
+    pub fn get_pv_line(&self) -> String {
+        let mut pv_line: Vec<String> = Vec::new();
+        let mut current_best_node = self.get_best_child_for_node(0);
+        pv_line.push(current_best_node._move.to_string());
+
+        while !current_best_node.is_leaf() && !current_best_node.is_terminal {
+            current_best_node = self.get_best_child_for_node(current_best_node.index);
+            pv_line.push(current_best_node._move.to_string());
+        }
+
+        pv_line.join(" ")
+    }
+
+    fn get_best_child_for_node(&self, node_index: u32) -> &Node {
+        let mut best_node = &self[node_index];
         let mut best_score = f32::MIN;
 
-        for child_index in best_node.children() {
+        for child_index in self[node_index].children() {
             let child = &self[child_index];
 
             if child.avg_value() > best_score {
