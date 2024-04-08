@@ -81,13 +81,15 @@ impl Uci {
     }
 
     fn position_command(context: &mut ContextVariables, args: &[String]) {
-        let apply_moves = |moves: &[String], board: &mut Board| {
-            let mut move_list = MoveList::new();
-            MoveProvider::generate_moves(&mut move_list, &board);
-        
-            for mv_str in moves.iter().skip_while(|&m| m != "moves").skip(1) {
-                if let Some(_move) = move_list.iter().find(|&m| m.to_string() == *mv_str) {
-                    board.make_move(*_move);
+        let apply_moves = |moves: &[String], board: &mut Board| {   
+            if let Some(start_index) = moves.iter().position(|x| x == "moves") {
+                for move_str in &moves[start_index + 1..] {
+                    let mut move_list = MoveList::new();
+                    MoveProvider::generate_moves(&mut move_list, board);
+
+                    if let Some(_move) = move_list.iter().find(|&m| m.to_string() == *move_str) {
+                        board.make_move(*_move);
+                    }
                 }
             }
         };

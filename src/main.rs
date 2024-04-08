@@ -29,7 +29,7 @@ fn main() {
         let command = parts[0];
         let args = &parts[1..].iter().map(|arg_str| arg_str.to_string()).collect::<Vec<String>>();
 
-        if command == "exit" {
+        if command == "exit" || command == "quit" {
             break;
         }
 
