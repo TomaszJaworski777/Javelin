@@ -2,15 +2,15 @@ mod node;
 mod search_params;
 mod search_rules;
 mod search_tree;
+mod qsearch;
 
 pub use search_params::SearchParams;
 pub use search_rules::SearchRules;
 pub use search_tree::SearchTree;
 
-use self::node::Node;
+use self::{node::Node, qsearch::qsearch};
 use crate::{
     core::{Board, Move, MoveList, MoveProvider},
-    eval::Evaluation,
     uci::Uci,
 };
 use arrayvec::ArrayVec;
@@ -90,8 +90,8 @@ impl<'a> Search<'a> {
     }
 
     fn expand(&mut self, node_index: NodeIndex, board: &Board) {
-        let mut move_list = MoveList::new();
-        MoveProvider::generate_moves(&mut move_list, &board);
+        let mut move_list = MoveList::new(); 
+        MoveProvider::generate_moves::<false>(&mut move_list, &board);
 
         self.search_tree[node_index].first_child_index = self.search_tree.node_count();
         self.search_tree[node_index].children_count = move_list.len() as NodeIndex;
@@ -122,17 +122,17 @@ impl<'a> Search<'a> {
             self.search_tree[node_index].is_terminal = true;
             return 0.5;
         }
-
+    
         let mut move_list = MoveList::new();
-        MoveProvider::generate_moves(&mut move_list, &board);
-
+        MoveProvider::generate_moves::<false>(&mut move_list, &board);
+    
         if move_list.len() == 0 {
             let score = if board.is_in_check() { -1.0 } else { 0.5 };
             self.search_tree[node_index].is_terminal = true;
             return score;
         }
 
-        Evaluation::evaluate(&board)
+        sigmoid(qsearch(&board, -30000, 30000))
     }
 
     fn backpropagate(&mut self, selection_history: &mut SelectionHistory, mut result: f32) {
@@ -156,4 +156,8 @@ fn puct(search_tree: &SearchTree, parent_index: NodeIndex, child_index: NodeInde
     let numerator = (n.max(1) as f32).sqrt();
     let denominator = ni as f32 + 1.0;
     v + c * p * (numerator / denominator)
+}
+
+fn sigmoid(input: i32) -> f32 {
+    1.0 / (1.0 + (-input as f32 / 400.0).exp())
 }

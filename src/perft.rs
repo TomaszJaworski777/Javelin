@@ -27,7 +27,7 @@ impl Perft {
         let mut nodes = 0u64;
 
         let mut move_list = MoveList::new();
-        MoveProvider::generate_moves(&mut move_list, board);
+        MoveProvider::generate_moves::<false>(&mut move_list, board);
 
         if BULK && depth == 1 && !first_iteration {
             return move_list.len() as u64;
