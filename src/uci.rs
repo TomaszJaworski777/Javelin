@@ -9,7 +9,7 @@ use std::{
 
 use crate::{
     core::{create_board, Board, MoveList, MoveProvider, Side},
-    mcts::{Search, SearchParams, SearchRules, SearchTree},
+    mcts::{Search, SearchParams, SearchRules, SearchTree}, perft::Perft,
 };
 
 type CommandFn = Box<dyn Fn(&mut ContextVariables, &[String]) + Send + Sync + 'static>;
@@ -50,6 +50,7 @@ impl Uci {
         uci.add_command("go", Uci::go_command);
         uci.add_command("stop", Uci::stop_search_command);
         uci.add_command("tree", Uci::tree_command);
+        uci.add_command("perft", Uci::perft_command);
 
         uci
     }
@@ -213,5 +214,13 @@ impl Uci {
             ),
             _ => return,
         }
+    }
+
+    fn perft_command(context: &mut ContextVariables, args: &[String]) {
+        if args.len() != 1 {
+            return;
+        }
+
+        Perft::execute::<true>(&context.board, args[0].parse().unwrap_or_default(), true);
     }
 }
