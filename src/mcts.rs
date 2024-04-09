@@ -54,14 +54,18 @@ impl<'a> Search<'a> {
                 depth += 1;
             }
 
-            let node_score = self.simulate(current_node_index, &current_board);
-
-            if !self.search_tree[current_node_index].is_terminal {
+            if !self.search_tree[current_node_index].is_terminal && self.search_tree[current_node_index].visit_count > 0 {
                 self.expand(current_node_index, &current_board);
+                current_node_index = self.search_tree[current_node_index].first_child_index;
+                selection_history.push(current_node_index);
+                current_board.make_move(self.search_tree[current_node_index].mv);
             }
 
+            let node_score = self.simulate(current_node_index, &current_board);
+
+            self.backpropagate(&mut selection_history, node_score);
+
             {
-                self.backpropagate(&mut selection_history, node_score);
 
                 if search_params.curernt_iterations % 128 == 0 {
                     search_params.time_passed = timer.elapsed().as_millis();
@@ -109,6 +113,7 @@ impl<'a> Search<'a> {
         let mut best_value = f32::MIN;
         for child_index in self.search_tree[parent_index].children() {
             let current_value = puct(&self.search_tree, parent_index, child_index, 1.41);
+
             if current_value > best_value {
                 best_index = child_index;
                 best_value = current_value;
