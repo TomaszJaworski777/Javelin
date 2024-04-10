@@ -60,7 +60,7 @@ impl Uci {
         let depth = search_params.get_avg_depth();
         let seldepth = search_params.max_depth;
         let time = search_params.time_passed;
-        let nodes = search_params.nodes;
+        let nodes = search_params.curernt_iterations;
         let nps = (nodes as u128) * 1000 / time.max(1);
         let score_text: String;
         if let GameResult::Win(n) = result {
