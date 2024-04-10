@@ -150,7 +150,7 @@ impl Board {
                 appearance_count += 1;
             }
         }
-        appearance_count >= 3
+        appearance_count >= 2
     }
 
     pub fn make_move(&mut self, mv: Move) {
