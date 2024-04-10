@@ -11,14 +11,12 @@ pub use node::GameResult;
 
 use self::{node::Node, qsearch::qsearch};
 use crate::{
-    core::{Board, Move, MoveList, MoveProvider},
-    uci::Uci,
+    core::{Board, Move, MoveList, MoveProvider}, eval::Evaluation, uci::Uci
 };
-use arrayvec::ArrayVec;
 use std::{sync::mpsc::Receiver, time::Instant};
 
 type NodeIndex = u32;
-type SelectionHistory = ArrayVec<NodeIndex, 128>;
+type SelectionHistory = Vec<NodeIndex>;
 
 pub struct Search<'a> {
     search_tree: SearchTree,
@@ -147,10 +145,10 @@ impl<'a> Search<'a> {
         self.search_tree[node_index].first_child_index = self.search_tree.node_count();
         self.search_tree[node_index].children_count = move_list.len() as NodeIndex;
 
-        for _move in move_list {
-            let mut new_node = Node::new(_move);
+        for mv in move_list {
+            let mut new_node = Node::new(mv);
             new_node.index = self.search_tree.node_count();
-            new_node.policy_value = 1.0 / self.search_tree[node_index].children_count as f32;
+            new_node.policy_value = sigmoid(Evaluation::get_move_value(&board, mv)) / self.search_tree[node_index].children_count as f32;
             self.search_tree.push(&new_node);
         }
     }
