@@ -2,6 +2,16 @@ use std::ops::Range;
 
 use crate::core::Move;
 
+use super::SearchTree;
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum GameResult {
+    None,
+    Lose(u8),
+    Draw,
+    Win(u8),
+}
+
 #[derive(Clone, Copy)]
 pub struct Node {
     pub index: u32,
@@ -10,7 +20,7 @@ pub struct Node {
     pub first_child_index: u32,
     pub children_count: u32,
     pub policy_value: f32,
-    pub is_terminal: bool,
+    pub result: GameResult,
     pub mv: Move,
 }
 impl Node {
@@ -22,13 +32,17 @@ impl Node {
             first_child_index: 0,
             children_count: 0,
             policy_value: 0.0,
-            is_terminal: false,
+            result: GameResult::None,
             mv,
         }
     }
 
     pub fn is_leaf(&self) -> bool {
         self.children_count == 0
+    }
+
+    pub fn is_terminal(&self) -> bool {
+        self.result != GameResult::None
     }
 
     pub fn children(&self) -> Range<u32> {
@@ -41,6 +55,33 @@ impl Node {
             return 0.5;
         }
         self.total_value / self.visit_count as f32
+    }
+
+    pub fn all_children_lost(&self, tree: &SearchTree) -> Option<u8> {
+        let lose_values =
+            self.children().filter_map(
+                |child_index| {
+                    if let GameResult::Lose(n) = tree[child_index].result {
+                        Some(n)
+                    } else {
+                        None
+                    }
+                },
+            );
+
+        let min_value = lose_values.min();
+
+        if min_value.is_some()
+            && self.children().all(|child_index| matches!(tree[child_index].result, GameResult::Lose(_)))
+        {
+            min_value
+        } else {
+            None
+        }
+    }
+
+    pub fn all_children_draw(&self, tree: &SearchTree) -> bool {
+        self.children().all(|child_index| matches!(tree[child_index].result, GameResult::Draw))
     }
 
     pub fn print_node(&self, prefix: &str, reverse_q: bool) {

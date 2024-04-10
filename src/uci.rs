@@ -9,7 +9,8 @@ use std::{
 
 use crate::{
     core::{create_board, Board, MoveList, MoveProvider, Side},
-    mcts::{Search, SearchParams, SearchRules, SearchTree}, perft::Perft,
+    mcts::{GameResult, Search, SearchParams, SearchRules, SearchTree},
+    perft::Perft,
 };
 
 type CommandFn = Box<dyn Fn(&mut ContextVariables, &[String]) + Send + Sync + 'static>;
@@ -55,21 +56,23 @@ impl Uci {
         uci
     }
 
-    pub fn print_raport(search_params: &SearchParams, pv_line: String, best_score: f32) {
+    pub fn print_raport(search_params: &SearchParams, pv_line: String, best_score: f32, result: GameResult) {
         let depth = search_params.get_avg_depth();
         let seldepth = search_params.max_depth;
         let time = search_params.time_passed;
-        let nodes = search_params.nodes;
+        let nodes = search_params.curernt_iterations;
         let nps = (nodes as u128) * 1000 / time.max(1);
-        let cp: i32;
-        if best_score >= 1.0 {
-            cp = 30000;
-        } else if best_score <= 0.0 {
-            cp = -30000;
+        let score_text: String;
+        if let GameResult::Win(n) = result {
+            score_text = format!("mate {n}");
+        } else if let GameResult::Lose(n) = result  {
+            score_text = format!("mate -{n}");
         } else {
-            cp = (-400.0 * (1.0 / best_score.clamp(0.0, 1.0) - 1.0).ln()) as i32;
+            score_text = format!("cp {}", (-400.0 * (1.0 / best_score.clamp(0.0, 1.0) - 1.0).ln()) as i32);
         }
-        println!("info depth {depth} seldepth {seldepth} score cp {cp} time {time} nodes {nodes} nps {nps} pv {pv_line}");
+        println!(
+            "info depth {depth} seldepth {seldepth} score {score_text} time {time} nodes {nodes} nps {nps} pv {pv_line}"
+        );
     }
 
     pub fn execute_command(&mut self, command_name: &str, args: &[String]) {
@@ -140,6 +143,10 @@ impl Uci {
     fn go_command(context: &mut ContextVariables, args: &[String]) {
         let mut rules = SearchRules::new();
         let mut timers = (0u64, 0u64, 0u64, 0u64, 0u64);
+
+        if args.len() == 0 {
+            rules.infinite = true;
+        }
 
         let mut i = 0;
         while i < args.len() {

@@ -25,12 +25,15 @@ impl MoveProvider {
         }
 
         let move_mask = if no_checks {
-            if ONLY_CAPTURE { board.get_opponent_occupancy() } else { !board.get_allied_occupancy() }
+            if ONLY_CAPTURE {
+                board.get_opponent_occupancy()
+            } else {
+                !board.get_allied_occupancy()
+            }
         } else {
             if ONLY_CAPTURE {
                 checkers
-            }
-            else {
+            } else {
                 let checker = checkers.ls1b_square();
                 Ray::get_ray(board.get_king_square(board.side_to_move), checker).include(checker)
             }
