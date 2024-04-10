@@ -23,9 +23,9 @@ impl Evaluation {
             let (moving_piece, _) = board.get_piece_on_square(mv.get_from_square());
             result += (target_piece as i32 * 100) - moving_piece as i32;
         }
-        //if mv.is_promotion() {
-            //result += (mv.get_promotion_piece() as i32) * 100;
-        //}
+        if mv.is_promotion() {
+            result += (mv.get_promotion_piece() as i32) * 100;
+        }
 
         return result;
     }
