@@ -13,11 +13,10 @@ use self::{node::Node, qsearch::qsearch};
 use crate::{
     core::{Board, Move, MoveList, MoveProvider}, eval::Evaluation, uci::Uci
 };
-use arrayvec::ArrayVec;
 use std::{sync::mpsc::Receiver, time::Instant};
 
 type NodeIndex = u32;
-type SelectionHistory = ArrayVec<NodeIndex, 256>;
+type SelectionHistory = Vec<NodeIndex>;
 
 pub struct Search<'a> {
     search_tree: SearchTree,
