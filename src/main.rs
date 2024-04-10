@@ -4,8 +4,8 @@ mod mcts;
 mod perft;
 mod uci;
 
-use std::io::stdin;
 use console::Term;
+use std::io::stdin;
 use uci::Uci;
 
 fn main() {

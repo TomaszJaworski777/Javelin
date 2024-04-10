@@ -1,4 +1,7 @@
-use crate::{core::{Board, MoveList, MoveProvider}, eval::Evaluation};
+use crate::{
+    core::{Board, MoveList, MoveProvider},
+    eval::Evaluation,
+};
 
 pub fn qsearch(board: &Board, mut alpha: i32, beta: i32) -> i32 {
     let evaluation = Evaluation::evaluate(&board);

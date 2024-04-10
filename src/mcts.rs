@@ -1,14 +1,14 @@
 mod node;
+mod qsearch;
 mod search_params;
 mod search_rules;
 mod search_tree;
-mod qsearch;
 
 pub use search_params::SearchParams;
 pub use search_rules::SearchRules;
 pub use search_tree::SearchTree;
 
-use self::{node::Node, qsearch::qsearch};
+use self::{node::GameResult, node::Node, qsearch::qsearch};
 use crate::{
     core::{Board, Move, MoveList, MoveProvider},
     uci::Uci,
@@ -49,12 +49,37 @@ impl<'a> Search<'a> {
             let mut depth = 0u32;
             while !self.search_tree[current_node_index].is_leaf() {
                 current_node_index = self.select(current_node_index);
+
+                if let GameResult::Win(_) = self.search_tree[current_node_index].result {
+                    break;
+                }
+
+                if current_node_index == 0 {
+                    break;
+                }
+
                 selection_history.push(current_node_index);
                 current_board.make_move(self.search_tree[current_node_index].mv);
                 depth += 1;
             }
 
-            if !self.search_tree[current_node_index].is_terminal && self.search_tree[current_node_index].visit_count > 0 {
+            if current_node_index == 0 {
+                break;
+            }
+
+            if let GameResult::Win(_) = self.search_tree[current_node_index].result {
+                search_params.time_passed = timer.elapsed().as_millis();
+                Uci::print_raport(
+                    &search_params,
+                    self.search_tree.get_pv_line(),
+                    self.search_tree.get_best_node().avg_value(),
+                );
+                break;
+            }
+
+            if !self.search_tree[current_node_index].is_terminal()
+                && self.search_tree[current_node_index].visit_count > 0
+            {
                 self.expand(current_node_index, &current_board);
                 current_node_index = self.search_tree[current_node_index].first_child_index;
                 selection_history.push(current_node_index);
@@ -66,25 +91,32 @@ impl<'a> Search<'a> {
             self.backpropagate(&mut selection_history, node_score);
 
             {
-
                 if search_params.curernt_iterations % 128 == 0 {
                     search_params.time_passed = timer.elapsed().as_millis();
                 }
-    
+
                 search_params.max_depth = search_params.max_depth.max(depth);
                 search_params.total_depth += depth;
                 search_params.curernt_iterations += 1;
                 search_params.nodes = self.search_tree.node_count();
-    
+
                 if let Ok(_) = self.interruption_channel.try_recv() {
                     search_params.time_passed = timer.elapsed().as_millis();
-                    Uci::print_raport(&search_params, self.search_tree.get_pv_line(), self.search_tree.get_best_node().avg_value());
+                    Uci::print_raport(
+                        &search_params,
+                        self.search_tree.get_pv_line(),
+                        self.search_tree.get_best_node().avg_value(),
+                    );
                     break;
                 }
-    
+
                 if search_params.get_avg_depth() > current_avg_depth {
                     search_params.time_passed = timer.elapsed().as_millis();
-                    Uci::print_raport(&search_params, self.search_tree.get_pv_line(), self.search_tree.get_best_node().avg_value());
+                    Uci::print_raport(
+                        &search_params,
+                        self.search_tree.get_pv_line(),
+                        self.search_tree.get_best_node().avg_value(),
+                    );
                     current_avg_depth = search_params.get_avg_depth();
                 }
             }
@@ -94,7 +126,7 @@ impl<'a> Search<'a> {
     }
 
     fn expand(&mut self, node_index: NodeIndex, board: &Board) {
-        let mut move_list = MoveList::new(); 
+        let mut move_list = MoveList::new();
         MoveProvider::generate_moves::<false>(&mut move_list, &board);
 
         self.search_tree[node_index].first_child_index = self.search_tree.node_count();
@@ -112,6 +144,15 @@ impl<'a> Search<'a> {
         let mut best_index = 0;
         let mut best_value = f32::MIN;
         for child_index in self.search_tree[parent_index].children() {
+            if self.search_tree[child_index].is_terminal() {
+                if matches!(self.search_tree[child_index].result, GameResult::Win(_))
+                    && self.search_tree[parent_index].index == 0
+                {
+                    return child_index;
+                }
+                continue;
+            }
+
             let current_value = puct(&self.search_tree, parent_index, child_index, 1.41);
 
             if current_value > best_value {
@@ -124,16 +165,20 @@ impl<'a> Search<'a> {
 
     fn simulate(&mut self, node_index: NodeIndex, board: &Board) -> f32 {
         if board.is_insufficient_material() || board.three_fold() || board.half_moves >= 100 {
-            self.search_tree[node_index].is_terminal = true;
+            self.search_tree[node_index].result = GameResult::Draw;
             return 0.5;
         }
-    
+
         let mut move_list = MoveList::new();
         MoveProvider::generate_moves::<false>(&mut move_list, &board);
-    
+
         if move_list.len() == 0 {
-            let score = if board.is_in_check() { -1.0 } else { 0.5 };
-            self.search_tree[node_index].is_terminal = true;
+            let score = if board.is_in_check() { 0.0 } else { 0.5 };
+            if score == 0.0 {
+                self.search_tree[node_index].result = GameResult::Win(0);
+            } else {
+                self.search_tree[node_index].result = GameResult::Draw;
+            }
             return score;
         }
 
@@ -141,10 +186,35 @@ impl<'a> Search<'a> {
     }
 
     fn backpropagate(&mut self, selection_history: &mut SelectionHistory, mut result: f32) {
+        let mut previous_node_index = 0;
         while let Some(node_index) = selection_history.pop() {
             result = 1.0 - result;
-            self.search_tree[node_index].total_value += result;
-            self.search_tree[node_index].visit_count += 1;
+
+            if previous_node_index == 0 {
+                self.search_tree[node_index].total_value += result;
+                self.search_tree[node_index].visit_count += 1;
+                previous_node_index = node_index;
+                continue;
+            }
+
+            if let GameResult::Win(n) = self.search_tree[previous_node_index].result {
+                self.search_tree[node_index].result = GameResult::Lose(n + 1);
+                self.search_tree[node_index].visit_count += 1;
+                self.search_tree[node_index].total_value = 0.0;
+            } else if let Some(n) = self.search_tree[node_index].all_children_lost(&self.search_tree) {
+                self.search_tree[node_index].result = GameResult::Win(n + 1);
+                self.search_tree[node_index].visit_count += 1;
+                self.search_tree[node_index].total_value = self.search_tree[node_index].visit_count as f32;
+            } else if self.search_tree[node_index].all_children_draw(&self.search_tree) {
+                self.search_tree[node_index].result = GameResult::Draw;
+                self.search_tree[node_index].visit_count += 1;
+                self.search_tree[node_index].total_value = (self.search_tree[node_index].visit_count as f32) / 2.0;
+            } else {
+                self.search_tree[node_index].total_value += result;
+                self.search_tree[node_index].visit_count += 1;
+            }
+
+            previous_node_index = node_index;
         }
     }
 }

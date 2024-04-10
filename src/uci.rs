@@ -9,7 +9,8 @@ use std::{
 
 use crate::{
     core::{create_board, Board, MoveList, MoveProvider, Side},
-    mcts::{Search, SearchParams, SearchRules, SearchTree}, perft::Perft,
+    mcts::{Search, SearchParams, SearchRules, SearchTree},
+    perft::Perft,
 };
 
 type CommandFn = Box<dyn Fn(&mut ContextVariables, &[String]) + Send + Sync + 'static>;
@@ -69,7 +70,9 @@ impl Uci {
         } else {
             cp = (-400.0 * (1.0 / best_score.clamp(0.0, 1.0) - 1.0).ln()) as i32;
         }
-        println!("info depth {depth} seldepth {seldepth} score cp {cp} time {time} nodes {nodes} nps {nps} pv {pv_line}");
+        println!(
+            "info depth {depth} seldepth {seldepth} score cp {cp} time {time} nodes {nodes} nps {nps} pv {pv_line}"
+        );
     }
 
     pub fn execute_command(&mut self, command_name: &str, args: &[String]) {
@@ -140,6 +143,10 @@ impl Uci {
     fn go_command(context: &mut ContextVariables, args: &[String]) {
         let mut rules = SearchRules::new();
         let mut timers = (0u64, 0u64, 0u64, 0u64, 0u64);
+
+        if args.len() == 0 {
+            rules.infinite = true;
+        }
 
         let mut i = 0;
         while i < args.len() {
