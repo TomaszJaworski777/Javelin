@@ -17,7 +17,7 @@ use arrayvec::ArrayVec;
 use std::{sync::mpsc::Receiver, time::Instant};
 
 type NodeIndex = u32;
-type SelectionHistory = ArrayVec<NodeIndex, 128>;
+type SelectionHistory = ArrayVec<NodeIndex, 256>;
 
 pub struct Search<'a> {
     search_tree: SearchTree,
