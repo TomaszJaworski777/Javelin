@@ -11,3 +11,6 @@ mod zobrist;
 pub use board::{create_board, Board};
 pub use core_structs::{Move, MoveList, Side, Square};
 pub use movegen::MoveProvider;
+#[allow(unused_imports)]
+pub use bitboard::Bitboard;
+pub use bit_ops::get_bit;

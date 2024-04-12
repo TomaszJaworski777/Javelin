@@ -2,8 +2,7 @@ use crate::{
     core::attacks::Attacks,
     core::bitboard::Bitboard,
     core::core_structs::{CastleRights, Move, Piece, Side, Square},
-    core::zobrist::ZobristKey,
-    eval::Evaluation,
+    core::zobrist::ZobristKey
 };
 use colored::*;
 
@@ -272,8 +271,7 @@ impl Board {
         info.push(half_moves.as_str());
         let in_check = format!("In Check: {}", self.is_in_check());
         info.push(in_check.as_str());
-        let eval = format!("Evaluation: {}", Evaluation::evaluate(self));
-        info.push(eval.as_str());
+        info.push("");
 
         let mut result = " ------------------------\n".to_string();
         for rank in (0..8).rev() {

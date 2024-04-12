@@ -1,4 +1,5 @@
 /target
+/resources/data
 cutechess_commands.txt
 output.txt
 error.txt

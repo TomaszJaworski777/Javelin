@@ -1,0 +1,98 @@
+use std::io::{stdin, stdout, Write};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
+use console::Term;
+use crate::selfplay_thread::SelfPlayThread;
+use crate::structs::{ChessPolicyData, PieceBoard};
+use crate::file_manager::Files;
+
+mod structs;
+mod file_manager;
+mod selfplay_thread;
+
+struct GenData{
+    files: Files,
+    value_filtered: usize,
+    policy_filtered: usize,
+    games_played: u64,
+    wins: u32,
+    loses: u32,
+    draws: u32
+}
+
+fn main() {
+    let gen_data = Arc::new(Mutex::new(GenData {
+        files: Files::new(),
+        value_filtered: 0,
+        policy_filtered: 0,
+        games_played: 0,
+        wins: 0,
+        loses: 0,
+        draws: 0
+    }));
+
+    let _ = gen_data.lock().unwrap().files.load();
+    print_raport(&gen_data.lock().unwrap());
+    
+    let mut input = String::new();
+
+    print!("Nodes per move: ");
+    let _ = stdout().flush();
+    stdin().read_line(&mut input).expect("Error reading input");
+    let nodes_per_move: u16 = input.trim().parse().expect("Invalid number for nodes per move");
+    input.clear();
+
+    print!("Concurrency: ");
+    let _ = stdout().flush();
+    stdin().read_line(&mut input).expect("Error reading input");
+    let concurrency: u8 = input.trim().parse().expect("Invalid number for concurrency");
+    input.clear();
+
+    for _ in 0..concurrency {
+        let selfplay_thread = SelfPlayThread::new(gen_data.clone());
+        selfplay_thread.run(nodes_per_move as u32);
+    }
+
+    loop {
+        {
+            let data = gen_data.lock().unwrap();
+            print_raport(&data);
+            println!("Games played: {}", data.games_played);
+            println!("W/D/L: {}/{}/{}", data.wins, data.draws, data.loses);
+            println!("Nodes per move: {}", nodes_per_move);
+            println!("Concurrency: {}", concurrency);
+            let _ = data.files.save();
+        }
+        thread::sleep(Duration::from_secs(1));
+    }
+}
+
+fn print_raport(data: &GenData){
+    let term = Term::stdout();
+    if let Err(e) = term.clear_screen() {
+        eprintln!("Failed to clear screen: {}", e);
+    }
+
+    println!("Welcome to selfplay data generator v{}\n", env!("CARGO_PKG_VERSION"));
+    println!("Value entries: {}({}B)", data.files.value_data.len(), number_scaler(data.files.value_data.len() * std::mem::size_of::<PieceBoard>()));
+    println!("Filtered: {}({}B)\n", data.value_filtered, number_scaler(data.value_filtered * std::mem::size_of::<PieceBoard>()));
+    println!("Policy entries: {}({}B)", data.files.policy_data.len(), number_scaler(data.files.policy_data.len() * std::mem::size_of::<ChessPolicyData>()));
+    println!("Filtered: {}({}B)\n", data.policy_filtered, number_scaler(data.policy_filtered * std::mem::size_of::<ChessPolicyData>()));
+}
+
+fn number_scaler(number: usize) -> String{
+    const KILO: f32 = 1024.0;
+    const MEGA: f32 = KILO * 1024.0;
+    const GIGA: f32 = MEGA * 1024.0;
+
+    if number < KILO as usize {
+        number.to_string()
+    } else if number < MEGA as usize {
+        format!("{:.2}k", number as f32 / KILO)
+    } else if number < GIGA as usize {
+        format!("{:.2}M", number as f32 / MEGA)
+    } else {
+        format!("{:.2}G", number as f32 / GIGA)
+    }
+}

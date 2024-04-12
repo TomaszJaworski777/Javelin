@@ -191,8 +191,8 @@ impl Uci {
         let search_active_clone = Arc::clone(&context.search_active);
         let tree_clone = Arc::clone(&context.search_tree);
         thread::spawn(move || {
-            let mut search = Search::new(&board, &reciever);
-            let result = search.run(&rules_final);
+            let mut search = Search::new(&board, Some(&reciever));
+            let result = search.run::<true>(&rules_final);
             println!("bestmove {}", result.0.to_string());
             *tree_clone.lock().unwrap() = result.1.clone();
             *search_active_clone.lock().unwrap() = false;

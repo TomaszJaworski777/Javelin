@@ -1,8 +1,8 @@
+mod uci;
 mod core;
 mod eval;
 mod mcts;
 mod perft;
-mod uci;
 
 use console::Term;
 use std::io::stdin;
