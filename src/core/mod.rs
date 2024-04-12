@@ -13,4 +13,5 @@ pub use core_structs::{Move, MoveList, Side, Square};
 pub use movegen::MoveProvider;
 #[allow(unused_imports)]
 pub use bitboard::Bitboard;
+#[allow(unused_imports)]
 pub use bit_ops::get_bit;
