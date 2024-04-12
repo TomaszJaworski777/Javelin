@@ -20,7 +20,6 @@ colored = "*"
 rand = "0.8"
 once_cell = "1.10.0"
 arrayvec = "0.7.4"
-console = "0.15.0"
 
 [workspace]
 members = ["datagen", "trainer"]

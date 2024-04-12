@@ -4,8 +4,7 @@ mod eval;
 mod mcts;
 mod perft;
 
-use console::Term;
-use std::io::stdin;
+use std::{io::stdin, process::Command};
 use uci::Uci;
 
 fn main() {
@@ -35,13 +34,27 @@ fn main() {
         }
 
         if command == "clean" || command == "clear" || command == "cln" || command == "cls" {
-            let term = Term::stdout();
-            if let Err(e) = term.clear_screen() {
-                eprintln!("Failed to clear screen: {}", e);
-            }
+            clear_terminal_screen();
             continue;
         }
 
         uci.execute_command(command, args);
     }
+}
+
+pub fn clear_terminal_screen() {
+    if cfg!(target_os = "windows") {
+        Command::new("cmd")
+            .args(["/c", "cls"])
+            .spawn()
+            .expect("cls command failed to start")
+            .wait()
+            .expect("failed to wait");
+    } else {
+        Command::new("clear")
+            .spawn()
+            .expect("clear command failed to start")
+            .wait()
+            .expect("failed to wait");
+    };
 }

@@ -1,8 +1,8 @@
 use std::io::{stdin, stdout, Write};
+use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-use console::Term;
 use crate::selfplay_thread::SelfPlayThread;
 use crate::structs::{ChessPolicyData, PieceBoard};
 use crate::file_manager::Files;
@@ -69,11 +69,7 @@ fn main() {
 }
 
 fn print_raport(data: &GenData){
-    let term = Term::stdout();
-    if let Err(e) = term.clear_screen() {
-        eprintln!("Failed to clear screen: {}", e);
-    }
-
+    clear_terminal_screen();
     println!("Welcome to selfplay data generator v{}\n", env!("CARGO_PKG_VERSION"));
     println!("Value entries: {}({}B)", data.files.value_data.len(), number_scaler(data.files.value_data.len() * std::mem::size_of::<PieceBoard>()));
     println!("Filtered: {}({}B)\n", data.value_filtered, number_scaler(data.value_filtered * std::mem::size_of::<PieceBoard>()));
@@ -95,4 +91,21 @@ fn number_scaler(number: usize) -> String{
     } else {
         format!("{:.2}G", number as f32 / GIGA)
     }
+}
+
+pub fn clear_terminal_screen() {
+    if cfg!(target_os = "windows") {
+        Command::new("cmd")
+            .args(["/c", "cls"])
+            .spawn()
+            .expect("cls command failed to start")
+            .wait()
+            .expect("failed to wait");
+    } else {
+        Command::new("clear")
+            .spawn()
+            .expect("clear command failed to start")
+            .wait()
+            .expect("failed to wait");
+    };
 }
