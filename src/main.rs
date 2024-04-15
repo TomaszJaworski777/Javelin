@@ -1,9 +1,9 @@
-mod uci;
 mod core;
 mod eval;
 mod mcts;
-mod perft;
 mod neural_core;
+mod perft;
+mod uci;
 
 use std::{io::stdin, process::Command};
 use uci::Uci;
@@ -52,10 +52,6 @@ pub fn clear_terminal_screen() {
             .wait()
             .expect("failed to wait");
     } else {
-        Command::new("clear")
-            .spawn()
-            .expect("clear command failed to start")
-            .wait()
-            .expect("failed to wait");
+        Command::new("clear").spawn().expect("clear command failed to start").wait().expect("failed to wait");
     };
 }

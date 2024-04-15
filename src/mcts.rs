@@ -4,14 +4,16 @@ mod search_params;
 mod search_rules;
 mod search_tree;
 
+pub use node::GameResult;
 pub use search_params::SearchParams;
 pub use search_rules::SearchRules;
 pub use search_tree::SearchTree;
-pub use node::GameResult;
 
 use self::{node::Node, qsearch::qsearch};
 use crate::{
-    core::{Board, Move, MoveList, MoveProvider}, eval::Evaluation, uci::Uci
+    core::{Board, Move, MoveList, MoveProvider},
+    eval::Evaluation,
+    uci::Uci,
 };
 use std::{sync::mpsc::Receiver, time::Instant};
 
@@ -25,7 +27,7 @@ pub struct Search<'a> {
 }
 impl<'a> Search<'a> {
     pub fn new(board: &Board, interruption_channel: Option<&'a Receiver<()>>) -> Self {
-        Self { search_tree: SearchTree::new(), root_position: *board, interruption_channel}
+        Self { search_tree: SearchTree::new(), root_position: *board, interruption_channel }
     }
 
     pub fn run<const UCI_REPORT: bool>(&mut self, search_rules: &SearchRules) -> (Move, &SearchTree) {
@@ -70,7 +72,7 @@ impl<'a> Search<'a> {
                         &search_params,
                         self.search_tree.get_pv_line(),
                         best_node.avg_value(),
-                        best_node.result
+                        best_node.result,
                     );
                 }
                 break;
@@ -84,7 +86,7 @@ impl<'a> Search<'a> {
                         &search_params,
                         self.search_tree.get_pv_line(),
                         best_node.avg_value(),
-                        best_node.result
+                        best_node.result,
                     );
                 }
                 break;
@@ -122,7 +124,7 @@ impl<'a> Search<'a> {
                                 &search_params,
                                 self.search_tree.get_pv_line(),
                                 best_node.avg_value(),
-                                best_node.result
+                                best_node.result,
                             );
                         }
                         break;
@@ -137,7 +139,7 @@ impl<'a> Search<'a> {
                             &search_params,
                             self.search_tree.get_pv_line(),
                             best_node.avg_value(),
-                            best_node.result
+                            best_node.result,
                         );
                     }
                     current_avg_depth = search_params.get_avg_depth();
@@ -158,7 +160,8 @@ impl<'a> Search<'a> {
         for mv in move_list {
             let mut new_node = Node::new(mv);
             new_node.index = self.search_tree.node_count();
-            new_node.policy_value = sigmoid(Evaluation::get_move_value(&board, mv)) / self.search_tree[node_index].children_count as f32;
+            new_node.policy_value =
+                sigmoid(Evaluation::get_move_value(&board, mv)) / self.search_tree[node_index].children_count as f32;
             self.search_tree.push(&new_node);
         }
     }

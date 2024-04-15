@@ -2,26 +2,29 @@
 #[derive(Clone, Copy)]
 pub struct NetworkLayer<const INPUTS: usize, const OUTPUTS: usize, const ACTIVATION: u8> {
     weights: [[f32; INPUTS]; OUTPUTS],
-    biases: [f32; OUTPUTS]
+    biases: [f32; OUTPUTS],
 }
 #[allow(unused)]
 impl<const INPUTS: usize, const OUTPUTS: usize, const ACTIVATION: u8> NetworkLayer<INPUTS, OUTPUTS, ACTIVATION> {
     pub const fn new() -> Self {
-        Self {
-            weights: [[0.1; INPUTS]; OUTPUTS],
-            biases: [0.1; OUTPUTS]
+        Self { weights: [[0.1; INPUTS]; OUTPUTS], biases: [0.1; OUTPUTS] }
+    }
+
+    pub fn set_weights(&mut self, weights: Vec<Vec<f32>>) {
+        for output_index in 0..OUTPUTS {
+            for input_index in 0..INPUTS {
+                self.weights[output_index][input_index] = weights[output_index][input_index];
+            }
         }
     }
 
-    pub fn set_weights(&mut self, weights: [[f32; INPUTS]; OUTPUTS]) {
-        self.weights = weights
+    pub fn set_biases(&mut self, biases: Vec<f32>) {
+        for output_index in 0..OUTPUTS {
+            self.biases[output_index] = biases[output_index];
+        }
     }
 
-    pub fn set_biases(&mut self, biases: [f32; OUTPUTS]) {
-        self.biases = biases;
-    }
-
-    pub fn feed_forward(&self, inputs: [f32; INPUTS] )  -> [f32; OUTPUTS] {
+    pub fn feed_forward(&self, inputs: [f32; INPUTS]) -> [f32; OUTPUTS] {
         let mut result = [0.0; OUTPUTS];
 
         for output_index in 0..OUTPUTS {

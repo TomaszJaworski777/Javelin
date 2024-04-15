@@ -2,7 +2,7 @@ use crate::{
     core::attacks::Attacks,
     core::bitboard::Bitboard,
     core::core_structs::{CastleRights, Move, Piece, Side, Square},
-    core::zobrist::ZobristKey
+    core::zobrist::ZobristKey,
 };
 use colored::*;
 

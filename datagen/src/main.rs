@@ -1,24 +1,24 @@
+use crate::file_manager::Files;
+use crate::selfplay_thread::SelfPlayThread;
+use crate::structs::{ChessPolicyData, PieceBoard};
 use std::io::{stdin, stdout, Write};
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-use crate::selfplay_thread::SelfPlayThread;
-use crate::structs::{ChessPolicyData, PieceBoard};
-use crate::file_manager::Files;
 
-mod structs;
 mod file_manager;
 mod selfplay_thread;
+mod structs;
 
-struct GenData{
+struct GenData {
     files: Files,
     value_filtered: usize,
     policy_filtered: usize,
     games_played: u64,
     wins: u32,
     loses: u32,
-    draws: u32
+    draws: u32,
 }
 
 fn main() {
@@ -29,12 +29,12 @@ fn main() {
         games_played: 0,
         wins: 0,
         loses: 0,
-        draws: 0
+        draws: 0,
     }));
 
     let _ = gen_data.lock().unwrap().files.load();
     print_raport(&gen_data.lock().unwrap());
-    
+
     let mut input = String::new();
 
     print!("Nodes per move: ");
@@ -68,16 +68,32 @@ fn main() {
     }
 }
 
-fn print_raport(data: &GenData){
+fn print_raport(data: &GenData) {
     clear_terminal_screen();
     println!("Welcome to selfplay data generator v{}\n", env!("CARGO_PKG_VERSION"));
-    println!("Value entries: {}({}B)", data.files.value_data.len(), number_scaler(data.files.value_data.len() * std::mem::size_of::<PieceBoard>()));
-    println!("Filtered: {}({}B)\n", data.value_filtered, number_scaler(data.value_filtered * std::mem::size_of::<PieceBoard>()));
-    println!("Policy entries: {}({}B)", data.files.policy_data.len(), number_scaler(data.files.policy_data.len() * std::mem::size_of::<ChessPolicyData>()));
-    println!("Filtered: {}({}B)\n", data.policy_filtered, number_scaler(data.policy_filtered * std::mem::size_of::<ChessPolicyData>()));
+    println!(
+        "Value entries: {}({}B)",
+        data.files.value_data.len(),
+        number_scaler(data.files.value_data.len() * std::mem::size_of::<PieceBoard>())
+    );
+    println!(
+        "Filtered: {}({}B)\n",
+        data.value_filtered,
+        number_scaler(data.value_filtered * std::mem::size_of::<PieceBoard>())
+    );
+    println!(
+        "Policy entries: {}({}B)",
+        data.files.policy_data.len(),
+        number_scaler(data.files.policy_data.len() * std::mem::size_of::<ChessPolicyData>())
+    );
+    println!(
+        "Filtered: {}({}B)\n",
+        data.policy_filtered,
+        number_scaler(data.policy_filtered * std::mem::size_of::<ChessPolicyData>())
+    );
 }
 
-fn number_scaler(number: usize) -> String{
+fn number_scaler(number: usize) -> String {
     const KILO: f32 = 1024.0;
     const MEGA: f32 = KILO * 1024.0;
     const GIGA: f32 = MEGA * 1024.0;
@@ -102,10 +118,6 @@ pub fn clear_terminal_screen() {
             .wait()
             .expect("failed to wait");
     } else {
-        Command::new("clear")
-            .spawn()
-            .expect("clear command failed to start")
-            .wait()
-            .expect("failed to wait");
+        Command::new("clear").spawn().expect("clear command failed to start").wait().expect("failed to wait");
     };
 }

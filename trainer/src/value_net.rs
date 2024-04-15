@@ -1,15 +1,15 @@
-use std::{fmt::Debug, fs::File, io::Write, mem, path::Path};
 use javelin::ValueNetwork;
+use std::{fmt::Debug, fs::File, io::Write, mem, path::Path};
 
 use tch::Tensor;
 
 use crate::core_net_struct::SimpleNet;
 
 pub struct ValueNet {
-    pub net: SimpleNet
+    pub net: SimpleNet,
 }
 impl ValueNet {
-    pub const ARCHITECTURE: &[usize] = &[768,64,1];
+    pub const ARCHITECTURE: &[usize] = &[768, 64, 1];
     pub const NET_PATH: &str = "../resources/training/value.ot";
     pub const EXPORT_PATH: &str = "../resources/nets/value.net";
 
@@ -37,25 +37,18 @@ impl ValueNet {
                 let mut weights = vec![vec![0.0; input_length]; output_length];
                 for weight_index in 0..input_length {
                     for output_index in 0..output_length {
-                        weights[output_index][weight_index] = tensor.get(output_index as i64).double_value(&[weight_index as i64]) as f32;
+                        weights[output_index][weight_index] =
+                            tensor.get(output_index as i64).double_value(&[weight_index as i64]) as f32;
                     }
                 }
-                if index == 0{
-                    value_network.access_input_layer().set_weights(vec2d_to_array2d_unchecked(weights));
-                } else {
-                    value_network.access_output_layer().set_weights(vec2d_to_array2d_unchecked(weights));
-                }
+                value_network.set_layer_weights(index, weights);
             } else {
                 let length = ValueNet::ARCHITECTURE[1 + index];
                 let mut biases = vec![0.0; length];
                 for output_index in 0..length {
                     biases[output_index] = tensor.double_value(&[output_index as i64]) as f32;
                 }
-                if index == 0{ 
-                    value_network.access_input_layer().set_biases(vec_to_array_unchecked(biases));
-                } else {
-                    value_network.access_output_layer().set_biases(vec_to_array_unchecked(biases));
-                }
+                value_network.set_layer_biases(index, biases);
             }
         }
 
@@ -92,6 +85,6 @@ where
         let inner_array: [T; N] = inner_vec.try_into().unwrap(); // Can panic if sizes don't match
         temp_storage.push(inner_array);
     }
-    
+
     temp_storage.try_into().unwrap()
 }

@@ -1,8 +1,11 @@
-use tch::{nn::{self, Module}, Device, Tensor};
+use tch::{
+    nn::{self, Module},
+    Device, Tensor,
+};
 
 pub struct SimpleNet {
     pub vs: nn::VarStore,
-    net: nn::Sequential
+    net: nn::Sequential,
 }
 
 impl SimpleNet {
@@ -20,24 +23,16 @@ impl SimpleNet {
                 Default::default(),
             ));
 
-            if index + 2 < architecture.len(){
-                net = net.add_fn(move |xs: &Tensor| {
-                    xs.clamp(0.0, 1.0).pow_tensor_scalar(2)
-                });
-            }
-            else {
-                net = net.add_fn(move |xs: &Tensor| {
-                    xs.sigmoid()
-                });
+            if index + 2 < architecture.len() {
+                net = net.add_fn(move |xs: &Tensor| xs.clamp(0.0, 1.0).pow_tensor_scalar(2));
+            } else {
+                net = net.add_fn(move |xs: &Tensor| xs.sigmoid());
             }
 
             input_features = output_features as i64;
         }
 
-        SimpleNet {
-            vs,
-            net,
-        }
+        SimpleNet { vs, net }
     }
 
     pub fn save(&self, path: &str) -> tch::Result<()> {

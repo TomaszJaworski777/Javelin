@@ -23,7 +23,7 @@ pub struct PieceBoard {
     pub result: i8,
     pub side_to_move: u8,
     pub num: u8,
-    pub extra: u8
+    pub extra: u8,
 }
 
 unsafe impl Zeroable for ChessMoveInfo {}
@@ -36,12 +36,12 @@ unsafe impl Zeroable for PieceBoard {}
 unsafe impl Pod for PieceBoard {}
 
 impl PieceBoard {
-    pub fn from_board(board: &Board) -> Self{
+    pub fn from_board(board: &Board) -> Self {
         let mut piece_boards = [javelin::Bitboard::EMPTY; 4];
 
-        for square in board.get_occupancy(){
+        for square in board.get_occupancy() {
             let (piece, color) = board.get_piece_on_square(square);
-            for bit_index in 0..3usize{
+            for bit_index in 0..3usize {
                 if get_bit(piece, bit_index as u8) > 0 {
                     piece_boards[bit_index].set_bit(square);
                 }
@@ -51,13 +51,6 @@ impl PieceBoard {
             }
         }
 
-        Self {
-            piece_boards,
-            score: 0.0,
-            result: 0,
-            side_to_move: board.side_to_move.current() as u8,
-            num: 0,
-            extra: 0
-        }
+        Self { piece_boards, score: 0.0, result: 0, side_to_move: board.side_to_move.current() as u8, num: 0, extra: 0 }
     }
 }

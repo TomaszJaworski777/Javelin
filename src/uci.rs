@@ -65,7 +65,7 @@ impl Uci {
         let score_text: String;
         if let GameResult::Win(n) = result {
             score_text = format!("mate {n}");
-        } else if let GameResult::Lose(n) = result  {
+        } else if let GameResult::Lose(n) = result {
             score_text = format!("mate -{n}");
         } else {
             score_text = format!("cp {}", (-400.0 * (1.0 / best_score.clamp(0.0, 1.0) - 1.0).ln()) as i32);
