@@ -1,8 +1,13 @@
 mod pesto;
+mod value_network;
 
 use crate::core::{Board, Move, Side};
 
 use self::pesto::Pesto;
+
+pub use value_network::ValueNetwork;
+
+const VALUE_NETWORK: ValueNetwork = unsafe { std::mem::transmute(*include_bytes!("../resources/nets/value-001.net")) };
 
 pub struct Evaluation;
 impl Evaluation {
