@@ -42,8 +42,8 @@ impl ValueNetwork {
     }
 
     pub fn evaluate(&self, inputs: [f32; 768]) -> f32 {
-        let input_layer_result = self.input_layer.feed_forward(inputs);
-        let output_layer_result = self.output_layer.feed_forward(input_layer_result);
+        let input_layer_result = self.input_layer.feed_forward(&inputs);
+        let output_layer_result = self.output_layer.feed_forward(&input_layer_result);
         output_layer_result[0]
     }
 }

@@ -24,7 +24,7 @@ impl<const INPUTS: usize, const OUTPUTS: usize, const ACTIVATION: u8> NetworkLay
         }
     }
 
-    pub fn feed_forward(&self, inputs: [f32; INPUTS]) -> [f32; OUTPUTS] {
+    pub fn feed_forward(&self, inputs: &[f32; INPUTS]) -> [f32; OUTPUTS] {
         let mut result = [0.0; OUTPUTS];
 
         for output_index in 0..OUTPUTS {

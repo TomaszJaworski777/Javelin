@@ -5,7 +5,7 @@ mod neural_core;
 mod perft;
 mod uci;
 
-pub use core::{create_board, get_bit, Bitboard, Board, Move, MoveList, MoveProvider};
+pub use core::{create_board, get_bit, Bitboard, Board, Move, MoveList, MoveProvider, Square};
 pub use eval::Evaluation;
 pub use eval::ValueNetwork;
 pub use mcts::GameResult;

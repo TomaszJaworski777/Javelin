@@ -210,6 +210,10 @@ impl Square {
         self.value == rhs.value
     }
 
+    pub const fn flip(&self) -> Self {
+        Self::from_raw(self.value ^ 56)
+    }
+
     pub fn to_string(&self) -> String {
         if *self == Square::NULL {
             return "NULL".to_string();

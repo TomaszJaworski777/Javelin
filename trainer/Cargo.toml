@@ -8,4 +8,6 @@ edition = "2021"
 [dependencies]
 tch = "0.15.0"
 bytemuck = "1.5"
+rand = "0.6.0"
 javelin = { path = "../" }
+datagen = { path = "../datagen/" }

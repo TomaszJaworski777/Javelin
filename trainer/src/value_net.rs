@@ -1,5 +1,5 @@
 use javelin::ValueNetwork;
-use std::{fmt::Debug, fs::File, io::Write, mem, path::Path};
+use std::{fs::File, io::Write, mem, path::Path};
 
 use tch::Tensor;
 
@@ -9,9 +9,9 @@ pub struct ValueNet {
     pub net: SimpleNet,
 }
 impl ValueNet {
-    pub const ARCHITECTURE: &[usize] = &[768, 64, 1];
-    pub const NET_PATH: &str = "../resources/training/value.ot";
-    pub const EXPORT_PATH: &str = "../resources/nets/value.net";
+    pub const ARCHITECTURE: &'static [usize] = &[768, 64, 1];
+    pub const NET_PATH: &'static str = "../resources/training/value.ot";
+    pub const EXPORT_PATH: &'static str = "../resources/nets/value-000.net";
 
     pub fn new() -> Self {
         let mut net = SimpleNet::new(ValueNet::ARCHITECTURE);
@@ -26,7 +26,11 @@ impl ValueNet {
         let _ = self.net.save(ValueNet::NET_PATH);
     }
 
-    pub fn export(&self) {
+    pub fn export_final(&self) {
+        self.export(ValueNet::EXPORT_PATH);
+    }
+
+    pub fn export(&self, path: &str) {
         let mut value_network = ValueNetwork::new();
         for (name, tensor) in self.net.vs.variables() {
             let name_split: Vec<&str> = name.split(".").collect();
@@ -52,7 +56,7 @@ impl ValueNet {
             }
         }
 
-        let file = File::create(ValueNet::EXPORT_PATH);
+        let file = File::create(path);
         let struct_bytes: &[u8] = unsafe {
             std::slice::from_raw_parts(
                 &value_network as *const ValueNetwork as *const u8,
@@ -62,29 +66,7 @@ impl ValueNet {
         file.unwrap().write_all(struct_bytes).expect("Failed to write data!");
     }
 
-    pub fn evaluate(&self, inputs: Vec<f32>) -> Tensor {
-        self.net.evaluate(inputs).unwrap()
+    pub fn evaluate(&self, inputs: &Vec<f32>) -> Tensor {
+        self.net.evaluate(&inputs)
     }
-}
-
-fn vec_to_array_unchecked<T, const N: usize>(mut vec: Vec<T>) -> [T; N] {
-    assert_eq!(vec.len(), N);
-    let ptr = vec.as_mut_ptr();
-    std::mem::forget(vec);
-    unsafe { std::ptr::read(ptr as *const [T; N]) }
-}
-
-fn vec2d_to_array2d_unchecked<T, const N: usize, const M: usize>(vec: Vec<Vec<T>>) -> [[T; N]; M]
-where
-    T: Default + Debug, // Default can help in handling partially initialized arrays in case of panic
-{
-    let mut temp_storage: Vec<[T; N]> = Vec::with_capacity(M);
-    for inner_vec in vec {
-        let msg = format!("Inner vector does not have the correct length {}, {}", inner_vec.len(), N);
-        assert_eq!(inner_vec.len(), N, "{msg}");
-        let inner_array: [T; N] = inner_vec.try_into().unwrap(); // Can panic if sizes don't match
-        temp_storage.push(inner_array);
-    }
-
-    temp_storage.try_into().unwrap()
 }
