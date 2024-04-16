@@ -1,7 +1,9 @@
 use crate::file_manager::Files;
 use crate::selfplay_thread::SelfPlayThread;
 use crate::structs::{ChessPolicyData, PieceBoard};
+use std::fs::File;
 use std::io::{stdin, stdout, Write};
+use std::path::Path;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::thread;

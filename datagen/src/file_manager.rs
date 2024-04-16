@@ -12,8 +12,8 @@ pub struct Files {
 
 #[allow(unused)]
 impl Files {
-    const VALUE_PATH: &'static str = "../resources/data/value.data";
-    const POLICY_PATH: &'static str = "../resources/data/policy.data";
+    pub const VALUE_PATH: &'static str = "../../resources/data/value.data";
+    const POLICY_PATH: &'static str = "../../resources/data/policy.data";
 
     pub fn new() -> Self {
         Self { value_data: Vec::new(), policy_data: Vec::new() }

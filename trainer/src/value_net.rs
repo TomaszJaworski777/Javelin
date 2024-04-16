@@ -10,13 +10,14 @@ pub struct ValueNet {
 }
 impl ValueNet {
     pub const ARCHITECTURE: &'static [usize] = &[768, 64, 1];
-    pub const NET_PATH: &'static str = "../resources/training/value.ot";
-    pub const EXPORT_PATH: &'static str = "../resources/nets/value-000.net";
+    pub const NET_PATH: &'static str = "../../resources/training/value.ot";
+    pub const EXPORT_PATH: &'static str = "../../resources/nets/value-000.net";
 
     pub fn new() -> Self {
         let mut net = SimpleNet::new(ValueNet::ARCHITECTURE);
         let path = Path::new(ValueNet::NET_PATH);
         if path.exists() {
+            println!("Loaded net from file!");
             let _ = net.vs.load(ValueNet::NET_PATH);
         }
         Self { net }

@@ -12,7 +12,7 @@ use rand::thread_rng;
 use rand::seq::SliceRandom;
 
 fn main() {
-    let mut value_net = ValueNet::new();
+    let value_net = ValueNet::new();
     let mut train_data = Files::new();
     let _ = train_data.load();
 
@@ -24,11 +24,11 @@ fn main() {
     let mut raport_lines: Vec<String> = Vec::new(); 
 
     for epoch in 1..=200 {
-        optimizer.zero_grad();
         let mut total_loss = 0.0;
         let mut data_clone = data_set.clone();
         data_clone.shuffle(&mut thread_rng());
         for (index, (inputs, target)) in data_clone.iter().enumerate() {
+            optimizer.zero_grad();
             let output = value_net.net.evaluate(&inputs.to_vec());
             let loss = output.subtract_scalar(*target as f64).pow_tensor_scalar(2);
             total_loss += loss.double_value(&[0]) as f32;
@@ -36,7 +36,7 @@ fn main() {
             loss.backward();
             optimizer.step();
 
-            if index % 1000 == 0 {
+            if index % 7777 == 0 {
                 clear_terminal_screen();
                 for line in &raport_lines{
                     println!("{line}");
