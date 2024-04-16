@@ -39,9 +39,8 @@ impl SimpleNet {
         self.vs.save(path)
     }
 
-    pub fn evaluate(&self, inputs: &Vec<f32>) -> Tensor {
-        let input_tensor = Tensor::from_slice(&inputs).to_device(self.vs.device());
-        let output_tensor = self.net.forward(&input_tensor);
+    pub fn evaluate(&self, input: &Tensor) -> Tensor {
+        let output_tensor = self.net.forward(&input);
         output_tensor
     }
 }

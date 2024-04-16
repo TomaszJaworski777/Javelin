@@ -67,7 +67,7 @@ impl ValueNet {
         file.unwrap().write_all(struct_bytes).expect("Failed to write data!");
     }
 
-    pub fn evaluate(&self, inputs: &Vec<f32>) -> Tensor {
-        self.net.evaluate(&inputs)
+    pub fn evaluate(&self, input: &Tensor) -> Tensor {
+        self.net.evaluate(&input)
     }
 }

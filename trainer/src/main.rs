@@ -1,7 +1,7 @@
 mod core_net_struct;
 mod value_net;
 
-use std::process::Command;
+use std::{process::Command, time::Instant};
 
 use crate::value_net::ValueNet;
 use datagen::{Files, PieceBoard};
@@ -10,52 +10,43 @@ use rand::Rng;
 use tch::nn::OptimizerConfig;
 use rand::thread_rng;
 use rand::seq::SliceRandom;
+use tch::{Kind, Tensor};
 
 fn main() {
     let value_net = ValueNet::new();
     let mut train_data = Files::new();
     let _ = train_data.load();
 
+    println!("Loading dataset...");
     let data_set = prepare_value_dataset(train_data.value_data);
 
     let learning_rate = 0.001;
     let mut optimizer = tch::nn::AdamW::default().build(&value_net.net.vs, learning_rate).unwrap();
 
-    let mut raport_lines: Vec<String> = Vec::new(); 
+    let timer = Instant::now();
 
     for epoch in 1..=200 {
         let mut total_loss = 0.0;
         let mut data_clone = data_set.clone();
         data_clone.shuffle(&mut thread_rng());
-        for (index, (inputs, target)) in data_clone.iter().enumerate() {
+        let batches = prepare_batches(&data_clone);
+        for (index, batch) in batches.iter().enumerate() {
+            let output = value_net.net.evaluate(&batch.0);
+            let loss = (output - &batch.1).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar_(batch.1.numel() as f64);
+
+            total_loss += loss.double_value(&[]) as f32;
+            
             optimizer.zero_grad();
-            let output = value_net.net.evaluate(&inputs.to_vec());
-            let loss = output.subtract_scalar(*target as f64).pow_tensor_scalar(2);
-            total_loss += loss.double_value(&[0]) as f32;
-
-            loss.backward();
-            optimizer.step();
-
-            if index % 7777 == 0 {
-                clear_terminal_screen();
-                for line in &raport_lines{
-                    println!("{line}");
-                }
-                println!("Current epoch progress: {}/{} ({:.2}%), curr_avg_loss: {}",
-                    index,
-                    data_set.len(),
-                    (index as f32 / data_set.len() as f32) * 100.0,
-                    total_loss / index as f32
-                );
-            }
+            optimizer.backward_step(&loss);
         }
 
         value_net.save();
 
-        raport_lines.push(format!("Epoch {}, avg_loss: {}", 
+        println!("Epoch {}, time: {:.2}s, avg_loss: {}", 
             epoch,
-            total_loss / data_set.len() as f32
-        ));
+            timer.elapsed().as_secs_f32(),
+            total_loss / batches.len() as f32
+        );
     }
 }
 
@@ -118,6 +109,25 @@ fn flip_board(board: [Bitboard; 12]) -> [Bitboard; 12] {
             let target_index = if piece_index < 6 { piece_index + 6 } else { piece_index - 6 };
             result[target_index].set_bit(target_square);
         }
+    }
+    result
+}
+
+fn prepare_batches(data_set: &Vec<([f32; 768], f32)> ) -> Vec<(Tensor, Tensor)> {
+    let mut result: Vec<(Tensor, Tensor)> = Vec::new();
+    let mut batch_inputs: Vec<[f32; 768]> = Vec::new();
+    let mut batch_outputs: Vec<[f32; 1]> = Vec::new();
+    for (index, data_entry) in data_set.iter().enumerate(){
+        if index != 0 && index % 16384 == 0 {
+            let inputs_tensor = Tensor::from_slice2(&batch_inputs);
+            let outputs_tensor = Tensor::from_slice2(&batch_outputs);
+            result.push((inputs_tensor, outputs_tensor));
+            batch_inputs.clear();
+            batch_outputs.clear();
+        }
+
+        batch_inputs.push(data_entry.0);
+        batch_outputs.push([data_entry.1]);
     }
     result
 }

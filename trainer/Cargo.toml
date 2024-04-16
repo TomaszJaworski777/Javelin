@@ -9,6 +9,6 @@ edition = "2021"
 tch = "0.15.0"
 bytemuck = "1.5"
 rand = "0.6.0"
-rayon = "1.5"
+rayon = "1.10"
 javelin = { path = "../" }
 datagen = { path = "../datagen/" }
