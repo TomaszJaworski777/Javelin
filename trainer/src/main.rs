@@ -14,6 +14,7 @@ use tch::{Kind, Tensor};
 
 fn main() {
     let value_net = ValueNet::new();
+    value_net.export_final();
     let mut train_data = Files::new();
     let _ = train_data.load();
 
@@ -56,6 +57,7 @@ fn main() {
     }
 }
 
+#[allow(unused)]
 fn create_snapshot(net: &ValueNet) -> i32 {
     let mut rng = rand::thread_rng();
     let snapshot_index = rng.gen_range(0, i32::MAX);

@@ -1,8 +1,6 @@
 use javelin::ValueNetwork;
 use std::{fs::File, io::Write, mem, path::Path};
 
-use tch::Tensor;
-
 use crate::core_net_struct::SimpleNet;
 
 pub struct ValueNet {
@@ -65,9 +63,5 @@ impl ValueNet {
             )
         };
         file.unwrap().write_all(struct_bytes).expect("Failed to write data!");
-    }
-
-    pub fn evaluate(&self, input: &Tensor) -> Tensor {
-        self.net.evaluate(&input)
     }
 }
