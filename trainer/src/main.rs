@@ -20,32 +20,38 @@ fn main() {
     println!("Loading dataset...");
     let data_set = prepare_value_dataset(train_data.value_data);
 
-    let learning_rate = 0.001;
+    let mut learning_rate = 0.00072;
     let mut optimizer = tch::nn::AdamW::default().build(&value_net.net.vs, learning_rate).unwrap();
 
     let timer = Instant::now();
 
-    for epoch in 1..=200 {
+    for epoch in 1..=2000000 {
         let mut total_loss = 0.0;
         let mut data_clone = data_set.clone();
         data_clone.shuffle(&mut thread_rng());
         let batches = prepare_batches(&data_clone);
-        for (index, batch) in batches.iter().enumerate() {
-            let output = value_net.net.evaluate(&batch.0);
-            let loss = (output - &batch.1).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar_(batch.1.numel() as f64);
+        for (inputs, targets) in &batches {
+            let outputs = value_net.net.evaluate(&inputs);
+            let loss = (outputs - targets).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar_(targets.numel() as f64);
 
             total_loss += loss.double_value(&[]) as f32;
             
-            optimizer.zero_grad();
+            //optimizer.zero_grad();
             optimizer.backward_step(&loss);
         }
 
         value_net.save();
 
-        println!("Epoch {}, time: {:.2}s, avg_loss: {}", 
+        if epoch % 15 == 0 && epoch != 0 {
+            learning_rate *= 0.9;
+            optimizer.set_lr(learning_rate);
+        }
+
+        println!("Epoch {}, time: {:.2}s, avg_loss: {}, lr: {}", 
             epoch,
             timer.elapsed().as_secs_f32(),
-            total_loss / batches.len() as f32
+            total_loss / batches.len() as f32,
+            learning_rate
         );
     }
 }
