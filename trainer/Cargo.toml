@@ -10,5 +10,6 @@ tch = "0.15.0"
 bytemuck = "1.5"
 rand = "0.6.0"
 rayon = "1.10"
+colored = "*"
 javelin = { path = "../" }
 datagen = { path = "../datagen/" }

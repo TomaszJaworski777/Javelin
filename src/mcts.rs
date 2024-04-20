@@ -24,10 +24,11 @@ pub struct Search<'a> {
     search_tree: SearchTree,
     root_position: Board,
     interruption_channel: Option<&'a Receiver<()>>,
+    qsearch: u16
 }
 impl<'a> Search<'a> {
     pub fn new(board: &Board, interruption_channel: Option<&'a Receiver<()>>) -> Self {
-        Self { search_tree: SearchTree::new(), root_position: *board, interruption_channel }
+        Self { search_tree: SearchTree::new(), root_position: *board, interruption_channel, qsearch: 0 }
     }
 
     pub fn run<const UCI_REPORT: bool>(&mut self, search_rules: &SearchRules) -> (Move, &SearchTree) {
@@ -161,7 +162,7 @@ impl<'a> Search<'a> {
             let mut new_node = Node::new(mv);
             new_node.index = self.search_tree.node_count();
             new_node.policy_value =
-                sigmoid(Evaluation::get_move_value(&board, mv)) / self.search_tree[node_index].children_count as f32;
+                sigmoid(Evaluation::get_move_value(&board, mv) as f32) / self.search_tree[node_index].children_count as f32;
             self.search_tree.push(&new_node);
         }
     }
@@ -208,7 +209,8 @@ impl<'a> Search<'a> {
             return score;
         }
 
-        sigmoid(qsearch(&board, -30000, 30000))
+        self.qsearch += 1;
+        sigmoid(qsearch(&board, -30000, 30000) as f32 / 10000.0)
     }
 
     fn backpropagate(&mut self, selection_history: &mut SelectionHistory, mut result: f32) {
@@ -259,6 +261,6 @@ fn puct(search_tree: &SearchTree, parent_index: NodeIndex, child_index: NodeInde
     v + c * p * (numerator / denominator)
 }
 
-fn sigmoid(input: i32) -> f32 {
-    1.0 / (1.0 + (-input as f32 / 400.0).exp())
+fn sigmoid(input: f32) -> f32 {
+    1.0 / (1.0 + (-input as f32).exp())
 }

@@ -3,12 +3,12 @@ mod value_network;
 
 use crate::core::{Board, Move, Side};
 
-use self::pesto::Pesto;
-
 pub use value_network::ValueNetwork;
 
-pub const VALUE_NETWORK: ValueNetwork =
-    unsafe { std::mem::transmute(*include_bytes!("../resources/nets/value-001.net")) };
+use self::pesto::Pesto;
+
+//pub const VALUE_NETWORK: ValueNetwork =
+    //unsafe { std::mem::transmute(*include_bytes!("../resources/training/snapshots/value_snapshot-100.net")) };
 
 pub struct Evaluation;
 impl Evaluation {

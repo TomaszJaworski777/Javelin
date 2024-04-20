@@ -14,3 +14,4 @@ pub use mcts::SearchRules;
 pub use mcts::SearchTree;
 pub use neural_core::NetworkLayer;
 pub use uci::Uci;
+pub use core::Side;
