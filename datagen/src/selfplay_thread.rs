@@ -90,47 +90,20 @@ impl SelfPlayThread {
                         _ => println!("???"),
                     }
 
+                    let result_value = match game_result {
+                        GameResult::None => 0,
+                        GameResult::Draw => 0,
+                        GameResult::Lose(_) => -1,
+                        GameResult::Win(_) => 1
+                    };
+
                     //iterate through temps and assign result
                     for item in &mut temp.value_data {
-                        item.result = match game_result {
-                            GameResult::None => 0,
-                            GameResult::Draw => 0,
-                            GameResult::Lose(_) => {
-                                if item.side_to_move == 0 {
-                                    -1
-                                } else {
-                                    1
-                                }
-                            }
-                            GameResult::Win(_) => {
-                                if item.side_to_move == 0 {
-                                    1
-                                } else {
-                                    -1
-                                }
-                            }
-                        }
+                        item.result = result_value
                     }
 
                     for item in &mut temp.policy_data {
-                        item.board.result = match game_result {
-                            GameResult::None => 0,
-                            GameResult::Draw => 0,
-                            GameResult::Lose(_) => {
-                                if item.board.side_to_move == 0 {
-                                    -1
-                                } else {
-                                    1
-                                }
-                            }
-                            GameResult::Win(_) => {
-                                if item.board.side_to_move == 0 {
-                                    1
-                                } else {
-                                    -1
-                                }
-                            }
-                        }
+                        item.board.result = result_value
                     }
 
                     //push temps into data
