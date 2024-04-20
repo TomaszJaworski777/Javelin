@@ -1,6 +1,5 @@
 use tch::{
-    nn::{self, Module},
-    Device, Tensor,
+    nn::{self, Module}, Device, Kind, Tensor
 };
 
 pub struct SimpleNet {
@@ -40,7 +39,7 @@ impl SimpleNet {
     }
 
     pub fn evaluate(&self, input: &Tensor) -> Tensor {
-        let output_tensor = self.net.forward(&input);
+        let output_tensor = self.net.forward(&input).to_kind(Kind::Float);
         output_tensor
     }
 }

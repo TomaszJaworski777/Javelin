@@ -5,6 +5,7 @@ use std::path::Path;
 
 use crate::structs::{ChessPolicyData, PieceBoard};
 
+#[derive(Clone)]
 pub struct Files {
     pub value_data: Vec<PieceBoard>,
     pub policy_data: Vec<ChessPolicyData>,

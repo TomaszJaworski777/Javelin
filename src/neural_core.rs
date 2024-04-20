@@ -1,3 +1,5 @@
+use crate::core::{Bitboard, Board, Side};
+
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct NetworkLayer<const INPUTS: usize, const OUTPUTS: usize, const ACTIVATION: u8> {
@@ -33,12 +35,46 @@ impl<const INPUTS: usize, const OUTPUTS: usize, const ACTIVATION: u8> NetworkLay
             }
             result[output_index] += self.biases[output_index];
 
-            match ACTIVATION {
+            result[output_index] = match ACTIVATION {
                 0 => continue,
-                1 => result[output_index] = screlu(result[output_index]),
-                2 => result[output_index] = relu(result[output_index]),
-                3 => result[output_index] = sigmoid(result[output_index]),
+                1 => screlu(result[output_index]),
+                2 => relu(result[output_index]),
+                3 =>sigmoid(result[output_index]),
                 _ => continue,
+            }
+        }
+
+        result
+    }
+
+    pub fn feed_input_layer(&self, board: &Board) -> [f32; OUTPUTS] {
+        let mut result = self.biases;
+
+        for piece_index in 1..=6 {
+            let mut stm_bitboard = board.get_piece_mask(piece_index, board.side_to_move);
+            let mut nstm_bitboard = board.get_piece_mask(piece_index, board.side_to_move.flipped());
+
+            if board.side_to_move == Side::BLACK {
+                stm_bitboard = stm_bitboard.flip();
+                nstm_bitboard = nstm_bitboard.flip();
+            }
+
+            for output_index in 0..OUTPUTS {
+                for square in stm_bitboard {
+                    result[output_index] += self.weights[output_index][(piece_index - 1) * 64 + square.get_value()];
+                }
+    
+                for square in nstm_bitboard {
+                    result[output_index] += self.weights[output_index][384 + (piece_index - 1) * 64 + square.get_value()];
+                }
+
+                result[output_index] = match ACTIVATION {
+                    0 => continue,
+                    1 => screlu(result[output_index]),
+                    2 => relu(result[output_index]),
+                    3 =>sigmoid(result[output_index]),
+                    _ => continue,
+                }
             }
         }
 

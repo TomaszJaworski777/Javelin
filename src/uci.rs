@@ -138,7 +138,6 @@ impl Uci {
 
     fn draw_board_command(context: &mut ContextVariables, args: &[String]) {
         context.board.draw_board();
-        println!("{}", context.board.three_fold());
     }
 
     fn go_command(context: &mut ContextVariables, args: &[String]) {

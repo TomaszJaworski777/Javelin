@@ -7,7 +7,7 @@ pub struct ValueNet {
     pub net: SimpleNet,
 }
 impl ValueNet {
-    pub const ARCHITECTURE: &'static [usize] = &[768, 64, 1];
+    pub const ARCHITECTURE: &'static [usize] = &[768, 4, 1];
     pub const NET_PATH: &'static str = "../../resources/training/value.ot";
     pub const EXPORT_PATH: &'static str = "../../resources/nets/value-000.net";
 
@@ -29,7 +29,7 @@ impl ValueNet {
         self.export(ValueNet::EXPORT_PATH);
     }
 
-    pub fn export(&self, path: &str) {
+    pub fn export(&self, path: &str) -> ValueNetwork{
         let mut value_network = ValueNetwork::new();
         for (name, tensor) in self.net.vs.variables() {
             let name_split: Vec<&str> = name.split(".").collect();
@@ -63,5 +63,6 @@ impl ValueNet {
             )
         };
         file.unwrap().write_all(struct_bytes).expect("Failed to write data!");
+        value_network
     }
 }
