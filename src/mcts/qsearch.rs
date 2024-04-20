@@ -4,7 +4,7 @@ use crate::{
 };
 
 pub fn qsearch(board: &Board, mut alpha: i32, beta: i32) -> i32 {
-    let evaluation = (Evaluation::evaluate(&board) * 10000.0) as i32;
+    let evaluation = Evaluation::evaluate(&board);
 
     if evaluation >= beta {
         return beta;

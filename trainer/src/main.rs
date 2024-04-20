@@ -41,6 +41,7 @@ fn main() {
 
         value_net.save();
         value_net.export_final();
+        create_snapshot(&value_net, epoch);
 
         if epoch % 7 == 0 && epoch != 0 {
             learning_rate *= 0.9;
@@ -57,10 +58,10 @@ fn main() {
 }
 
 #[allow(unused)]
-fn create_snapshot(net: &ValueNet) -> i32 {
+fn create_snapshot(net: &ValueNet, index: i32) -> i32 {
     let mut rng = rand::thread_rng();
     let snapshot_index = rng.gen_range(0, i32::MAX);
-    net.export(format!("../resources/training/snapshots/value_snapshot-{snapshot_index}.net").as_str());
+    net.export(format!("../../resources/training/snapshots/value_snapshot-{index}.net").as_str());
     snapshot_index
 }
 
