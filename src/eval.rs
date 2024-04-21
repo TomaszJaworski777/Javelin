@@ -3,6 +3,7 @@ mod value_network;
 
 use crate::core::{Board, Move, Side};
 
+#[allow(unused)]
 pub use value_network::ValueNetwork;
 
 use self::pesto::Pesto;

@@ -1,4 +1,4 @@
-use crate::core::{Bitboard, Board, Side};
+use crate::core::{Board, Side};
 
 #[repr(C)]
 #[derive(Clone, Copy)]

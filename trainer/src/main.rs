@@ -6,7 +6,7 @@ use std::{process::Command, time::Instant};
 use crate::value_net::ValueNet;
 use colored::Colorize;
 use datagen::{Files, PieceBoard};
-use javelin::{create_board, Bitboard, Side, Square};
+use javelin::{Bitboard, Side, Square};
 use rand::Rng;
 use tch::nn::OptimizerConfig;
 use rand::thread_rng;
@@ -150,6 +150,7 @@ pub fn clear_terminal_screen() {
     };
 }
 
+#[allow(unused)]
 fn get_piece_tuple(board: &[Bitboard; 12], square: Square) -> (usize, Side) {
     for (index, bitboard) in board.iter().enumerate() {
         if !bitboard.get_bit(square) {
@@ -162,6 +163,7 @@ fn get_piece_tuple(board: &[Bitboard; 12], square: Square) -> (usize, Side) {
     (0, Side::WHITE)
 }
 
+#[allow(unused)]
 fn draw_board(board: &[Bitboard; 12]) {
     let piece_icons: [[&str; 7]; 2] =
     [[" . ", " P ", " N ", " B ", " R ", " Q ", " K "], [" . ", " p ", " n ", " b ", " r ", " q ", " k "]];
