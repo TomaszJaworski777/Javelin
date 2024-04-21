@@ -1,5 +1,6 @@
 mod core_net_struct;
 mod value_net;
+mod simple_trainer;
 
 use std::{process::Command, time::Instant};
 

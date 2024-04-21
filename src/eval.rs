@@ -1,10 +1,13 @@
 mod pesto;
 mod value_network;
+mod policy_network;
 
 use crate::core::{Board, Move, Side};
 
 #[allow(unused)]
 pub use value_network::ValueNetwork;
+#[allow(unused)]
+pub use policy_network::PolicyNetwork;
 
 use self::pesto::Pesto;
 
