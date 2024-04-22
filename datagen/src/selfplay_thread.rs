@@ -44,7 +44,7 @@ impl SelfPlayThread {
 
                     for (index, child_index) in tree[0].children().into_iter().enumerate() {
                         policy_data.moves[index] = ChessMoveInfo {
-                            mov: tree[child_index].mv.value,
+                            mv: tree[child_index].mv.value,
                             visits: tree[child_index].visit_count as u16,
                         };
                     }

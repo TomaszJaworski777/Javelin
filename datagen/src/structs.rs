@@ -4,7 +4,7 @@ use javelin::{get_bit, Board};
 #[repr(C)]
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub struct ChessMoveInfo {
-    pub mov: u16,
+    pub mv: u16,
     pub visits: u16,
 }
 

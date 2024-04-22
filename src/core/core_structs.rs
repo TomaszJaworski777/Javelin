@@ -50,6 +50,11 @@ impl Move {
         result
     };
 
+    #[allow(unused)]
+    pub fn from_raw(value: u16) -> Self {
+        Move { value: value }
+    }
+
     pub fn create_move(from_square: Square, to_square: Square, mask: u16) -> Self {
         Move { value: Move::init_move(from_square, to_square) | mask }
     }

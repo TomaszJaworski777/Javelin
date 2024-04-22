@@ -9,7 +9,7 @@ pub struct SimpleNet {
 
 impl SimpleNet {
     pub fn new(architecture: &[usize]) -> SimpleNet {
-        let vs = nn::VarStore::new(Device::Cpu);
+        let vs: nn::VarStore = nn::VarStore::new(Device::Cpu);
         let mut net = nn::seq();
         let mut iter = architecture.iter();
         let mut input_features = *iter.next().unwrap() as i64;
