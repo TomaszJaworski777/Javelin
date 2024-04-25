@@ -166,7 +166,6 @@ impl<'a> SimpleTrainer<'a> {
                 optimizer.set_lr(current_learning_rate);
             }
 
-            continue;
             self.var_store.save(SimpleTrainer::TRAINING_PATH.to_string() + self.name + ".ot").expect("Failed to save training progress!");
             export_policy(&self.var_store, &self.export_path, [768,384]);
             let checkpoint_path = SimpleTrainer::CHECKPOINT_PATH.to_string() + format!("{}-epoch{}.net", self.name, epoch).as_str();
@@ -202,8 +201,8 @@ fn clear_terminal_screen() {
     };
 }
 
-pub fn export_value(var_store: &VarStore, path: &str, architecture: [usize; 3]) -> ValueNetwork{
-    let mut value_network = ValueNetwork::new();
+fn export_value(var_store: &VarStore, path: &str, architecture: [usize; 3]){
+    let mut value_network = boxed_and_zeroed::<ValueNetwork>();
     for (name, tensor) in var_store.variables() {
         let name_split: Vec<&str> = name.split(".").collect();
         let index = name_split[0].parse::<usize>().expect("Incorrect index!");
@@ -229,18 +228,16 @@ pub fn export_value(var_store: &VarStore, path: &str, architecture: [usize; 3]) 
     }
 
     let file = File::create(path);
-    let struct_bytes: &[u8] = unsafe {
-        std::slice::from_raw_parts(
-            &value_network as *const ValueNetwork as *const u8,
-            std::mem::size_of::<ValueNetwork>(),
-        )
-    };
-    file.unwrap().write_all(struct_bytes).expect("Failed to write data!");
-    value_network
+    let size = std::mem::size_of::<ValueNetwork>();
+    unsafe {
+        let slice: *const u8 = std::slice::from_ref(value_network.as_ref()).as_ptr().cast();
+        let struct_bytes: &[u8] = std::slice::from_raw_parts(slice, size);
+        file.unwrap().write_all(struct_bytes).expect("Failed to write data!");
+    }
 }
 
-pub fn export_policy(var_store: &VarStore, path: &str, architecture: [usize; 2]) -> PolicyNetwork{
-    let mut value_network = PolicyNetwork::new();
+fn export_policy(var_store: &VarStore, path: &str, architecture: [usize; 2]){
+    let mut policy_network = boxed_and_zeroed::<PolicyNetwork>();
     for (name, tensor) in var_store.variables() {
         let name_split: Vec<&str> = name.split(".").collect();
         let index = name_split[0].parse::<usize>().expect("Incorrect index!");
@@ -254,24 +251,33 @@ pub fn export_policy(var_store: &VarStore, path: &str, architecture: [usize; 2])
                         tensor.get(output_index as i64).double_value(&[weight_index as i64]) as f32;
                 }
             }
-            value_network.set_layer_weights(index, weights);
+            policy_network.set_layer_weights(index, weights);
         } else {
             let length = architecture[1 + index];
             let mut biases = vec![0.0; length];
             for output_index in 0..length {
                 biases[output_index] = tensor.double_value(&[output_index as i64]) as f32;
             }
-            value_network.set_layer_biases(index, biases);
+            policy_network.set_layer_biases(index, biases);
         }
     }
 
     let file = File::create(path);
-    let struct_bytes: &[u8] = unsafe {
-        std::slice::from_raw_parts(
-            &value_network as *const PolicyNetwork as *const u8,
-            std::mem::size_of::<PolicyNetwork>(),
-        )
-    };
-    file.unwrap().write_all(struct_bytes).expect("Failed to write data!");
-    value_network
+    let size = std::mem::size_of::<PolicyNetwork>();
+    unsafe {
+        let slice: *const u8 = std::slice::from_ref(policy_network.as_ref()).as_ptr().cast();
+        let struct_bytes: &[u8] = std::slice::from_raw_parts(slice, size);
+        file.unwrap().write_all(struct_bytes).expect("Failed to write data!");
+    }
+}
+
+fn boxed_and_zeroed<T>() -> Box<T> {
+    unsafe {
+        let layout = std::alloc::Layout::new::<T>();
+        let ptr = std::alloc::alloc_zeroed(layout);
+        if ptr.is_null() {
+            std::alloc::handle_alloc_error(layout);
+        }
+        Box::from_raw(ptr.cast())
+    }
 }
