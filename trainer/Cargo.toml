@@ -9,7 +9,8 @@ edition = "2021"
 tch = "0.15.0"
 bytemuck = "1.5"
 rand = "0.6.0"
-rayon = "1.10"
 colored = "*"
+stacker = "0.1.14"
+arrayvec = "0.7.4"
 javelin = { path = "../" }
 datagen = { path = "../datagen/" }

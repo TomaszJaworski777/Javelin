@@ -43,14 +43,14 @@ fn value_trainer() {
 #[allow(unused)]
 fn policy_trainer() {
     let mut trainer = SimpleTrainer::new("base_policy");
+
     let mut structure = seq()
     .add(linear(
         trainer.var_store.root() / format!("0"),
         768,
         384,
         Default::default(),
-    ))
-    .add_fn(move |xs: &Tensor| xs.sigmoid());
+    ));
 
     trainer.add_structure(structure);
     trainer.change_learning_rate(0.001, 0.5, 5);

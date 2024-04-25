@@ -3,6 +3,8 @@ use std::{fs::File, io::Write, path::Path, process::Command, time::Instant};
 use datagen::Files;
 use javelin::{PolicyNetwork, ValueNetwork};
 use tch::{nn::{seq, Module, Optimizer, OptimizerConfig, Sequential, VarStore}, Kind};
+use rand::thread_rng;
+use rand::seq::SliceRandom;
 
 use crate::{policy_data_loader::PolicyDataLoader, value_data_loader::ValueDataLoader};
 
@@ -75,21 +77,21 @@ impl<'a> SimpleTrainer<'a> {
     }
 
     fn value_run(&self, optimizer: &mut Optimizer, train_data: &Files){
-        let timer = Instant::now();
         let mut current_learning_rate = self.start_learning_rate;
         let mut lowest_loss = 0.0;
         let mut loss_delay = 0u8;
-
-        let data_set = ValueDataLoader::new(&train_data.value_data);
+        
+        let mut batches = ValueDataLoader::get_batches(&train_data.value_data, self.batch_size);
         println!("Finished preparing data!");
-
+        
+        let timer = Instant::now();
         for epoch in 0..self.epoch_count {
             let mut total_loss = 0.0;
-            let batches = data_set.get_batches(self.batch_size);
+            batches.shuffle(&mut thread_rng());
 
             for (inputs, targets) in &batches {
                 let outputs = self.net_structure.forward(&inputs);
-                let loss = (outputs - targets).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar_(targets.numel() as f64);
+                let loss = (outputs - targets).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar(targets.numel() as f64);
     
                 total_loss += loss.double_value(&[]) as f32;
                 optimizer.backward_step(&loss);
@@ -124,29 +126,24 @@ impl<'a> SimpleTrainer<'a> {
     }
 
     fn policy_run(&self, optimizer: &mut Optimizer, train_data: &Files){
-        let timer = Instant::now();
         let mut current_learning_rate = self.start_learning_rate;
         let mut lowest_loss = 0.0;
         let mut loss_delay = 0u8;
-
-        let data_set = PolicyDataLoader::new(&train_data.policy_data);
+        
+        let mut batches = PolicyDataLoader::get_batches(&train_data.policy_data, self.batch_size);
         println!("Finished preparing data!");
-
-        for epoch in 0..self.epoch_count {
-            println!("1");
+        
+        let timer = Instant::now();
+        for epoch in 1..=self.epoch_count {
             let mut total_loss = 0.0;
-            let batches = data_set.get_batches(self.batch_size);
-            println!("2");
+            batches.shuffle(&mut thread_rng());
 
-            for (inputs, targets, mask) in &batches {
-                let outputs = self.net_structure.forward(&inputs).multiply(mask).softmax(1, Kind::Float);
-                println!("3");
-                let loss = (outputs - targets).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar_(targets.numel() as f64);
-                println!("4");
+            for (inputs, targets, mask, negative) in &batches {
+                let outputs = &self.net_structure.forward(&inputs).multiply(mask).g_add(negative).softmax(-1, Kind::Float);
+                let loss = (outputs - targets).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar(self.batch_size as f64);
                 total_loss += loss.double_value(&[]) as f32;
                 optimizer.backward_step(&loss);
             }
-            println!("5");
 
             println!("epoch {} time {:.2} loss {:.5} lr {:.7}",
                 epoch,
@@ -171,6 +168,7 @@ impl<'a> SimpleTrainer<'a> {
 
             self.var_store.save(SimpleTrainer::TRAINING_PATH.to_string() + self.name + ".ot").expect("Failed to save training progress!");
             export_policy(&self.var_store, &self.export_path, [768,384]);
+            continue;
             let checkpoint_path = SimpleTrainer::CHECKPOINT_PATH.to_string() + format!("{}-epoch{}.net", self.name, epoch).as_str();
             export_policy(&self.var_store, &checkpoint_path, [768,384]);
         }
