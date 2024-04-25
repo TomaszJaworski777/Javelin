@@ -91,9 +91,9 @@ impl<'a> SimpleTrainer<'a> {
 
             for (inputs, targets) in &batches {
                 let outputs = self.net_structure.forward(&inputs);
-                let loss = (outputs - targets).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar(targets.numel() as f64);
+                let loss = (outputs - targets).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar(self.batch_size as f64);
     
-                total_loss += loss.double_value(&[]) as f32;
+                total_loss += loss.double_value(&[]) as f32 / batches.len() as f32;
                 optimizer.backward_step(&loss);
             }
 
@@ -141,7 +141,7 @@ impl<'a> SimpleTrainer<'a> {
             for (inputs, targets, mask, negative) in &batches {
                 let outputs = &self.net_structure.forward(&inputs).multiply(mask).g_add(negative).softmax(-1, Kind::Float);
                 let loss = (outputs - targets).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar(self.batch_size as f64);
-                total_loss += loss.double_value(&[]) as f32;
+                total_loss += loss.double_value(&[]) as f32 / batches.len() as f32;
                 optimizer.backward_step(&loss);
             }
 
@@ -166,9 +166,9 @@ impl<'a> SimpleTrainer<'a> {
                 optimizer.set_lr(current_learning_rate);
             }
 
+            continue;
             self.var_store.save(SimpleTrainer::TRAINING_PATH.to_string() + self.name + ".ot").expect("Failed to save training progress!");
             export_policy(&self.var_store, &self.export_path, [768,384]);
-            continue;
             let checkpoint_path = SimpleTrainer::CHECKPOINT_PATH.to_string() + format!("{}-epoch{}.net", self.name, epoch).as_str();
             export_policy(&self.var_store, &checkpoint_path, [768,384]);
         }
