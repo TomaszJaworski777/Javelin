@@ -33,8 +33,9 @@ fn value_trainer() {
     .add_fn(move |xs: &Tensor| xs.sigmoid());
 
     trainer.add_structure(structure);
-    trainer.change_learning_rate(0.001, 0.5, 5);
+    trainer.change_learning_rate(0.001, 0.75, 20);
     trainer.change_batch_size(16_384);
+    trainer.change_epoch_count(100_000);
     trainer.build();
 
     trainer.run::<true>();
@@ -53,8 +54,9 @@ fn policy_trainer() {
     ));
 
     trainer.add_structure(structure);
-    trainer.change_learning_rate(0.001, 0.5, 5);
+    trainer.change_learning_rate(0.001, 0.75, 20);
     trainer.change_batch_size(16_384);
+    trainer.change_epoch_count(100_000);
     trainer.build();
 
     trainer.run::<false>();

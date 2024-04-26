@@ -54,6 +54,10 @@ impl<'a> SimpleTrainer<'a> {
         self.batch_size = size;
     }
 
+    pub fn change_epoch_count(&mut self, count: u32) {
+        self.epoch_count = count;
+    }
+
     pub fn build(&mut self) {
         let path = SimpleTrainer::TRAINING_PATH.to_string() + self.name + ".ot";
         if Path::new(&path).exists() {
@@ -78,8 +82,6 @@ impl<'a> SimpleTrainer<'a> {
 
     fn value_run(&self, optimizer: &mut Optimizer, train_data: &Files){
         let mut current_learning_rate = self.start_learning_rate;
-        let mut lowest_loss = 0.0;
-        let mut loss_delay = 0u8;
         
         let mut batches = ValueDataLoader::get_batches(&train_data.value_data, self.batch_size);
         println!("Finished preparing data!");
@@ -104,16 +106,7 @@ impl<'a> SimpleTrainer<'a> {
                 current_learning_rate
             );
 
-            if total_loss >= lowest_loss {
-                loss_delay += 1;
-            } else {
-                loss_delay -= 1;
-                loss_delay = loss_delay.clamp(0, u8::MAX);
-                lowest_loss = total_loss;
-            }
-
-            if loss_delay >= self.drop_delay {
-                loss_delay = 0;
+            if epoch != 0 && epoch % self.drop_delay as u32 == 0 {
                 current_learning_rate *= self.learning_rate_drop;
                 optimizer.set_lr(current_learning_rate);
             }
@@ -127,8 +120,6 @@ impl<'a> SimpleTrainer<'a> {
 
     fn policy_run(&self, optimizer: &mut Optimizer, train_data: &Files){
         let mut current_learning_rate = self.start_learning_rate;
-        let mut lowest_loss = 0.0;
-        let mut loss_delay = 0u8;
         
         let mut batches = PolicyDataLoader::get_batches(&train_data.policy_data, self.batch_size);
         println!("Finished preparing data!");
@@ -145,23 +136,14 @@ impl<'a> SimpleTrainer<'a> {
                 optimizer.backward_step(&loss);
             }
 
-            println!("epoch {} time {:.2} loss {:.5} lr {:.7}",
+            println!("epoch {} time {:.2} a_loss {:.5} lr {:.7}",
                 epoch,
                 timer.elapsed().as_secs_f32(),
                 total_loss,
                 current_learning_rate
             );
 
-            if total_loss >= lowest_loss {
-                loss_delay += 1;
-            } else {
-                loss_delay -= 1;
-                loss_delay = loss_delay.clamp(0, u8::MAX);
-                lowest_loss = total_loss;
-            }
-
-            if loss_delay >= self.drop_delay {
-                loss_delay = 0;
+            if epoch != 0 && epoch % self.drop_delay as u32 == 0 {
                 current_learning_rate *= self.learning_rate_drop;
                 optimizer.set_lr(current_learning_rate);
             }
