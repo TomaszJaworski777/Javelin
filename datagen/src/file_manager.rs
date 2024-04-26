@@ -48,6 +48,16 @@ impl Files {
         Ok(())
     }
 
+    pub fn load_value(&mut self) -> io::Result<()> {
+        self.value_data = self.load_data::<PieceBoard>(Self::VALUE_PATH)?;
+        Ok(())
+    }
+
+    pub fn load_policy(&mut self) -> io::Result<()> {
+        self.policy_data = self.load_data::<ChessPolicyData>(Self::POLICY_PATH)?;
+        Ok(())
+    }
+
     fn save_data<T: Pod>(&self, path: &str, data: &[T]) -> io::Result<()> {
         let bytes = bytemuck::cast_slice(data);
         fs::write(path, bytes)

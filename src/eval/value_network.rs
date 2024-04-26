@@ -22,10 +22,6 @@ impl ValueNetwork {
         Self { input_layer: NetworkLayer::new(), output_layer: NetworkLayer::new() }
     }
 
-    pub const fn load(path: &str) -> Self {
-        Self { input_layer: NetworkLayer::new(), output_layer: NetworkLayer::new() }
-    }
-
     pub fn set_layer_weights(&mut self, index: usize, weights: Vec<Vec<f32>>) {
         match index {
             0 => self.input_layer.set_weights(weights),

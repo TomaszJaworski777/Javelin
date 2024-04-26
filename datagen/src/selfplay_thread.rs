@@ -26,7 +26,7 @@ impl SelfPlayThread {
             loop {
                 let mut search = Search::new(&current_board, None);
                 let mut rules = SearchRules::new();
-                rules.max_nodes = nodes;
+                rules.max_iterations = nodes;
                 let (mv, tree) = search.run::<false>(&rules);
 
                 let mut piece_board = PieceBoard::from_board(&current_board);
@@ -38,13 +38,13 @@ impl SelfPlayThread {
                     gen_data_clone.lock().unwrap().value_filtered += 1;
                 }
 
-                if piece_board.num <= 104 {
+                if piece_board.num < 104 {
                     let mut policy_data =
                         ChessPolicyData { board: piece_board, moves: [ChessMoveInfo::default(); 104] };
 
                     for (index, child_index) in tree[0].children().into_iter().enumerate() {
                         policy_data.moves[index] = ChessMoveInfo {
-                            mov: tree[child_index].mv.value,
+                            mv: tree[child_index].mv.value,
                             visits: tree[child_index].visit_count as u16,
                         };
                     }

@@ -1,10 +1,7 @@
 /target
 /resources/data
+/resources/training
+/resources/training/snapshots
 cutechess_commands.txt
 output.txt
 error.txt
-
-resources/training/value.ot
-/resources/training
-/resources/training
-/resources/training/snapshots
