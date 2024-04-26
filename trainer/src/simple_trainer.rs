@@ -123,7 +123,7 @@ impl<'a> SimpleTrainer<'a> {
         
         let mut batches = PolicyDataLoader::get_batches(&train_data.policy_data, self.batch_size);
         println!("Finished preparing data!");
-        
+
         let timer = Instant::now();
         for epoch in 1..=self.epoch_count {
             let mut total_loss = 0.0;

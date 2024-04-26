@@ -1,5 +1,3 @@
-use core::num;
-
 use colored::Colorize;
 use datagen::ChessPolicyData;
 use javelin::{Bitboard, Move, Side, Square};

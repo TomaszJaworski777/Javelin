@@ -2,7 +2,7 @@ mod pesto;
 mod value_network;
 mod policy_network;
 
-use crate::core::{Board, Move, Side};
+use crate::core::{Board, Side, MoveList};
 
 #[allow(unused)]
 pub use value_network::ValueNetwork;
@@ -13,6 +13,9 @@ use self::pesto::Pesto;
 
 //pub const VALUE_NETWORK: ValueNetwork =
     //unsafe { std::mem::transmute(*include_bytes!("../resources/training/snapshots/value_snapshot-100.net")) };
+
+pub const POLICY_NETWORK: PolicyNetwork =
+    unsafe { std::mem::transmute(*include_bytes!("../resources/nets/base_policy.net")) };
 
 pub struct Evaluation;
 impl Evaluation {
@@ -25,18 +28,13 @@ impl Evaluation {
         }
     }
 
-    pub fn get_move_value(board: &Board, mv: Move) -> i32 {
-        let mut result = 0;
-
-        if mv.is_capture() {
-            let (target_piece, _) = board.get_piece_on_square(mv.get_to_square());
-            let (moving_piece, _) = board.get_piece_on_square(mv.get_from_square());
-            result += (target_piece as i32 * 100) - moving_piece as i32;
+    pub fn get_policy_values(board: &Board, move_list: &MoveList) -> Vec<f32> {
+        let mut mask = [false; 384];
+        for mv in move_list {
+            let base_index = (board.get_piece_on_square(mv.get_from_square()).0 - 1) * 64;
+            let index = base_index + if board.side_to_move == Side::WHITE { mv.get_to_square().get_value() } else { mv.get_to_square().get_value() ^ 56 };
+            mask[index] = true;
         }
-        if mv.is_promotion() {
-            result += (mv.get_promotion_piece() as i32) * 100;
-        }
-
-        return result;
+        POLICY_NETWORK.evaluate(&board, &mask)
     }
 }

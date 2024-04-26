@@ -11,7 +11,7 @@ pub use search_tree::SearchTree;
 
 use self::{node::Node, qsearch::qsearch};
 use crate::{
-    core::{Board, Move, MoveList, MoveProvider},
+    core::{Board, Move, MoveList, MoveProvider, Side},
     eval::Evaluation,
     uci::Uci,
 };
@@ -158,11 +158,14 @@ impl<'a> Search<'a> {
         self.search_tree[node_index].first_child_index = self.search_tree.node_count();
         self.search_tree[node_index].children_count = move_list.len() as NodeIndex;
 
+        let policy_values = Evaluation::get_policy_values(&board, &move_list);
+
         for mv in move_list {
             let mut new_node = Node::new(mv);
             new_node.index = self.search_tree.node_count();
-            new_node.policy_value =
-                sigmoid(Evaluation::get_move_value(&board, mv)) / self.search_tree[node_index].children_count as f32;
+            let base_index = (board.get_piece_on_square(mv.get_from_square()).0 - 1) * 64;
+            let index = base_index + if board.side_to_move == Side::WHITE { mv.get_to_square().get_value() } else { mv.get_to_square().get_value() ^ 56 };
+            new_node.policy_value = policy_values[index];
             self.search_tree.push(&new_node);
         }
     }

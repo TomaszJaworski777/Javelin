@@ -39,7 +39,7 @@ impl<const INPUTS: usize, const OUTPUTS: usize, const ACTIVATION: u8> NetworkLay
                 0 => continue,
                 1 => screlu(result[output_index]),
                 2 => relu(result[output_index]),
-                3 =>sigmoid(result[output_index]),
+                3 => sigmoid(result[output_index]),
                 _ => continue,
             }
         }
@@ -72,7 +72,7 @@ impl<const INPUTS: usize, const OUTPUTS: usize, const ACTIVATION: u8> NetworkLay
                     0 => continue,
                     1 => screlu(result[output_index]),
                     2 => relu(result[output_index]),
-                    3 =>sigmoid(result[output_index]),
+                    3 => sigmoid(result[output_index]),
                     _ => continue,
                 }
             }

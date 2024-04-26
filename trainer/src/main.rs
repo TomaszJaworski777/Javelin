@@ -1,5 +1,3 @@
-mod core_net_struct;
-mod value_net;
 mod simple_trainer;
 mod value_data_loader;
 mod policy_data_loader;
@@ -35,7 +33,7 @@ fn value_trainer() {
     trainer.add_structure(structure);
     trainer.change_learning_rate(0.001, 0.75, 20);
     trainer.change_batch_size(16_384);
-    trainer.change_epoch_count(100_000);
+    trainer.change_epoch_count(400);
     trainer.build();
 
     trainer.run::<true>();
@@ -56,7 +54,7 @@ fn policy_trainer() {
     trainer.add_structure(structure);
     trainer.change_learning_rate(0.001, 0.75, 20);
     trainer.change_batch_size(16_384);
-    trainer.change_epoch_count(100_000);
+    trainer.change_epoch_count(400);
     trainer.build();
 
     trainer.run::<false>();

@@ -1,5 +1,5 @@
 use crate::neural_core::NetworkLayer;
-use crate::core::{Board, Move};
+use crate::core::Board;
 
 #[allow(unused)]
 const NO_FUNCTION: u8 = 0;
@@ -13,7 +13,7 @@ const SIGMOID_FUNCTION: u8 = 3;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct PolicyNetwork {
-    input_layer: NetworkLayer<768, 384, SIGMOID_FUNCTION>,
+    input_layer: NetworkLayer<768, 384, NO_FUNCTION>,
 }
 #[allow(unused)]
 impl PolicyNetwork {
@@ -35,8 +35,22 @@ impl PolicyNetwork {
         }
     }
 
-    pub fn evaluate(&self, board: &Board, mv: Move) -> f32 {
+    pub fn evaluate(&self, board: &Board, mask: &[bool; 384]) -> Vec<f32> {
         let input_layer_result = self.input_layer.feed_input_layer(&board);
-        input_layer_result[64 * (board.get_piece_on_square(mv.get_from_square()).0 - 1) + mv.get_to_square().get_value()]
+        let masked_output: Vec<f32> = input_layer_result.iter()
+        .zip(mask.iter())
+        .map(|(&x, &y)| if y { x } else { f32::NEG_INFINITY })
+        .collect();
+        softmax(&masked_output)
     }
+}
+
+fn softmax(x: &Vec<f32>) -> Vec<f32> {
+    if x.is_empty() {
+        return Vec::new();
+    }
+    let max_val = x.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
+    let exps: Vec<f32> = x.iter().map(|&num| if num == f32::NEG_INFINITY { 0.0 } else { (num - max_val).exp() }).collect();
+    let sum_exps: f32 = exps.iter().sum();
+    exps.iter().map(|&exp| exp / sum_exps).collect()
 }
