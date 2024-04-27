@@ -8,7 +8,7 @@ use simple_trainer::SimpleTrainer;
 use tch::{nn::{linear, seq}, Tensor};
 
 fn main() {
-    policy_trainer();
+    value_trainer();
 }
 
 #[allow(unused)]
@@ -18,21 +18,22 @@ fn value_trainer() {
     .add(linear(
         trainer.var_store.root() / format!("0"),
         768,
-        4,
+        16,
         Default::default(),
     ))
     .add_fn(move |xs: &Tensor| xs.clamp(0.0, 1.0).pow_tensor_scalar(2))
     .add(linear(
         trainer.var_store.root() / format!("1"),
-        4,
+        16,
         1,
         Default::default(),
     ))
     .add_fn(move |xs: &Tensor| xs.sigmoid());
 
     trainer.add_structure(structure);
-    trainer.change_learning_rate(0.001, 0.75, 20);
+    trainer.change_learning_rate(0.001, 0.75, 12);
     trainer.change_batch_size(16_384);
+    trainer.change_batch_per_superbatch_count(100);
     trainer.change_epoch_count(400);
     trainer.build();
 
@@ -54,6 +55,7 @@ fn policy_trainer() {
     trainer.add_structure(structure);
     trainer.change_learning_rate(0.001, 0.75, 20);
     trainer.change_batch_size(16_384);
+    trainer.change_batch_per_superbatch_count(100);
     trainer.change_epoch_count(400);
     trainer.build();
 

@@ -1,13 +1,17 @@
 use datagen::PieceBoard;
 use javelin::{Bitboard, Square};
 use tch::{Tensor, Kind};
+use rand::thread_rng;
+use rand::seq::SliceRandom;
 
 #[allow(unused)]
 pub struct ValueDataLoader;
 #[allow(unused)]
 impl ValueDataLoader {
     pub fn get_batches(data_set: &Vec<PieceBoard>, batch_size: usize) -> Vec<(Tensor, Tensor)> {
-        let data = prepare_value_dataset(&data_set);
+        let mut data = prepare_value_dataset(&data_set);
+        data.shuffle(&mut thread_rng());
+
         let mut result: Vec<(Tensor, Tensor)> = Vec::new();
         let mut batch_inputs: Vec<[f32; 768]> = Vec::new();
         let mut batch_outputs: Vec<[f32; 1]> = Vec::new();
