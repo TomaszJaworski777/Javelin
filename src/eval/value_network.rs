@@ -38,6 +38,11 @@ impl ValueNetwork {
         }
     }
 
+    pub fn print(&self){
+        self.input_layer.print();
+        self.output_layer.print();
+    }
+
     pub fn evaluate(&self, board: &Board) -> f32 {
         let input_layer_result = self.input_layer.feed_input_layer(&board);
         let output_layer_result = self.output_layer.feed_forward(&input_layer_result);

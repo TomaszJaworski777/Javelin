@@ -26,14 +26,32 @@ impl<const INPUTS: usize, const OUTPUTS: usize, const ACTIVATION: u8> NetworkLay
         }
     }
 
+    pub fn print(&self) {
+        println!("\nWeights:");
+        for weight_index in 0..self.weights.len() {
+            for (index, weight) in self.weights[weight_index].iter().enumerate() {
+                if index != 0 && index % 8 == 0 {
+                    print!("\n");
+                }
+                print!("{}, ", weight);
+            }
+        }
+        println!("\nBiases:");
+        for bias_index in 0..self.biases.len() {
+            if bias_index != 0 && bias_index % 8 == 0 {
+                print!("\n");
+            }
+            print!("{}, ", self.biases[bias_index]);
+        }
+    }
+
     pub fn feed_forward(&self, inputs: &[f32; INPUTS]) -> [f32; OUTPUTS] {
-        let mut result = [0.0; OUTPUTS];
+        let mut result = self.biases;
 
         for output_index in 0..OUTPUTS {
             for input_index in 0..INPUTS {
                 result[output_index] += inputs[input_index] * self.weights[output_index][input_index];
             }
-            result[output_index] += self.biases[output_index];
 
             result[output_index] = match ACTIVATION {
                 0 => continue,
@@ -67,14 +85,16 @@ impl<const INPUTS: usize, const OUTPUTS: usize, const ACTIVATION: u8> NetworkLay
                 for square in nstm_bitboard {
                     result[output_index] += self.weights[output_index][384 + (piece_index - 1) * 64 + square.get_value()];
                 }
+            }
+        }
 
-                result[output_index] = match ACTIVATION {
-                    0 => continue,
-                    1 => screlu(result[output_index]),
-                    2 => relu(result[output_index]),
-                    3 => sigmoid(result[output_index]),
-                    _ => continue,
-                }
+        for output_index in 0..OUTPUTS{
+            result[output_index] = match ACTIVATION {
+                0 => continue,
+                1 => screlu(result[output_index]),
+                2 => relu(result[output_index]),
+                3 => sigmoid(result[output_index]),
+                _ => continue,
             }
         }
 
