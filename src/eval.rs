@@ -9,10 +9,8 @@ pub use value_network::ValueNetwork;
 #[allow(unused)]
 pub use policy_network::PolicyNetwork;
 
-use self::pesto::Pesto;
-
-//pub const VALUE_NETWORK: ValueNetwork =
-    //unsafe { std::mem::transmute(*include_bytes!("../resources/training/snapshots/value_snapshot-100.net")) };
+pub const VALUE_NETWORK: ValueNetwork =
+    unsafe { std::mem::transmute(*include_bytes!("../resources/nets/base_value.net")) };
 
 pub const POLICY_NETWORK: PolicyNetwork =
     unsafe { std::mem::transmute(*include_bytes!("../resources/nets/base_policy.net")) };
@@ -20,12 +18,7 @@ pub const POLICY_NETWORK: PolicyNetwork =
 pub struct Evaluation;
 impl Evaluation {
     pub fn evaluate(board: &Board) -> i32 {
-        let result = Pesto::get_score(&board);
-        if board.side_to_move == Side::WHITE {
-            result
-        } else {
-            -result
-        }
+        (VALUE_NETWORK.evaluate(&board) * 400.0) as i32
     }
 
     pub fn get_policy_values(board: &Board, move_list: &MoveList) -> Vec<f32> {
