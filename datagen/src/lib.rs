@@ -1,5 +1,5 @@
-mod structs;
 mod file_manager;
+mod structs;
 
 pub use structs::ChessMoveInfo;
 pub use structs::ChessPolicyData;

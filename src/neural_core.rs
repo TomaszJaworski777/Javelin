@@ -81,14 +81,15 @@ impl<const INPUTS: usize, const OUTPUTS: usize, const ACTIVATION: u8> NetworkLay
                 for square in stm_bitboard {
                     result[output_index] += self.weights[output_index][(piece_index - 1) * 64 + square.get_value()];
                 }
-    
+
                 for square in nstm_bitboard {
-                    result[output_index] += self.weights[output_index][384 + (piece_index - 1) * 64 + square.get_value()];
+                    result[output_index] +=
+                        self.weights[output_index][384 + (piece_index - 1) * 64 + square.get_value()];
                 }
             }
         }
 
-        for output_index in 0..OUTPUTS{
+        for output_index in 0..OUTPUTS {
             result[output_index] = match ACTIVATION {
                 0 => continue,
                 1 => screlu(result[output_index]),

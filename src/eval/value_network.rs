@@ -1,5 +1,5 @@
-use crate::neural_core::NetworkLayer;
 use crate::core::Board;
+use crate::neural_core::NetworkLayer;
 
 #[allow(unused)]
 const NO_FUNCTION: u8 = 0;
@@ -38,7 +38,7 @@ impl ValueNetwork {
         }
     }
 
-    pub fn print(&self){
+    pub fn print(&self) {
         self.input_layer.print();
         self.output_layer.print();
     }

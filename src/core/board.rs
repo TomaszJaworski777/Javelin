@@ -1,5 +1,10 @@
 use crate::{
-    core::{attacks::Attacks, bitboard::Bitboard, core_structs::{CastleRights, Move, Piece, Side, Square}, zobrist::ZobristKey},
+    core::{
+        attacks::Attacks,
+        bitboard::Bitboard,
+        core_structs::{CastleRights, Move, Piece, Side, Square},
+        zobrist::ZobristKey,
+    },
     eval::Evaluation,
 };
 use colored::*;

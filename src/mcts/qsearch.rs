@@ -1,7 +1,7 @@
 use arrayvec::ArrayVec;
 
 use crate::{
-    core::{Board, MoveList, MoveProvider, Move},
+    core::{Board, Move, MoveList, MoveProvider},
     eval::Evaluation,
 };
 
@@ -38,11 +38,11 @@ pub fn qsearch(board: &Board, mut alpha: i32, beta: i32) -> i32 {
     return alpha;
 }
 
-struct MoveOrderer<'a>{
+struct MoveOrderer<'a> {
     move_list: &'a MoveList,
-    used_indecies: ArrayVec<Move, 256>
+    used_indecies: ArrayVec<Move, 256>,
 }
-impl<'a> MoveOrderer<'a>{
+impl<'a> MoveOrderer<'a> {
     fn new(move_list: &'a MoveList) -> Self {
         Self { move_list, used_indecies: ArrayVec::new() }
     }
@@ -50,8 +50,8 @@ impl<'a> MoveOrderer<'a>{
     fn get_next_move(&mut self, board: &Board) -> Move {
         let mut best_move = Move::NULL;
         let mut best_score = i32::MIN;
-        for mv in self.move_list{
-            if self.used_indecies.contains(mv){
+        for mv in self.move_list {
+            if self.used_indecies.contains(mv) {
                 continue;
             }
 
