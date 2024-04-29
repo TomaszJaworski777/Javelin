@@ -24,7 +24,7 @@ pub struct Search<'a> {
     search_tree: SearchTree,
     root_position: Board,
     interruption_channel: Option<&'a Receiver<()>>,
-    qsearch: u16
+    qsearch: u16,
 }
 impl<'a> Search<'a> {
     pub fn new(board: &Board, interruption_channel: Option<&'a Receiver<()>>) -> Self {
@@ -164,7 +164,12 @@ impl<'a> Search<'a> {
             let mut new_node = Node::new(mv);
             new_node.index = self.search_tree.node_count();
             let base_index = (board.get_piece_on_square(mv.get_from_square()).0 - 1) * 64;
-            let index = base_index + if board.side_to_move == Side::WHITE { mv.get_to_square().get_value() } else { mv.get_to_square().get_value() ^ 56 };
+            let index = base_index
+                + if board.side_to_move == Side::WHITE {
+                    mv.get_to_square().get_value()
+                } else {
+                    mv.get_to_square().get_value() ^ 56
+                };
             new_node.policy_value = policy_values[index];
             self.search_tree.push(&new_node);
         }

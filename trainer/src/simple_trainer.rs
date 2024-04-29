@@ -1,11 +1,14 @@
 use std::{fs::File, io::Write, path::Path, process::Command, time::Instant};
 
+use crate::{policy_data_loader::PolicyDataLoader, value_data_loader::ValueDataLoader};
 use datagen::Files;
 use javelin::{PolicyNetwork, ValueNetwork};
-use tch::{nn::{seq, Module, Optimizer, OptimizerConfig, Sequential, VarStore}, Kind};
-use crate::{policy_data_loader::PolicyDataLoader, value_data_loader::ValueDataLoader};
+use tch::{
+    nn::{seq, Module, Optimizer, OptimizerConfig, Sequential, VarStore},
+    Kind,
+};
 
-pub struct SimpleTrainer<'a>{
+pub struct SimpleTrainer<'a> {
     pub var_store: VarStore,
     net_structure: Sequential,
     name: &'a str,
@@ -15,7 +18,7 @@ pub struct SimpleTrainer<'a>{
     batch_size: usize,
     batches_per_superbatch: usize,
     epoch_count: u32,
-    export_path: String
+    export_path: String,
 }
 impl<'a> SimpleTrainer<'a> {
     const TRAINING_PATH: &'static str = "../../resources/training/";
@@ -35,7 +38,7 @@ impl<'a> SimpleTrainer<'a> {
             batch_size: 16384,
             batches_per_superbatch: 100,
             epoch_count: 400,
-            export_path
+            export_path,
         }
     }
 
@@ -83,30 +86,35 @@ impl<'a> SimpleTrainer<'a> {
         }
     }
 
-    fn value_run(&self, optimizer: &mut Optimizer, train_data: &Files){
+    fn value_run(&self, optimizer: &mut Optimizer, train_data: &Files) {
         let mut current_learning_rate = self.start_learning_rate;
-        
+
         let data_per_superbatch = self.batches_per_superbatch * self.batch_size;
-        let superbatches_count = &train_data.value_data.len() / data_per_superbatch; 
+        let superbatches_count = &train_data.value_data.len() / data_per_superbatch;
 
         let timer = Instant::now();
         for epoch in 1..=self.epoch_count {
             let mut total_loss = 0.0;
 
-            for superbatch_index in 0..superbatches_count{
+            for superbatch_index in 0..superbatches_count {
                 let start_index = superbatch_index * data_per_superbatch;
                 let end_index = start_index + data_per_superbatch;
-                let batches = ValueDataLoader::get_batches(&train_data.value_data[start_index..end_index].to_vec(), self.batch_size);
+                let batches = ValueDataLoader::get_batches(
+                    &train_data.value_data[start_index..end_index].to_vec(),
+                    self.batch_size,
+                );
                 for (inputs, targets) in &batches {
                     let outputs = self.net_structure.forward(&inputs);
-                    let loss = (outputs - targets).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar(self.batch_size as f64);
-        
+                    let loss =
+                        (outputs - targets).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar(self.batch_size as f64);
+
                     total_loss += loss.double_value(&[]) as f32 / (superbatches_count * batches.len()) as f32;
                     optimizer.backward_step(&loss);
                 }
             }
 
-            println!("epoch {} time {:.2} loss {:.5} lr {:.7}",
+            println!(
+                "epoch {} time {:.2} loss {:.5} lr {:.7}",
                 epoch,
                 timer.elapsed().as_secs_f32(),
                 total_loss,
@@ -118,37 +126,46 @@ impl<'a> SimpleTrainer<'a> {
                 optimizer.set_lr(current_learning_rate);
             }
 
-            self.var_store.save(SimpleTrainer::TRAINING_PATH.to_string() + self.name + ".ot").expect("Failed to save training progress!");
-            export_value(&self.var_store, &self.export_path, [768,16,1]);
-            let checkpoint_path = SimpleTrainer::CHECKPOINT_PATH.to_string() + format!("{}-epoch{}.net", self.name, epoch).as_str();
-            export_value(&self.var_store, &checkpoint_path, [768,16,1]);
+            self.var_store
+                .save(SimpleTrainer::TRAINING_PATH.to_string() + self.name + ".ot")
+                .expect("Failed to save training progress!");
+            export_value(&self.var_store, &self.export_path, [768, 16, 1]);
+            let checkpoint_path =
+                SimpleTrainer::CHECKPOINT_PATH.to_string() + format!("{}-epoch{}.net", self.name, epoch).as_str();
+            export_value(&self.var_store, &checkpoint_path, [768, 16, 1]);
         }
     }
 
-    fn policy_run(&self, optimizer: &mut Optimizer, train_data: &Files){
+    fn policy_run(&self, optimizer: &mut Optimizer, train_data: &Files) {
         let mut current_learning_rate = self.start_learning_rate;
-        
+
         let data_per_superbatch = self.batches_per_superbatch * self.batch_size;
-        let superbatches_count = &train_data.policy_data.len() / data_per_superbatch; 
+        let superbatches_count = &train_data.policy_data.len() / data_per_superbatch;
 
         let timer = Instant::now();
         for epoch in 1..=self.epoch_count {
             let mut total_loss = 0.0;
 
-            for superbatch_index in 0..superbatches_count{
+            for superbatch_index in 0..superbatches_count {
                 let start_index = superbatch_index * data_per_superbatch;
                 let end_index = start_index + data_per_superbatch;
-                let batches = PolicyDataLoader::get_batches(&train_data.policy_data[start_index..end_index].to_vec(), self.batch_size);
+                let batches = PolicyDataLoader::get_batches(
+                    &train_data.policy_data[start_index..end_index].to_vec(),
+                    self.batch_size,
+                );
                 for (inputs, targets, mask, negative) in &batches {
-                    let outputs = &self.net_structure.forward(&inputs).multiply(mask).g_add(negative).softmax(-1, Kind::Float);
-                    let loss = (outputs - targets).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar(self.batch_size as f64);
+                    let outputs =
+                        &self.net_structure.forward(&inputs).multiply(mask).g_add(negative).softmax(-1, Kind::Float);
+                    let loss =
+                        (outputs - targets).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar(self.batch_size as f64);
                     total_loss += loss.double_value(&[]) as f32 / (superbatches_count * batches.len()) as f32;
                     optimizer.backward_step(&loss);
                 }
             }
 
-            println!("epoch {} time {:.2} a_loss {:.5} lr {:.7}",
-                epoch, 
+            println!(
+                "epoch {} time {:.2} a_loss {:.5} lr {:.7}",
+                epoch,
                 timer.elapsed().as_secs_f32(),
                 total_loss,
                 current_learning_rate
@@ -159,13 +176,15 @@ impl<'a> SimpleTrainer<'a> {
                 optimizer.set_lr(current_learning_rate);
             }
 
-            self.var_store.save(SimpleTrainer::TRAINING_PATH.to_string() + self.name + ".ot").expect("Failed to save training progress!");
-            export_policy(&self.var_store, &self.export_path, [768,384]);
-            let checkpoint_path = SimpleTrainer::CHECKPOINT_PATH.to_string() + format!("{}-epoch{}.net", self.name, epoch).as_str();
-            export_policy(&self.var_store, &checkpoint_path, [768,384]);
+            self.var_store
+                .save(SimpleTrainer::TRAINING_PATH.to_string() + self.name + ".ot")
+                .expect("Failed to save training progress!");
+            export_policy(&self.var_store, &self.export_path, [768, 384]);
+            let checkpoint_path =
+                SimpleTrainer::CHECKPOINT_PATH.to_string() + format!("{}-epoch{}.net", self.name, epoch).as_str();
+            export_policy(&self.var_store, &checkpoint_path, [768, 384]);
         }
     }
-
 
     fn print_search_params(&self, data_size: usize) {
         println!("Starting learning");
@@ -196,7 +215,7 @@ fn clear_terminal_screen() {
     };
 }
 
-fn export_value(var_store: &VarStore, path: &str, architecture: [usize; 3]){
+fn export_value(var_store: &VarStore, path: &str, architecture: [usize; 3]) {
     let mut value_network = boxed_and_zeroed::<ValueNetwork>();
     for (name, tensor) in var_store.variables() {
         let name_split: Vec<&str> = name.split(".").collect();
@@ -231,7 +250,7 @@ fn export_value(var_store: &VarStore, path: &str, architecture: [usize; 3]){
     }
 }
 
-fn export_policy(var_store: &VarStore, path: &str, architecture: [usize; 2]){
+fn export_policy(var_store: &VarStore, path: &str, architecture: [usize; 2]) {
     let mut policy_network = boxed_and_zeroed::<PolicyNetwork>();
     for (name, tensor) in var_store.variables() {
         let name_split: Vec<&str> = name.split(".").collect();

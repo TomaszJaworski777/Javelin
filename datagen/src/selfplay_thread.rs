@@ -94,7 +94,7 @@ impl SelfPlayThread {
                         GameResult::None => 0,
                         GameResult::Draw => 0,
                         GameResult::Lose(_) => -1,
-                        GameResult::Win(_) => 1
+                        GameResult::Win(_) => 1,
                     };
 
                     //iterate through temps and assign result
