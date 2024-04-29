@@ -5,8 +5,8 @@ use arrayvec::ArrayVec;
 use crate::{
     core::{Board, Move, MoveList, MoveProvider},
     eval::Evaluation,
+    mcts::SearchRules,
     see::SEE,
-    mcts::SearchRules
 };
 
 use super::SearchParams;

@@ -53,7 +53,6 @@ impl SEE {
         let mut side_to_move = board.side_to_move.flipped();
 
         loop {
-
             // If we have no more attackers left we lose
             let my_attackers = attackers & board.get_occupancy_for_side(side_to_move);
             if my_attackers.is_empty() {
@@ -63,7 +62,7 @@ impl SEE {
             // Find our weakest piece to attack with
             for new_next_victim in Piece::PAWN..=Piece::KING {
                 next_victim = new_next_victim;
-                if (my_attackers & board.get_piece_mask_for_both(new_next_victim)).is_not_empty(){
+                if (my_attackers & board.get_piece_mask_for_both(new_next_victim)).is_not_empty() {
                     break;
                 }
             }
