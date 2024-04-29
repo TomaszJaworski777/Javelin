@@ -1,15 +1,10 @@
-use std::{sync::mpsc::Receiver, time::Instant};
-
 use arrayvec::ArrayVec;
 
 use crate::{
     core::{Board, Move, MoveList, MoveProvider},
     eval::Evaluation,
-    mcts::SearchRules,
     see::SEE,
 };
-
-use super::SearchParams;
 
 pub fn qsearch<'a>(board: &Board, mut alpha: i32, beta: i32) -> i32 {
     let evaluation = Evaluation::evaluate(&board);
