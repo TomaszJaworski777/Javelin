@@ -3,6 +3,7 @@ mod eval;
 mod mcts;
 mod neural_core;
 mod perft;
+mod see;
 mod uci;
 
 use std::{io::stdin, process::Command};

@@ -43,6 +43,10 @@ impl Board {
         }
     }
 
+    pub fn get_piece_mask_for_both(&self, piece: usize) -> Bitboard {
+        self.pieces[piece - 1]
+    }
+
     pub fn get_piece_mask(&self, piece: usize, side: Side) -> Bitboard {
         self.pieces[piece - 1] & self.piece_maps[side.current()]
     }
@@ -57,6 +61,10 @@ impl Board {
 
     pub fn get_opponent_occupancy(&self) -> Bitboard {
         self.piece_maps[self.side_to_move.opposite()]
+    }
+
+    pub fn get_occupancy_for_side(&self, side: Side) -> Bitboard {
+        self.piece_maps[side.current()]
     }
 
     pub fn get_king_square(&self, color: Side) -> Square {
@@ -129,6 +137,19 @@ impl Board {
             }
         }
         return false;
+    }
+
+    pub fn all_attackers_to_square(&self, occupancy: Bitboard, square: Square) -> Bitboard {
+        // When performing a static exchange evaluation we need to find all
+        // attacks to a given square, but we also are given an updated occupied
+        // bitboard, which will likely not match the actual board, as pieces are
+        // removed during the iterations in the static exchange evaluation
+        (Attacks::get_pawn_attacks_for_square(square, Side::BLACK) & self.piece_maps[0] & self.pieces[0])
+            | (Attacks::get_pawn_attacks_for_square(square, Side::WHITE) & self.piece_maps[1] & self.pieces[0])
+            | (Attacks::get_knight_attacks_for_square(square) & self.pieces[1])
+            | (Attacks::get_bishop_attacks_for_square(square, occupancy) & (self.pieces[2] | self.pieces[4]))
+            | (Attacks::get_rook_attacks_for_square(square, occupancy) & (self.pieces[3] | self.pieces[4]))
+            | (Attacks::get_king_attacks_for_square(square) & self.pieces[5])
     }
 
     pub fn is_insufficient_material(&self) -> bool {
