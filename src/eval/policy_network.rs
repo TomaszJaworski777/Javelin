@@ -35,11 +35,12 @@ impl PolicyNetwork {
         }
     }
 
-    pub fn evaluate(&self, board: &Board, mask: &[bool; 384]) -> Vec<f32> {
+    pub fn evaluate(&self, board: &Board, mask: &[bool; 384], see_offset: &[f32; 384]) -> Vec<f32> {
         let input_layer_result = self.input_layer.feed_input_layer(&board);
         let masked_output: Vec<f32> =
             input_layer_result.iter().zip(mask.iter()).map(|(&x, &y)| if y { x } else { f32::NEG_INFINITY }).collect();
-        softmax(&masked_output)
+        let applied_see = masked_output.iter().zip(see_offset.iter()).map(|(&x, &y)| x + y).collect();
+        softmax(&applied_see)
     }
 }
 

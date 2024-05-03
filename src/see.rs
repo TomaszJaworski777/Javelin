@@ -2,6 +2,7 @@ use crate::core::{Attacks, Board, Move, Piece};
 
 pub struct SEE;
 impl SEE {
+    pub const POLICY_MARGIN: i32 = 108;
     pub const QS_MARGIN: i32 = 123;
     pub const PIECE_VALUES: [i32; 6] = [100, 300, 350, 500, 1000, 0];
 
