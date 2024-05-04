@@ -6,8 +6,16 @@ use crate::{
     see::SEE,
 };
 
-pub fn qsearch<'a>(board: &Board, mut alpha: i32, beta: i32) -> i32 {
+pub fn qsearch<'a>(board: &Board, mut alpha: i32, beta: i32, depth: u8) -> i32 {
+    if board.is_insufficient_material() || board.three_fold() || board.half_moves >= 100 {
+        return 0;
+    }
+
     let evaluation = Evaluation::evaluate(&board);
+
+    if depth > 128{
+        return evaluation;
+    }
 
     if evaluation >= beta {
         return beta;
@@ -30,7 +38,7 @@ pub fn qsearch<'a>(board: &Board, mut alpha: i32, beta: i32) -> i32 {
         let mut board_copy = board.clone();
         board_copy.make_move(mv);
 
-        let score = -qsearch(&board_copy, -beta, -alpha);
+        let score = -qsearch(&board_copy, -beta, -alpha, depth + 1);
 
         if score >= beta {
             return beta;
