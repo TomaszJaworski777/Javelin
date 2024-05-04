@@ -218,7 +218,7 @@ impl<'a> Search<'a> {
         }
 
         self.qsearch += 1;
-        sigmoid(qsearch(&board, -30000, 30000))
+        sigmoid(qsearch(&board, -30000, 30000, 0))
     }
 
     fn backpropagate(&mut self, selection_history: &mut SelectionHistory, mut result: f32) {
