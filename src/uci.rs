@@ -163,7 +163,7 @@ impl Uci {
                         "binc" => timers.3 = value,
                         "movestogo" => timers.4 = value,
                         "depth" => rules.max_depth = value as u32,
-                        "nodes" => rules.max_iterations = value as u32,
+                        "nodes" => rules.max_nodes = value as u32,
                         "movetime" => rules.time_for_move = value,
                         _ => {}
                     }

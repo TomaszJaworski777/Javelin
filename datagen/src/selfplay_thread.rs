@@ -26,7 +26,7 @@ impl SelfPlayThread {
             loop {
                 let mut search = Search::new(&current_board, None);
                 let mut rules = SearchRules::new();
-                rules.max_iterations = nodes;
+                rules.max_nodes = nodes;
                 let (mv, tree) = search.run::<false>(&rules);
 
                 let mut piece_board = PieceBoard::from_board(&current_board);
