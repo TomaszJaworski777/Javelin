@@ -10,7 +10,8 @@ use std::{
 use crate::{
     core::{create_board, Board, MoveList, MoveProvider, Side},
     mcts::{GameResult, Search, SearchParams, SearchRules, SearchTree},
-    perft::Perft, search_raport::SearchRaport,
+    perft::Perft,
+    search_raport::SearchRaport,
 };
 
 type CommandFn = Box<dyn Fn(&mut ContextVariables, &[String]) + Send + Sync + 'static>;
@@ -20,7 +21,7 @@ struct ContextVariables {
     interruption_channel: Option<Sender<()>>,
     search_active: Arc<Mutex<bool>>,
     search_tree: Arc<Mutex<SearchTree>>,
-    uci_initialized: bool
+    uci_initialized: bool,
 }
 
 impl ContextVariables {
@@ -30,7 +31,7 @@ impl ContextVariables {
             interruption_channel: None,
             search_active: Arc::new(Mutex::new(false)),
             search_tree: Arc::new(Mutex::new(SearchTree::new())),
-            uci_initialized: false
+            uci_initialized: false,
         }
     }
 }
@@ -58,7 +59,12 @@ impl Commands {
         commands
     }
 
-    pub fn print_raport<const UCI_REPORT: bool>(search_params: &SearchParams, pv_line: String, best_score: f32, result: GameResult) {
+    pub fn print_raport<const UCI_REPORT: bool>(
+        search_params: &SearchParams,
+        pv_line: String,
+        best_score: f32,
+        result: GameResult,
+    ) {
         let depth = search_params.get_avg_depth();
         let seldepth = search_params.max_depth;
         let time = search_params.time_passed;
@@ -187,10 +193,12 @@ impl Commands {
         *context.search_active.lock().unwrap() = true;
         let search_active_clone = Arc::clone(&context.search_active);
         let tree_clone = Arc::clone(&context.search_tree);
+        *tree_clone.lock().unwrap() = SearchTree::new(); //replace it later with test to reuse the tree
         let uci_initialized = context.uci_initialized;
         thread::spawn(move || {
             let mut search = Search::new(&board, Some(&reciever));
-            let result = if uci_initialized { search.run::<true>(&rules_final) } else { search.run::<false>(&rules_final) };
+            let result =
+                if uci_initialized { search.run::<true>(&rules_final) } else { search.run::<false>(&rules_final) };
             println!("bestmove {}", result.0.to_string());
             *tree_clone.lock().unwrap() = result.1.clone();
             *search_active_clone.lock().unwrap() = false;

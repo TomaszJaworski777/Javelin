@@ -1,4 +1,5 @@
 use crate::core::Board;
+use colored::*;
 use std::ops::{Index, IndexMut};
 
 use super::node::Node;
@@ -42,7 +43,7 @@ impl SearchTree {
         for child_index in self[node_index].children() {
             let child = &self[child_index];
 
-            if child.visit_count == 0{
+            if child.visit_count == 0 {
                 continue;
             }
 
@@ -57,6 +58,15 @@ impl SearchTree {
 
     #[allow(unused)]
     pub fn draw_tree_from_root(&self, max_depth: i32, board: &Board) {
+        let usage_percentage = self.0.len() as f32 / u32::MAX as f32;
+        let usage_text = format!("{:.2}%", usage_percentage);
+        println!(
+            "Tree usage: {}/{} ({})",
+            convert_number_memory_string(self.0.len() as u32),
+            convert_number_memory_string(u32::MAX),
+            heat_color(usage_text.as_str(), 1.0 - usage_percentage, 0.0, 1.0)
+        );
+
         if !self.0.is_empty() {
             self.draw_tree(0, "".to_string(), false, true, max_depth, 0, &board, 0.0, 0.0, false);
         }
@@ -64,6 +74,15 @@ impl SearchTree {
 
     #[allow(unused)]
     pub fn draw_tree_from_node(&self, node_index: u32, max_depth: i32, board: &Board) {
+        let usage_percentage = self.0.len() as f32 / u32::MAX as f32;
+        let usage_text = format!("{:.2}%", usage_percentage);
+        println!(
+            "Tree usage: {}/{} ({})",
+            convert_number_memory_string(self.0.len() as u32),
+            convert_number_memory_string(u32::MAX),
+            heat_color(usage_text.as_str(), 1.0 - usage_percentage, 0.0, 1.0)
+        );
+
         if !self.0.is_empty() {
             self.draw_tree(
                 node_index,
@@ -75,7 +94,7 @@ impl SearchTree {
                 &board,
                 0.0,
                 0.0,
-                false
+                false,
             );
         }
     }
@@ -91,7 +110,7 @@ impl SearchTree {
         board: &Board,
         heat_min_value: f32,
         heat_max_value: f32,
-        has_promotion: bool
+        has_promotion: bool,
     ) {
         if max_depth < 0 {
             return;
@@ -102,7 +121,13 @@ impl SearchTree {
         let connector = if last { "└─> " } else { "├─> " };
 
         let prefix_string = prefix.clone() + connector;
-        node.print_node(if is_root { "" } else { prefix_string.as_str() }, is_root, heat_min_value, heat_max_value, has_promotion);
+        node.print_node(
+            if is_root { "" } else { prefix_string.as_str() },
+            is_root,
+            heat_min_value,
+            heat_max_value,
+            has_promotion,
+        );
 
         if max_depth == 0 {
             return;
@@ -133,7 +158,7 @@ impl SearchTree {
                 &board,
                 heat_min_value,
                 heat_max_value,
-                has_promotion
+                has_promotion,
             );
         }
     }
@@ -170,4 +195,24 @@ impl IndexMut<u32> for SearchTree {
     fn index_mut(&mut self, index: u32) -> &mut Self::Output {
         &mut self.0[index as usize]
     }
+}
+
+fn convert_number_memory_string(number: u32) -> String {
+    let byte_count = number as usize * std::mem::size_of::<Node>();
+    if byte_count < 1000 {
+        format!("{}B", byte_count).truecolor(192, 210, 255).to_string()
+    } else if byte_count < 1_000_000 {
+        format!("{:.1}KB", byte_count as f32 / 1000.0).truecolor(192, 210, 255).to_string()
+    } else if byte_count < 1_000_000_000 {
+        format!("{:.1}MB", byte_count as f32 / 1_000_000.0).truecolor(192, 210, 255).to_string()
+    } else {
+        format!("{:.1}GB", byte_count as f32 / 1_000_000_000.0).truecolor(192, 210, 255).to_string()
+    }
+}
+
+fn heat_color(content: &str, value: f32, min_value: f32, max_value: f32) -> String {
+    let scalar = (value - min_value) / (max_value - min_value);
+    let r = (255.0 * (1.0 - scalar)) as u8;
+    let g = (255.0 * scalar) as u8;
+    content.truecolor(r, g, if r < 100 || g < 100 { 10 } else { 0 }).to_string()
 }

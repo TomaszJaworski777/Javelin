@@ -11,9 +11,9 @@ pub use search_tree::SearchTree;
 
 use self::{node::Node, qsearch::qsearch};
 use crate::{
+    commands::Commands,
     core::{Board, Move, MoveList, MoveProvider, Side},
     eval::Evaluation,
-    commands::Commands,
 };
 use std::{sync::mpsc::Receiver, time::Instant};
 

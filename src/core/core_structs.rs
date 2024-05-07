@@ -146,7 +146,7 @@ impl Square {
     pub const G3: Self = Self { value: 22 };
     pub const H3: Self = Self { value: 23 };
     pub const A4: Self = Self { value: 24 };
-    pub const B4: Self = Self { value: 25 }; 
+    pub const B4: Self = Self { value: 25 };
     pub const C4: Self = Self { value: 26 };
     pub const D4: Self = Self { value: 27 };
     pub const E4: Self = Self { value: 28 };

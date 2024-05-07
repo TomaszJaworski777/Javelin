@@ -13,7 +13,7 @@ pub fn qsearch<'a>(board: &Board, mut alpha: i32, beta: i32, depth: u8) -> i32 {
 
     let evaluation = Evaluation::evaluate(&board);
 
-    if depth > 128{
+    if depth > 128 {
         return evaluation;
     }
 

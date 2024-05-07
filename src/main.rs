@@ -1,14 +1,14 @@
+mod commands;
 mod core;
 mod eval;
 mod mcts;
 mod neural_core;
 mod perft;
-mod see;
-mod commands;
 mod search_raport;
+mod see;
 
-use std::{io::stdin, process::Command};
 use commands::Commands;
+use std::{io::stdin, process::Command};
 
 fn main() {
     let mut uci = Commands::new();

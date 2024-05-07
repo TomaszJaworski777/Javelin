@@ -35,7 +35,7 @@ impl Perft {
 
         let mut has_promotion = false;
         if first_iteration {
-            for mv in &move_list { 
+            for mv in &move_list {
                 if mv.is_promotion() {
                     has_promotion = true;
                 }
