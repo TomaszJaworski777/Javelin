@@ -10,7 +10,7 @@ use std::{
 use crate::{
     core::{create_board, Board, MoveList, MoveProvider, Side},
     mcts::{GameResult, Search, SearchParams, SearchRules, SearchTree},
-    perft::Perft,
+    perft::Perft, search_raport::SearchRaport,
 };
 
 type CommandFn = Box<dyn Fn(&mut ContextVariables, &[String]) + Send + Sync + 'static>;
@@ -20,6 +20,7 @@ struct ContextVariables {
     interruption_channel: Option<Sender<()>>,
     search_active: Arc<Mutex<bool>>,
     search_tree: Arc<Mutex<SearchTree>>,
+    uci_initialized: bool
 }
 
 impl ContextVariables {
@@ -29,50 +30,46 @@ impl ContextVariables {
             interruption_channel: None,
             search_active: Arc::new(Mutex::new(false)),
             search_tree: Arc::new(Mutex::new(SearchTree::new())),
+            uci_initialized: false
         }
     }
 }
 
-pub struct Uci {
+pub struct Commands {
     commands: HashMap<String, CommandFn>,
     context: ContextVariables,
 }
 
 #[allow(unused_variables)]
-impl Uci {
+impl Commands {
     pub fn new() -> Self {
-        let mut uci = Uci { commands: HashMap::new(), context: ContextVariables::new() };
+        let mut commands = Commands { commands: HashMap::new(), context: ContextVariables::new() };
 
-        uci.add_command("uci", Uci::uci_command);
-        uci.add_command("isready", Uci::is_ready_command);
-        uci.add_command("ucinewgame", Uci::new_game_command);
-        uci.add_command("position", Uci::position_command);
-        uci.add_command("draw", Uci::draw_board_command);
-        uci.add_command("go", Uci::go_command);
-        uci.add_command("stop", Uci::stop_search_command);
-        uci.add_command("tree", Uci::tree_command);
-        uci.add_command("perft", Uci::perft_command);
+        commands.add_command("uci", Commands::uci_command);
+        commands.add_command("isready", Commands::is_ready_command);
+        commands.add_command("ucinewgame", Commands::new_game_command);
+        commands.add_command("position", Commands::position_command);
+        commands.add_command("draw", Commands::draw_board_command);
+        commands.add_command("go", Commands::go_command);
+        commands.add_command("stop", Commands::stop_search_command);
+        commands.add_command("tree", Commands::tree_command);
+        commands.add_command("perft", Commands::perft_command);
 
-        uci
+        commands
     }
 
-    pub fn print_raport(search_params: &SearchParams, pv_line: String, best_score: f32, result: GameResult) {
+    pub fn print_raport<const UCI_REPORT: bool>(search_params: &SearchParams, pv_line: String, best_score: f32, result: GameResult) {
         let depth = search_params.get_avg_depth();
         let seldepth = search_params.max_depth;
         let time = search_params.time_passed;
         let nodes = search_params.curernt_iterations;
         let nps = (nodes as u128) * 1000 / time.max(1);
-        let score_text: String;
-        if let GameResult::Win(n) = result {
-            score_text = format!("mate {n}");
-        } else if let GameResult::Lose(n) = result {
-            score_text = format!("mate -{n}");
+
+        if UCI_REPORT {
+            SearchRaport::uci_report(depth, seldepth, time, nodes, nps, best_score, result, pv_line);
         } else {
-            score_text = format!("cp {}", (-400.0 * (1.0 / best_score.clamp(0.0, 1.0) - 1.0).ln()) as i32);
+            SearchRaport::pretty_report(depth, seldepth, time, nodes, nps, best_score, result, pv_line);
         }
-        println!(
-            "info depth {depth} seldepth {seldepth} score {score_text} time {time} nodes {nodes} nps {nps} pv {pv_line}"
-        );
     }
 
     pub fn execute_command(&mut self, command_name: &str, args: &[String]) {
@@ -92,6 +89,7 @@ impl Uci {
         println!("id name Javelin v{}", env!("CARGO_PKG_VERSION"));
         println!("id author Tomasz Jaworski");
         println!("uciok");
+        context.uci_initialized = true;
     }
 
     fn is_ready_command(context: &mut ContextVariables, args: &[String]) {
@@ -189,9 +187,10 @@ impl Uci {
         *context.search_active.lock().unwrap() = true;
         let search_active_clone = Arc::clone(&context.search_active);
         let tree_clone = Arc::clone(&context.search_tree);
+        let uci_initialized = context.uci_initialized;
         thread::spawn(move || {
             let mut search = Search::new(&board, Some(&reciever));
-            let result = search.run::<true>(&rules_final);
+            let result = if uci_initialized { search.run::<true>(&rules_final) } else { search.run::<false>(&rules_final) };
             println!("bestmove {}", result.0.to_string());
             *tree_clone.lock().unwrap() = result.1.clone();
             *search_active_clone.lock().unwrap() = false;
@@ -215,8 +214,8 @@ impl Uci {
                 context.search_tree.lock().unwrap().draw_tree_from_root(args[0].parse::<i32>().unwrap(), &context.board)
             }
             2 => context.search_tree.lock().unwrap().draw_tree_from_node(
-                args[0].parse::<u32>().unwrap(),
-                args[1].parse::<i32>().unwrap(),
+                args[1].parse::<u32>().unwrap(),
+                args[0].parse::<i32>().unwrap(),
                 &context.board,
             ),
             _ => return,

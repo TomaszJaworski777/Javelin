@@ -33,14 +33,27 @@ impl Perft {
             return move_list.len() as u64;
         }
 
-        for _move in move_list {
+        let mut has_promotion = false;
+        if first_iteration {
+            for mv in &move_list { 
+                if mv.is_promotion() {
+                    has_promotion = true;
+                }
+            }
+        }
+
+        for mv in &move_list {
             let mut new_board = *board;
-            new_board.make_move(_move);
+            new_board.make_move(*mv);
             let new_nodes = Perft::internal_execute::<BULK>(&new_board, depth - 1, false);
             nodes += new_nodes;
 
             if first_iteration {
-                print!("{} - {}\n", _move.to_string(), new_nodes);
+                if has_promotion {
+                    print!("{:<7}{}\n", mv.to_string() + ":", new_nodes);
+                } else {
+                    print!("{:<6}{}\n", mv.to_string() + ":", new_nodes);
+                }
             }
         }
 

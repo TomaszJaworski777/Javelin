@@ -54,7 +54,7 @@ impl SearchTree {
     #[allow(unused)]
     pub fn draw_tree_from_root(&self, max_depth: i32, board: &Board) {
         if !self.0.is_empty() {
-            self.draw_tree(0, "".to_string(), false, true, max_depth, 0, &board);
+            self.draw_tree(0, "".to_string(), false, true, max_depth, 0, &board, 0.0, 0.0, false);
         }
     }
 
@@ -69,6 +69,9 @@ impl SearchTree {
                 max_depth,
                 self.depth_of_node(node_index).unwrap(),
                 &board,
+                0.0,
+                0.0,
+                false
             );
         }
     }
@@ -82,6 +85,9 @@ impl SearchTree {
         max_depth: i32,
         current_depth: u32,
         board: &Board,
+        heat_min_value: f32,
+        heat_max_value: f32,
+        has_promotion: bool
     ) {
         if max_depth < 0 {
             return;
@@ -92,7 +98,7 @@ impl SearchTree {
         let connector = if last { "└─> " } else { "├─> " };
 
         let prefix_string = prefix.clone() + connector;
-        node.print_node(if is_root { "" } else { prefix_string.as_str() }, current_depth % 2 == 0);
+        node.print_node(if is_root { "" } else { prefix_string.as_str() }, is_root, heat_min_value, heat_max_value, has_promotion);
 
         if max_depth == 0 {
             return;
@@ -100,6 +106,17 @@ impl SearchTree {
 
         let children = node.children();
         let children_count = children.end - children.start;
+        let mut heat_min_value = f32::MAX;
+        let mut heat_max_value = f32::MIN;
+        let mut has_promotion = false;
+        for child_index in children.clone() {
+            let child = self[child_index];
+            heat_min_value = heat_min_value.min(child.policy_value);
+            heat_max_value = heat_max_value.max(child.policy_value);
+            if child.mv.is_promotion() {
+                has_promotion = true;
+            }
+        }
         for (i, child_index) in children.enumerate() {
             let is_last_child = i as u32 == children_count - 1;
             self.draw_tree(
@@ -110,6 +127,9 @@ impl SearchTree {
                 max_depth - 1,
                 current_depth + 1,
                 &board,
+                heat_min_value,
+                heat_max_value,
+                has_promotion
             );
         }
     }

@@ -1,7 +1,6 @@
 use std::ops::Range;
-
 use crate::core::Move;
-
+use colored::*;
 use super::SearchTree;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -84,19 +83,52 @@ impl Node {
         self.children().all(|child_index| matches!(tree[child_index].result, GameResult::Draw))
     }
 
-    pub fn print_node(&self, prefix: &str, reverse_q: bool) {
+    pub fn print_node(&self, prefix: &str, reverse_q: bool, heat_min_value: f32, heat_max_value: f32, has_promotion: bool) {
         let move_str = if self.mv == Move::NULL {
-            "root".to_string()
+            "root".truecolor(192,210,255).to_string()
         } else {
-            format!("{}. {}", self.index, self.mv.to_string())
+            format!("{:<4} {}", self.index.to_string() + ".", self.mv.to_string().truecolor(192,210,255))
         };
-        println!(
-            "{}{} Q({:.2}%) N({}) P({:.2}%)",
-            prefix,
-            move_str,
-            if reverse_q { 1.0 - self.avg_value() } else { self.avg_value() } * 100.0,
-            self.visit_count,
-            self.policy_value * 100.0
-        );
+        let q_value = if reverse_q { 1.0 - self.avg_value() } else { self.avg_value() } * 100.0;
+        let q_text = format!("Q({})", heat_color(format!("{:.2}%", q_value).as_str(), q_value, 0.0, 100.0));
+        let n_text = format!("N({})", self.visit_count.to_string().truecolor(192,210,255).to_string());
+        let p_text = format!("P({})", heat_color(format!("{:.2}%", self.policy_value * 100.0).as_str(), self.policy_value, heat_min_value, heat_max_value));
+
+        if self.mv == Move::NULL
+        {
+            println!(
+                "{}{:<28}{:<31}{:<35}",
+                prefix,
+                move_str,
+                q_text,
+                n_text
+            );
+        }
+        else if has_promotion {
+            println!(
+                "{}{:<34}{:<31}{:<35}{}",
+                prefix,
+                move_str,
+                q_text,
+                n_text,
+                p_text
+            );
+        } else {
+            println!(
+                "{}{:<33}{:<31}{:<35}{}",
+                prefix,
+                move_str,
+                q_text,
+                n_text,
+                p_text
+            );
+        }
     }
+}
+
+fn heat_color(content: &str, value: f32, min_value: f32, max_value: f32) -> String {
+    let scalar = ( value - min_value ) / ( max_value - min_value );
+    let r = (255.0 * (1.0 - scalar)) as u8;
+    let g = (255.0 * scalar) as u8;
+    content.truecolor(r, g, if r < 100 || g < 100 { 10 } else { 0 }).to_string()
 }

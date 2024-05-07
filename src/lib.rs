@@ -4,7 +4,8 @@ mod mcts;
 mod neural_core;
 mod perft;
 mod see;
-mod uci;
+mod commands;
+mod search_raport;
 
 pub use core::Side;
 pub use core::{create_board, get_bit, Bitboard, Board, Move, MoveList, MoveProvider, Square};
@@ -16,4 +17,4 @@ pub use mcts::Search;
 pub use mcts::SearchRules;
 pub use mcts::SearchTree;
 pub use neural_core::NetworkLayer;
-pub use uci::Uci;
+pub use commands::Commands;

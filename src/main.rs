@@ -4,13 +4,14 @@ mod mcts;
 mod neural_core;
 mod perft;
 mod see;
-mod uci;
+mod commands;
+mod search_raport;
 
 use std::{io::stdin, process::Command};
-use uci::Uci;
+use commands::Commands;
 
 fn main() {
-    let mut uci = Uci::new();
+    let mut uci = Commands::new();
 
     loop {
         let mut input_command = String::new();
