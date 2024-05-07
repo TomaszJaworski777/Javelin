@@ -42,6 +42,10 @@ impl SearchTree {
         for child_index in self[node_index].children() {
             let child = &self[child_index];
 
+            if child.visit_count == 0{
+                continue;
+            }
+
             if child.avg_value() > best_score {
                 best_score = child.avg_value();
                 best_node = child;

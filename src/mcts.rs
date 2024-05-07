@@ -97,7 +97,7 @@ impl<'a> Search<'a> {
                 && self.search_tree[current_node_index].visit_count > 0
             {
                 self.expand(current_node_index, &current_board);
-                current_node_index = self.search_tree[current_node_index].first_child_index;
+                current_node_index = self.select(current_node_index);
                 selection_history.push(current_node_index);
                 current_board.make_move(self.search_tree[current_node_index].mv);
             }

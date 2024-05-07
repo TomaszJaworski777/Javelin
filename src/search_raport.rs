@@ -15,7 +15,7 @@ impl SearchRaport {
                 score_text = format!("+{:.2}", score/100.0).as_str().green().to_string();
             }
             else if score < 0.0 {
-                score_text = format!("-{:.2}", score/100.0).as_str().red().to_string();
+                score_text = format!("{:.2}", score/100.0).as_str().red().to_string();
             }
             else{
                 score_text = "+0.00".white().to_string();
