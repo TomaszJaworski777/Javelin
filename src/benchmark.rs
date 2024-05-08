@@ -85,6 +85,7 @@ impl Benchmark {
         let result = format!("\n    Nodes:       {nodes_string}\n    Duration:    {duration_string}\n    Average Nps: {nps_string}\n",
         ).truecolor(163, 75, 163).to_string();
         println!("{result}");
+        println!("{total_nodes} nodes {total_nps} nps");
     }
 }
 
