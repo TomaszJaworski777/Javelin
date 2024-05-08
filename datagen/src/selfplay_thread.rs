@@ -27,7 +27,7 @@ impl SelfPlayThread {
                 let mut search = Search::new(&current_board, None);
                 let mut rules = SearchRules::new();
                 rules.max_nodes = nodes;
-                let (mv, tree) = search.run::<false>(&rules);
+                let (mv, tree, _) = search.run::<false, false>(&rules);
 
                 let mut piece_board = PieceBoard::from_board(&current_board);
                 piece_board.score = tree.get_best_node().avg_value();

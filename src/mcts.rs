@@ -31,7 +31,7 @@ impl<'a> Search<'a> {
         Self { search_tree: SearchTree::new(), root_position: *board, interruption_channel, qsearch: 0 }
     }
 
-    pub fn run<const UCI_REPORT: bool>(&mut self, search_rules: &SearchRules) -> (Move, &SearchTree) {
+    pub fn run<const UCI_REPORT: bool, const LOG: bool>(&mut self, search_rules: &SearchRules) -> (Move, &SearchTree, SearchParams) {
         let timer = Instant::now();
         let mut selection_history = SelectionHistory::new();
         let mut search_params = SearchParams::new();
@@ -40,7 +40,7 @@ impl<'a> Search<'a> {
         let board = self.root_position;
         self.expand(0, &board);
 
-        if !UCI_REPORT {
+        if !UCI_REPORT && LOG {
             println!("   Depth   Score    Time      Nodes     Speed        Pv Line");
         }
 
@@ -72,24 +72,28 @@ impl<'a> Search<'a> {
             if current_node_index == 0 {
                 search_params.time_passed = timer.elapsed().as_millis();
                 let best_node = self.search_tree.get_best_node();
-                Commands::print_raport::<UCI_REPORT>(
-                    &search_params,
-                    self.search_tree.get_pv_line(),
-                    best_node.avg_value(),
-                    best_node.result,
-                );
+                if LOG {
+                    Commands::print_raport::<UCI_REPORT>(
+                        &search_params,
+                        self.search_tree.get_pv_line(),
+                        best_node.avg_value(),
+                        best_node.result,
+                    );
+                }
                 break;
             }
 
             if let GameResult::Win(_) = self.search_tree[current_node_index].result {
                 search_params.time_passed = timer.elapsed().as_millis();
                 let best_node = self.search_tree.get_best_node();
-                Commands::print_raport::<UCI_REPORT>(
-                    &search_params,
-                    self.search_tree.get_pv_line(),
-                    best_node.avg_value(),
-                    best_node.result,
-                );
+                if LOG {
+                    Commands::print_raport::<UCI_REPORT>(
+                        &search_params,
+                        self.search_tree.get_pv_line(),
+                        best_node.avg_value(),
+                        best_node.result,
+                    );
+                }
                 break;
             }
 
@@ -120,12 +124,14 @@ impl<'a> Search<'a> {
                     if let Ok(_) = reciver.try_recv() {
                         search_params.time_passed = timer.elapsed().as_millis();
                         let best_node = self.search_tree.get_best_node();
-                        Commands::print_raport::<UCI_REPORT>(
-                            &search_params,
-                            self.search_tree.get_pv_line(),
-                            best_node.avg_value(),
-                            best_node.result,
-                        );
+                        if LOG {
+                            Commands::print_raport::<UCI_REPORT>(
+                                &search_params,
+                                self.search_tree.get_pv_line(),
+                                best_node.avg_value(),
+                                best_node.result,
+                            );
+                        }
                         break;
                     }
                 }
@@ -133,18 +139,20 @@ impl<'a> Search<'a> {
                 if search_params.get_avg_depth() > current_avg_depth {
                     search_params.time_passed = timer.elapsed().as_millis();
                     let best_node = self.search_tree.get_best_node();
-                    Commands::print_raport::<UCI_REPORT>(
-                        &search_params,
-                        self.search_tree.get_pv_line(),
-                        best_node.avg_value(),
-                        best_node.result,
-                    );
+                    if LOG {
+                        Commands::print_raport::<UCI_REPORT>(
+                            &search_params,
+                            self.search_tree.get_pv_line(),
+                            best_node.avg_value(),
+                            best_node.result,
+                        );
+                    }
                     current_avg_depth = search_params.get_avg_depth();
                 }
             }
         }
 
-        (self.search_tree.get_best_node().mv, &self.search_tree)
+        (self.search_tree.get_best_node().mv, &self.search_tree, search_params)
     }
 
     fn expand(&mut self, node_index: NodeIndex, board: &Board) {

@@ -6,6 +6,7 @@ mod neural_core;
 mod perft;
 mod search_raport;
 mod see;
+mod benchmark;
 
 pub use commands::Commands;
 pub use core::Side;

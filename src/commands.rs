@@ -8,10 +8,7 @@ use std::{
 };
 
 use crate::{
-    core::{create_board, Board, MoveList, MoveProvider, Side},
-    mcts::{GameResult, Search, SearchParams, SearchRules, SearchTree},
-    perft::Perft,
-    search_raport::SearchRaport,
+    benchmark::Benchmark, core::{create_board, Board, MoveList, MoveProvider, Side}, mcts::{GameResult, Search, SearchParams, SearchRules, SearchTree}, perft::Perft, search_raport::SearchRaport
 };
 
 type CommandFn = Box<dyn Fn(&mut ContextVariables, &[String]) + Send + Sync + 'static>;
@@ -55,6 +52,7 @@ impl Commands {
         commands.add_command("stop", Commands::stop_search_command);
         commands.add_command("tree", Commands::tree_command);
         commands.add_command("perft", Commands::perft_command);
+        commands.add_command("bench", Commands::bench_command);
 
         commands
     }
@@ -198,7 +196,7 @@ impl Commands {
         thread::spawn(move || {
             let mut search = Search::new(&board, Some(&reciever));
             let result =
-                if uci_initialized { search.run::<true>(&rules_final) } else { search.run::<false>(&rules_final) };
+                if uci_initialized { search.run::<true, true>(&rules_final) } else { search.run::<false, true>(&rules_final) };
             println!("bestmove {}", result.0.to_string());
             *tree_clone.lock().unwrap() = result.1.clone();
             *search_active_clone.lock().unwrap() = false;
@@ -236,5 +234,13 @@ impl Commands {
         }
 
         Perft::execute::<true>(&context.board, args[0].parse().unwrap_or_default(), true);
+    }
+
+    fn bench_command(context: &mut ContextVariables, args: &[String]) {
+        if args.len() != 1 {
+            return;
+        }
+
+        Benchmark::run(args[0].parse().unwrap_or_default());
     }
 }
