@@ -13,7 +13,7 @@ use self::{node::Node, qsearch::qsearch};
 use crate::{
     commands::Commands,
     core::{Board, Move, MoveList, MoveProvider, Side},
-    eval::Evaluation,
+    eval::Evaluation, options::Options,
 };
 use std::{sync::mpsc::Receiver, time::Instant};
 
@@ -47,8 +47,14 @@ impl<'a> Search<'a> {
             println!("   Depth   Score    Time      Nodes     Speed        Pv Line");
         }
 
+        let current_memory_usage = |nodes: usize| -> bool {
+            let current_memory_usage = (nodes + 218) as usize * std::mem::size_of::<Node>();
+            let memory_capacity = Options::get("Hash").get_value::<usize>() * 1024 * 1024;
+            current_memory_usage < memory_capacity
+        };
+
         let mut current_avg_depth = 0;
-        while search_rules.continue_search(&search_params) && search_params.nodes + 256 < u32::MAX {
+        while search_rules.continue_search(&search_params) && current_memory_usage(search_params.nodes as usize){
             selection_history.clear();
 
             let mut current_node_index = root_node.index;

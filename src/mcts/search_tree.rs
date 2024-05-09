@@ -1,4 +1,4 @@
-use crate::core::Board;
+use crate::{core::Board, options::Options};
 use colored::*;
 use std::ops::{Index, IndexMut};
 
@@ -58,15 +58,7 @@ impl SearchTree {
 
     #[allow(unused)]
     pub fn draw_tree_from_root(&self, max_depth: i32, board: &Board) {
-        let usage_percentage = self.0.len() as f32 / u32::MAX as f32;
-        let usage_text = format!("{:.2}%", usage_percentage);
-        println!(
-            "Tree usage: {}/{} ({})",
-            convert_number_memory_string(self.0.len() as u32),
-            convert_number_memory_string(u32::MAX),
-            heat_color(usage_text.as_str(), 1.0 - usage_percentage, 0.0, 1.0)
-        );
-
+        self.print_tree_usage();
         if !self.0.is_empty() {
             self.draw_tree(0, "".to_string(), false, true, max_depth, 0, &board, 0.0, 0.0, false);
         }
@@ -74,15 +66,7 @@ impl SearchTree {
 
     #[allow(unused)]
     pub fn draw_tree_from_node(&self, node_index: u32, max_depth: i32, board: &Board) {
-        let usage_percentage = self.0.len() as f32 / u32::MAX as f32;
-        let usage_text = format!("{:.2}%", usage_percentage);
-        println!(
-            "Tree usage: {}/{} ({})",
-            convert_number_memory_string(self.0.len() as u32),
-            convert_number_memory_string(u32::MAX),
-            heat_color(usage_text.as_str(), 1.0 - usage_percentage, 0.0, 1.0)
-        );
-
+        self.print_tree_usage();
         if !self.0.is_empty() {
             self.draw_tree(
                 node_index,
@@ -97,6 +81,18 @@ impl SearchTree {
                 false,
             );
         }
+    }
+
+    fn print_tree_usage(&self){
+        let tree_cap = (Options::get("Hash").get_value::<u32>() * 1024 * 1024) / std::mem::size_of::<Node>() as u32;
+        let usage_percentage = self.0.len() as f32 / tree_cap as f32;
+        let usage_text = format!("{:.2}%", usage_percentage);
+        println!(
+            "Tree usage: {}/{} ({})",
+            convert_number_memory_string(self.0.len() as u32),
+            convert_number_memory_string(tree_cap),
+            heat_color(usage_text.as_str(), 1.0 - usage_percentage, 0.0, 1.0)
+        );
     }
 
     fn draw_tree(
@@ -199,14 +195,14 @@ impl IndexMut<u32> for SearchTree {
 
 fn convert_number_memory_string(number: u32) -> String {
     let byte_count = number as usize * std::mem::size_of::<Node>();
-    if byte_count < 1000 {
+    if byte_count < 1024 {
         format!("{}B", byte_count).truecolor(192, 210, 255).to_string()
-    } else if byte_count < 1_000_000 {
-        format!("{:.1}KB", byte_count as f32 / 1000.0).truecolor(192, 210, 255).to_string()
-    } else if byte_count < 1_000_000_000 {
-        format!("{:.1}MB", byte_count as f32 / 1_000_000.0).truecolor(192, 210, 255).to_string()
+    } else if byte_count < (1024.0 * 1023.99) as usize {
+        format!("{:.1}KB", byte_count as f32 / 1024.0).truecolor(192, 210, 255).to_string()
+    } else if byte_count < (1024.0 * 1024.0 * 1023.99) as usize {
+        format!("{:.1}MB", byte_count as f32 / (1024.0 * 1024.0)).truecolor(192, 210, 255).to_string()
     } else {
-        format!("{:.1}GB", byte_count as f32 / 1_000_000_000.0).truecolor(192, 210, 255).to_string()
+        format!("{:.1}GB", byte_count as f32 / (1024.0 * 1024.0 * 1024.0)).truecolor(192, 210, 255).to_string()
     }
 }
 
