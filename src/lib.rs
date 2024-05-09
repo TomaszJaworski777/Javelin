@@ -1,12 +1,13 @@
+mod benchmark;
 mod commands;
 mod core;
 mod eval;
 mod mcts;
 mod neural_core;
+mod options;
 mod perft;
 mod search_raport;
 mod see;
-mod benchmark;
 
 pub use commands::Commands;
 pub use core::Side;

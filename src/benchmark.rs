@@ -1,7 +1,10 @@
-use std::time::Instant;
 use colored::*;
+use std::time::Instant;
 
-use crate::{core::create_board, mcts::{SearchRules, Search}};
+use crate::{
+    core::create_board,
+    mcts::{Search, SearchRules},
+};
 
 pub struct Benchmark;
 impl Benchmark {
@@ -55,7 +58,7 @@ impl Benchmark {
         "rnbqkb1r/pppppppp/5n2/8/2PP4/8/PP2PPPP/RNBQKBNR b KQkq c3 0 2",
         "2rr2k1/1p4bp/p1q1p1p1/4Pp1n/2PB4/1PN3P1/P3Q2P/2RR2K1 w - f6 0 20",
         "3br1k1/p1pn3p/1p3n2/5pNq/2P1p3/1PN3PP/P2Q1PB1/4R1K1 w - - 0 23",
-        "2r2b2/5p2/5k2/p1r1pP2/P2pB3/1P3P2/K1P3R1/7R w - - 23 93"
+        "2r2b2/5p2/5k2/p1r1pP2/P2pB3/1P3P2/K1P3R1/7R w - - 23 93",
     ];
 
     pub fn run(depth: u32) {
@@ -82,8 +85,11 @@ impl Benchmark {
         let nodes_string = number_processor(total_nodes).truecolor(200, 200, 0).to_string();
         let duration_string = format!("{:.2}s", total_time).truecolor(200, 200, 0).to_string();
         let nps_string = format!("{}n/s", number_processor(total_nps)).truecolor(200, 200, 0).to_string();
-        let result = format!("\n    Nodes:       {nodes_string}\n    Duration:    {duration_string}\n    Average Nps: {nps_string}\n",
-        ).truecolor(163, 75, 163).to_string();
+        let result = format!(
+            "\n    Nodes:       {nodes_string}\n    Duration:    {duration_string}\n    Average Nps: {nps_string}\n",
+        )
+        .truecolor(163, 75, 163)
+        .to_string();
         println!("{result}");
         println!("{total_nodes} nodes {total_nps} nps");
     }
@@ -93,8 +99,8 @@ fn number_processor(value: u32) -> String {
     if value < 1000 {
         value.to_string()
     } else if value < 1_000_000 {
-        format!("{:.2}k", value as f32/1000.0)
+        format!("{:.2}k", value as f32 / 1000.0)
     } else {
-        format!("{:.2}m", value as f32/1_000_000.0)
+        format!("{:.2}m", value as f32 / 1_000_000.0)
     }
 }

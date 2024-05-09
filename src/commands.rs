@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    benchmark::Benchmark, core::{create_board, Board, MoveList, MoveProvider, Side}, mcts::{GameResult, Search, SearchParams, SearchRules, SearchTree}, perft::Perft, search_raport::SearchRaport
+    benchmark::Benchmark, core::{create_board, Board, MoveList, MoveProvider, Side}, mcts::{GameResult, Search, SearchParams, SearchRules, SearchTree}, options::Options, perft::Perft, search_raport::SearchRaport
 };
 
 type CommandFn = Box<dyn Fn(&mut ContextVariables, &[String]) + Send + Sync + 'static>;
@@ -44,6 +44,7 @@ impl Commands {
         let mut commands = Commands { commands: HashMap::new(), context: ContextVariables::new() };
 
         commands.add_command("uci", Commands::uci_command);
+        commands.add_command("setoption", Commands::set_option_command);
         commands.add_command("isready", Commands::is_ready_command);
         commands.add_command("ucinewgame", Commands::new_game_command);
         commands.add_command("position", Commands::position_command);
@@ -92,8 +93,37 @@ impl Commands {
     fn uci_command(context: &mut ContextVariables, args: &[String]) {
         println!("id name Javelin v{}", env!("CARGO_PKG_VERSION"));
         println!("id author Tomasz Jaworski");
+        Options::print();
         println!("uciok");
         context.uci_initialized = true;
+    }
+
+    fn set_option_command(context: &mut ContextVariables, args: &[String]) {
+        let mut name: String = String::new();
+        let mut value: String = String::new();
+    
+        if args.len() != 4 {
+            println!("Error: Incorrect number of arguments.");
+            return;
+        }
+    
+        for (index, argument) in args.iter().enumerate() {
+            match argument.as_str() {
+                "name" => {
+                    if index + 1 < args.len() {
+                        name = args[index + 1].clone();
+                    }
+                },
+                "value" => {
+                    if index + 1 < args.len() {
+                        value = args[index + 1].clone();
+                    }
+                },
+                _ => continue
+            }
+        }
+    
+        Options::set(name, value);
     }
 
     fn is_ready_command(context: &mut ContextVariables, args: &[String]) {
@@ -195,8 +225,11 @@ impl Commands {
         let uci_initialized = context.uci_initialized;
         thread::spawn(move || {
             let mut search = Search::new(&board, Some(&reciever));
-            let result =
-                if uci_initialized { search.run::<true, true>(&rules_final) } else { search.run::<false, true>(&rules_final) };
+            let result = if uci_initialized {
+                search.run::<true, true>(&rules_final)
+            } else {
+                search.run::<false, true>(&rules_final)
+            };
             println!("bestmove {}", result.0.to_string());
             *tree_clone.lock().unwrap() = result.1.clone();
             *search_active_clone.lock().unwrap() = false;

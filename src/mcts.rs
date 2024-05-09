@@ -31,7 +31,10 @@ impl<'a> Search<'a> {
         Self { search_tree: SearchTree::new(), root_position: *board, interruption_channel, qsearch: 0 }
     }
 
-    pub fn run<const UCI_REPORT: bool, const LOG: bool>(&mut self, search_rules: &SearchRules) -> (Move, &SearchTree, SearchParams) {
+    pub fn run<const UCI_REPORT: bool, const LOG: bool>(
+        &mut self,
+        search_rules: &SearchRules,
+    ) -> (Move, &SearchTree, SearchParams) {
         let timer = Instant::now();
         let mut selection_history = SelectionHistory::new();
         let mut search_params = SearchParams::new();
