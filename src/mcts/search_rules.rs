@@ -1,3 +1,5 @@
+use crate::options::Options;
+
 use super::search_params::SearchParams;
 
 pub struct SearchRules {
@@ -33,6 +35,6 @@ impl SearchRules {
 
     pub fn calculate_time(time_remaining: u64, time_increment: u64, moves_to_go: u64) -> u64 {
         let divider = if moves_to_go > 0 { moves_to_go } else { 20 };
-        (time_remaining / divider.max(1) + time_increment / 2).max(10)
+        (time_remaining / divider.max(1) + time_increment / 2 - Options::get("MoveOverhead").get_value::<u64>()).max(1).min(time_remaining)
     }
 }

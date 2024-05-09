@@ -1,3 +1,5 @@
+use std::{fmt::Debug, str::FromStr};
+
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use unicase::UniCase;
@@ -81,27 +83,15 @@ impl EngineOption {
         }
     }
 
-    pub fn get_int(&self) -> i32 {
+    pub fn get_value<T>(&self) -> T     
+    where
+        T: FromStr + Default,
+        <T as FromStr>::Err: Debug,
+    {
         if let OptionType::Spin(_, _) = self.option_type {
-            self.value.parse::<i32>().unwrap()
+            self.value.parse::<T>().unwrap()
         } else {
-            0
-        }
-    }
-
-    pub fn get_bool(&self) -> bool {
-        if let OptionType::Check = self.option_type {
-            self.value == "true"
-        } else {
-            false
-        }
-    }
-
-    pub fn get_string(&self) -> String {
-        if let OptionType::String = self.option_type {
-            self.value.clone()
-        } else {
-            String::new()
+            T::default()
         }
     }
 
