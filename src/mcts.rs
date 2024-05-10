@@ -60,11 +60,21 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
             println!("   Depth   Score    Time      Nodes     Speed        Usage   Pv Line");
         }
 
-        //Prepare all variables needed for next iteration, increment current iteration counter
-        self.init_next_iteration::<PRETTY_PRINT>()
+        //Iteration loop that breaks, when search rules decide seach should not longer continue
+        //or when iteration returns 'true' which is search-break token
+        while self.search_rules.continue_search(&self.search_params) {
+            if self.init_next_iteration::<PRETTY_PRINT>() {
+                return self.end_step::<PRETTY_PRINT>(true);
+            }
+        }
+
+        //We only want to print final search report, if search ended not because of reaching max depth
+        self.end_step::<PRETTY_PRINT>(
+            self.search_rules.max_depth == 0 || self.search_params.get_avg_depth() < self.search_rules.max_depth,
+        )
     }
 
-    fn init_next_iteration<const PRETTY_PRINT: bool>(&mut self) -> (Move, &SearchTree, SearchParams) {
+    fn init_next_iteration<const PRETTY_PRINT: bool>(&mut self) -> bool {
         self.selection_history.clear();
         self.selection_history.push(0);
         self.search_params.curernt_iterations += 1;
@@ -79,7 +89,7 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
         mut current_node_index: u32,
         current_board: &mut Board,
         mut depth: u32,
-    ) -> (Move, &SearchTree, SearchParams) {
+    ) -> bool {
         //We select best child of a node. If selected child is checkmate
         //or if it's root. Then we can end the search, due to all children
         //of root being terminal nodes. TODO: what if the node is in the stalemate?
@@ -87,11 +97,11 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
         current_node_index = self.select_best_child(current_node_index);
 
         if let GameResult::Win(_) = self.search_tree[current_node_index].result {
-            return self.end_step::<PRETTY_PRINT>(true);
+            return true;
         }
 
         if current_node_index == 0 {
-            return self.end_step::<PRETTY_PRINT>(true);
+            return true;
         }
 
         //We apply the selected move, and increase selection depth
@@ -113,7 +123,7 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
         current_node_index: u32,
         current_board: &mut Board,
         depth: u32,
-    ) -> (Move, &SearchTree, SearchParams) {
+    ) -> bool {
         //If node has beem visited before, we want to expand it further
         //and select one of its children as current node for simulation
         //If no, then we want to simulate it first
@@ -130,7 +140,7 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
         current_node_index: u32,
         current_board: &Board,
         depth: u32,
-    ) -> (Move, &SearchTree, SearchParams) {
+    ) -> bool {
         //We simulate currently selected node and then backpropage the result
         //down the tree
         let node_score = self.simulate_node(current_node_index, &current_board);
@@ -141,12 +151,12 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
         &mut self,
         depth: u32,
         score: f32,
-    ) -> (Move, &SearchTree, SearchParams) {
+    ) -> bool {
         self.backpropagate_score(score);
         return self.end_iteration::<PRETTY_PRINT>(depth);
     }
 
-    fn end_iteration<const PRETTY_PRINT: bool>(&mut self, depth: u32) -> (Move, &SearchTree, SearchParams) {
+    fn end_iteration<const PRETTY_PRINT: bool>(&mut self, depth: u32) -> bool {
         //We update time only every 128 iterations to reduce workload during search
         if self.search_params.curernt_iterations % 128 == 0 {
             self.search_params.time_passed = self.timer.elapsed().as_millis();
@@ -155,13 +165,12 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
         //We are upadating all search parameters to prepare it for next iteration or end of the search
         self.search_params.max_depth = self.search_params.max_depth.max(depth);
         self.search_params.total_depth += depth;
-        self.search_params.curernt_iterations += 1;
         self.search_params.nodes = self.search_tree.node_count();
 
         //If interruption signal was send ('stop' command), we force exit the search
         if let Some(reciver) = self.interruption_channel {
             if let Ok(_) = reciver.try_recv() {
-                return self.end_step::<PRETTY_PRINT>(true);
+                return true;
             }
         }
 
@@ -180,15 +189,7 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
             self.current_avg_depth = self.search_params.get_avg_depth();
         }
 
-        //Decided based on search rules if search shuold be continued or interrupted
-        if self.search_rules.continue_search(&self.search_params) {
-            return self.init_next_iteration::<PRETTY_PRINT>();
-        }
-
-        //We don't want to print search report if search ended due to reaching max depth
-        self.end_step::<PRETTY_PRINT>(
-            self.search_rules.max_depth == 0 || self.search_params.get_avg_depth() < self.search_rules.max_depth,
-        )
+        false
     }
 
     fn end_step<const PRETTY_PRINT: bool>(&mut self, show_report: bool) -> (Move, &SearchTree, SearchParams) {
