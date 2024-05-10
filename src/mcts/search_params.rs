@@ -1,3 +1,4 @@
+#[derive(Clone, Copy)]
 pub struct SearchParams {
     pub curernt_iterations: u32,
     pub total_depth: u32,

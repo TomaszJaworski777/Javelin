@@ -24,10 +24,10 @@ impl SelfPlayThread {
             let mut game_result = GameResult::None;
             let mut temp = Files::new();
             loop {
-                let mut search = Search::new(&current_board, None);
                 let mut rules = SearchRules::new();
                 rules.max_nodes = nodes;
-                let (mv, tree, _) = search.run::<false, false>(&rules);
+                let mut search = Search::<false>::new(&current_board, None, rules);
+                let (mv, tree, _) = search.run::<false>();
 
                 let mut piece_board = PieceBoard::from_board(&current_board);
                 piece_board.score = tree.get_best_node().avg_value();

@@ -1,9 +1,29 @@
-use crate::mcts::{GameResult, SearchRules};
+use crate::mcts::{GameResult, SearchParams, SearchRules};
 use colored::*;
 
 pub struct SearchRaport;
 impl SearchRaport {
-    pub fn pretty_report(
+    pub fn print_raport<const PRETTY_PRINT: bool>(
+        search_params: &SearchParams,
+        pv_line: String,
+        best_score: f32,
+        result: GameResult,
+    ) {
+        let depth = search_params.get_avg_depth();
+        let seldepth = search_params.max_depth;
+        let time: u128 = search_params.time_passed;
+        let iterations = search_params.curernt_iterations;
+        let nodes = search_params.nodes;
+        let nps = (iterations as u128) * 1000 / time.max(1);
+
+        if PRETTY_PRINT {
+            SearchRaport::pretty_report(depth, seldepth, time, nodes, iterations, nps, best_score, result, pv_line);
+        } else {
+            SearchRaport::uci_report(depth, seldepth, time, nodes, iterations, nps, best_score, result, pv_line);
+        }
+    }
+
+    fn pretty_report(
         depth: u32,
         seldepth: u32,
         time: u128,
@@ -64,7 +84,7 @@ impl SearchRaport {
         );
     }
 
-    pub fn uci_report(
+    fn uci_report(
         depth: u32,
         seldepth: u32,
         time: u128,

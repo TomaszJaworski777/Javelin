@@ -2,6 +2,7 @@ use crate::options::Options;
 
 use super::{node::Node, search_params::SearchParams};
 
+#[derive(Clone, Copy)]
 pub struct SearchRules {
     pub time_for_move: u64,
     pub max_depth: u32,
@@ -18,6 +19,10 @@ impl SearchRules {
             return false;
         }
 
+        if self.infinite {
+            return true;
+        }
+
         if self.max_nodes > 0 && search_params.curernt_iterations >= self.max_nodes {
             return false;
         }
@@ -30,11 +35,10 @@ impl SearchRules {
             return false;
         }
 
-        self.infinite
+        true
     }
 
-
-    pub fn get_memory_usage_percentage(nodes: usize) -> f32{
+    pub fn get_memory_usage_percentage(nodes: usize) -> f32 {
         let current_memory_usage = nodes * std::mem::size_of::<Node>();
         let memory_capacity = Options::get("Hash").get_value::<usize>() * 1024 * 1024;
         current_memory_usage as f32 / memory_capacity as f32
@@ -42,6 +46,8 @@ impl SearchRules {
 
     pub fn calculate_time(time_remaining: u64, time_increment: u64, moves_to_go: u64) -> u64 {
         let divider = if moves_to_go > 0 { moves_to_go } else { 20 };
-        (time_remaining / divider.max(1) + time_increment / 2 - Options::get("MoveOverhead").get_value::<u64>()).max(1).min(time_remaining)
+        (time_remaining / divider.max(1) + time_increment / 2 - Options::get("MoveOverhead").get_value::<u64>())
+            .max(1)
+            .min(time_remaining)
     }
 }

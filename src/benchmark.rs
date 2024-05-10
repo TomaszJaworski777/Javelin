@@ -71,9 +71,9 @@ impl Benchmark {
         let mut total_nps = 0;
         for fen in Benchmark::FENS {
             let board = create_board(fen);
-            let mut search = Search::new(&board, None);
+            let mut search = Search::<false>::new(&board, None, rules);
             let search_timer = Instant::now();
-            let (_, _, result) = search.run::<false, false>(&rules);
+            let (_, _, result) = search.run::<false>();
             let eclapsed = search_timer.elapsed().as_secs_f32();
             total_nodes = total_nodes + result.curernt_iterations;
             total_time = total_time + eclapsed;

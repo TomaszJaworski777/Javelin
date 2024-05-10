@@ -19,7 +19,10 @@ impl Options {
     }
 
     fn add_option(&mut self, name: &'static str, value: &'static str, option_type: OptionType) {
-        self.map.insert(UniCase::new(name.to_string()), EngineOption::new(name.to_string(), &value.to_string(), option_type));
+        self.map.insert(
+            UniCase::new(name.to_string()),
+            EngineOption::new(name.to_string(), &value.to_string(), option_type),
+        );
     }
 
     pub fn get<'a>(key: &'a str) -> EngineOption {
@@ -44,7 +47,7 @@ impl Options {
         for entry in OPTIONS.map.iter() {
             entry.value().print();
         }
-    } 
+    }
 }
 
 #[derive(Clone)]
@@ -56,7 +59,8 @@ pub struct EngineOption {
 }
 #[allow(unused)]
 impl EngineOption {
-    const NONE: Self = Self { name: String::new(), value: String::new(), default: String::new(), option_type: OptionType::Check };
+    const NONE: Self =
+        Self { name: String::new(), value: String::new(), default: String::new(), option_type: OptionType::Check };
 
     fn new(name: String, value: &String, option_type: OptionType) -> Self {
         Self { name, value: value.clone(), default: value.clone(), option_type }
@@ -83,7 +87,7 @@ impl EngineOption {
         }
     }
 
-    pub fn get_value<T>(&self) -> T     
+    pub fn get_value<T>(&self) -> T
     where
         T: FromStr + Default,
         <T as FromStr>::Err: Debug,

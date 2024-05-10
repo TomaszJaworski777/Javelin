@@ -8,7 +8,11 @@ use std::{
 };
 
 use crate::{
-    benchmark::Benchmark, core::{create_board, Board, MoveList, MoveProvider, Side}, mcts::{GameResult, Search, SearchParams, SearchRules, SearchTree}, options::Options, perft::Perft, search_raport::SearchRaport
+    benchmark::Benchmark,
+    core::{create_board, Board, MoveList, MoveProvider, Side},
+    mcts::{Search, SearchRules, SearchTree},
+    options::Options,
+    perft::Perft,
 };
 
 type CommandFn = Box<dyn Fn(&mut ContextVariables, &[String]) + Send + Sync + 'static>;
@@ -58,26 +62,6 @@ impl Commands {
         commands
     }
 
-    pub fn print_raport<const UCI_REPORT: bool>(
-        search_params: &SearchParams,
-        pv_line: String,
-        best_score: f32,
-        result: GameResult,
-    ) {
-        let depth = search_params.get_avg_depth();
-        let seldepth = search_params.max_depth;
-        let time: u128 = search_params.time_passed;
-        let iterations = search_params.curernt_iterations;
-        let nodes = search_params.nodes;
-        let nps = (iterations as u128) * 1000 / time.max(1);
-
-        if UCI_REPORT {
-            SearchRaport::uci_report(depth, seldepth, time, nodes, iterations, nps, best_score, result, pv_line);
-        } else {
-            SearchRaport::pretty_report(depth, seldepth, time, nodes, iterations, nps, best_score, result, pv_line);
-        }
-    }
-
     pub fn execute_command(&mut self, command_name: &str, args: &[String]) {
         if let Some(command) = self.commands.get(command_name) {
             command(&mut self.context, args);
@@ -102,28 +86,28 @@ impl Commands {
     fn set_option_command(context: &mut ContextVariables, args: &[String]) {
         let mut name: String = String::new();
         let mut value: String = String::new();
-    
+
         if args.len() != 4 {
             println!("Error: Incorrect number of arguments.");
             return;
         }
-    
+
         for (index, argument) in args.iter().enumerate() {
             match argument.as_str() {
                 "name" => {
                     if index + 1 < args.len() {
                         name = args[index + 1].clone();
                     }
-                },
+                }
                 "value" => {
                     if index + 1 < args.len() {
                         value = args[index + 1].clone();
                     }
-                },
-                _ => continue
+                }
+                _ => continue,
             }
         }
-    
+
         Options::set(name, value);
     }
 
@@ -225,12 +209,8 @@ impl Commands {
         *tree_clone.lock().unwrap() = SearchTree::new(); //replace it later with test to reuse the tree
         let uci_initialized = context.uci_initialized;
         thread::spawn(move || {
-            let mut search = Search::new(&board, Some(&reciever));
-            let result = if uci_initialized {
-                search.run::<true, true>(&rules_final)
-            } else {
-                search.run::<false, true>(&rules_final)
-            };
+            let mut search = Search::<true>::new(&board, Some(&reciever), rules_final);
+            let result = if uci_initialized { search.run::<false>() } else { search.run::<true>() };
             println!("bestmove {}", result.0.to_string());
             *tree_clone.lock().unwrap() = result.1.clone();
             *search_active_clone.lock().unwrap() = false;

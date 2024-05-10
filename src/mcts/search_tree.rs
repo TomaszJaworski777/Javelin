@@ -83,7 +83,7 @@ impl SearchTree {
         }
     }
 
-    fn print_tree_usage(&self){
+    fn print_tree_usage(&self) {
         let tree_cap = (Options::get("Hash").get_value::<u32>() * 1024 * 1024) / std::mem::size_of::<Node>() as u32;
         let usage_percentage = self.0.len() as f32 / tree_cap as f32;
         let usage_text = format!("{:.2}%", usage_percentage);
