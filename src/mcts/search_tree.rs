@@ -1,4 +1,4 @@
-use crate::{core::Board, options::Options};
+use crate::options::Options;
 use colored::*;
 use std::ops::{Index, IndexMut};
 
@@ -57,15 +57,15 @@ impl SearchTree {
     }
 
     #[allow(unused)]
-    pub fn draw_tree_from_root(&self, max_depth: i32, board: &Board) {
+    pub fn draw_tree_from_root(&self, max_depth: i32) {
         self.print_tree_usage();
         if !self.0.is_empty() {
-            self.draw_tree(0, "".to_string(), false, true, max_depth, 0, &board, 0.0, 0.0, false);
+            self.draw_tree(0, "".to_string(), false, true, max_depth, 0, 0.0, 0.0, false);
         }
     }
 
     #[allow(unused)]
-    pub fn draw_tree_from_node(&self, node_index: u32, max_depth: i32, board: &Board) {
+    pub fn draw_tree_from_node(&self, node_index: u32, max_depth: i32) {
         self.print_tree_usage();
         if !self.0.is_empty() {
             self.draw_tree(
@@ -75,7 +75,6 @@ impl SearchTree {
                 true,
                 max_depth,
                 self.depth_of_node(node_index).unwrap(),
-                &board,
                 0.0,
                 0.0,
                 false,
@@ -103,7 +102,6 @@ impl SearchTree {
         is_root: bool,
         max_depth: i32,
         current_depth: u32,
-        board: &Board,
         heat_min_value: f32,
         heat_max_value: f32,
         has_promotion: bool,
@@ -151,7 +149,6 @@ impl SearchTree {
                 false,
                 max_depth - 1,
                 current_depth + 1,
-                &board,
                 heat_min_value,
                 heat_max_value,
                 has_promotion,

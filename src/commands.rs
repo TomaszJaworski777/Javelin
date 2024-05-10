@@ -229,14 +229,13 @@ impl Commands {
 
     fn tree_command(context: &mut ContextVariables, args: &[String]) {
         match args.len() {
-            0 => context.search_tree.lock().unwrap().draw_tree_from_root(1, &context.board),
+            0 => context.search_tree.lock().unwrap().draw_tree_from_root(1),
             1 => {
-                context.search_tree.lock().unwrap().draw_tree_from_root(args[0].parse::<i32>().unwrap(), &context.board)
+                context.search_tree.lock().unwrap().draw_tree_from_root(args[0].parse::<i32>().unwrap())
             }
             2 => context.search_tree.lock().unwrap().draw_tree_from_node(
                 args[1].parse::<u32>().unwrap(),
                 args[0].parse::<i32>().unwrap(),
-                &context.board,
             ),
             _ => return,
         }
