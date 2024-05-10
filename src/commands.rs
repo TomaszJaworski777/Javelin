@@ -66,14 +66,15 @@ impl Commands {
     ) {
         let depth = search_params.get_avg_depth();
         let seldepth = search_params.max_depth;
-        let time = search_params.time_passed;
-        let nodes = search_params.curernt_iterations;
-        let nps = (nodes as u128) * 1000 / time.max(1);
+        let time: u128 = search_params.time_passed;
+        let iterations = search_params.curernt_iterations;
+        let nodes = search_params.nodes;
+        let nps = (iterations as u128) * 1000 / time.max(1);
 
         if UCI_REPORT {
-            SearchRaport::uci_report(depth, seldepth, time, nodes, nps, best_score, result, pv_line);
+            SearchRaport::uci_report(depth, seldepth, time, nodes, iterations, nps, best_score, result, pv_line);
         } else {
-            SearchRaport::pretty_report(depth, seldepth, time, nodes, nps, best_score, result, pv_line);
+            SearchRaport::pretty_report(depth, seldepth, time, nodes, iterations, nps, best_score, result, pv_line);
         }
     }
 

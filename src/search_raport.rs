@@ -1,4 +1,4 @@
-use crate::mcts::GameResult;
+use crate::mcts::{GameResult, SearchRules};
 use colored::*;
 
 pub struct SearchRaport;
@@ -8,6 +8,7 @@ impl SearchRaport {
         seldepth: u32,
         time: u128,
         nodes: u32,
+        iterations: u32,
         nps: u128,
         best_score: f32,
         result: GameResult,
@@ -37,12 +38,12 @@ impl SearchRaport {
         }
 
         let nodes_text: String;
-        if nodes < 1000 {
-            nodes_text = format!("{}", nodes);
-        } else if nodes < 1_000_000 {
-            nodes_text = format!("{:.1}k", nodes as f32 / 1000.0);
+        if iterations < 1000 {
+            nodes_text = format!("{}", iterations);
+        } else if iterations < 1_000_000 {
+            nodes_text = format!("{:.1}k", iterations as f32 / 1000.0);
         } else {
-            nodes_text = format!("{:.1}m", nodes as f32 / 1_000_000.0);
+            nodes_text = format!("{:.1}m", iterations as f32 / 1_000_000.0);
         }
 
         let nps_text: String;
@@ -54,8 +55,11 @@ impl SearchRaport {
             nps_text = format!("{:.1}mn/s", nps as f32 / 1_000_000.0);
         }
 
+        let usage_permill = (SearchRules::get_memory_usage_percentage(nodes as usize) * 100.0) as usize;
+        let hashfull_text = format!("{usage_permill}%");
+
         println!(
-            "   {depth_text:<8}{score_text:<18}{time_text:<10}{nodes_text:<10}{nps_text:<13}{pv_line}",
+            "   {depth_text:<8}{score_text:<18}{time_text:<10}{nodes_text:<10}{nps_text:<13}{hashfull_text:<8}{pv_line}",
             depth_text = format!("{}/{}", depth, seldepth)
         );
     }
@@ -65,6 +69,7 @@ impl SearchRaport {
         seldepth: u32,
         time: u128,
         nodes: u32,
+        iterations: u32,
         nps: u128,
         best_score: f32,
         result: GameResult,
@@ -78,8 +83,9 @@ impl SearchRaport {
         } else {
             score_text = format!("cp {}", (-400.0 * (1.0 / best_score.clamp(0.0, 1.0) - 1.0).ln()) as i32);
         }
+        let usage_permill = (SearchRules::get_memory_usage_percentage(nodes as usize) * 1000.0) as usize;
         println!(
-            "info depth {depth} seldepth {seldepth} score {score_text} time {time} nodes {nodes} nps {nps} pv {pv_line}"
+            "info depth {depth} seldepth {seldepth} score {score_text} time {time} nodes {iterations} nps {nps} hashfull {usage_permill} pv {pv_line}"
         );
     }
 }
