@@ -1,4 +1,7 @@
-use crate::{mcts::Evaluation, core::{Board, MoveList, MoveProvider, Side}};
+use crate::{
+    core::{Board, MoveList, MoveProvider, Side},
+    mcts::Evaluation,
+};
 
 use super::phantom_node::PhantomNode;
 
@@ -15,20 +18,11 @@ pub struct Node {
     children: Vec<PhantomNode>,
     result: GameResult,
     parent: i32,
-    child: u16
+    child: u16,
 }
 impl Node {
     pub fn new(result: GameResult, parent: i32, child: usize) -> Self {
-        Self {
-            children: Vec::new(),
-            result,
-            parent,
-            child: child as u16
-        }
-    }
-
-    pub fn is_leaf(&self) -> bool {
-        self.children.is_empty()
+        Self { children: Vec::new(), result, parent, child: child as u16 }
     }
 
     pub fn is_terminal(&self) -> bool {
@@ -55,7 +49,7 @@ impl Node {
         self.result = result
     }
 
-    pub fn parent(&self) -> i32{
+    pub fn parent(&self) -> i32 {
         self.parent
     }
 
@@ -64,7 +58,6 @@ impl Node {
     }
 
     pub fn expand(&mut self, board: &Board) {
-
         //Generate all possible moves from the node
         let mut move_list = MoveList::new();
         MoveProvider::generate_moves::<false>(&mut move_list, &board);
@@ -73,7 +66,6 @@ impl Node {
         let policy_values = Evaluation::get_policy_values(&board, &move_list);
 
         for mv in move_list {
-
             //Calculate policy index -> piece_type * 64 + target_square
             //We flip the board for neural network to always present it from side to move POV
             //So we also need to flip the target_square of the move

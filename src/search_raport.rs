@@ -8,7 +8,7 @@ impl SearchRaport {
         pv_line: String,
         best_score: f32,
         result: GameResult,
-        tree: &SearchTree
+        tree: &SearchTree,
     ) {
         let depth = search_params.get_avg_depth();
         let seldepth = search_params.max_depth;
@@ -32,7 +32,7 @@ impl SearchRaport {
         best_score: f32,
         result: GameResult,
         pv_line: String,
-        tree: &SearchTree
+        tree: &SearchTree,
     ) {
         let score_text: String;
         if let GameResult::Win(n) = result {
@@ -93,7 +93,7 @@ impl SearchRaport {
         best_score: f32,
         result: GameResult,
         pv_line: String,
-        tree: &SearchTree
+        tree: &SearchTree,
     ) {
         let score_text: String;
         if let GameResult::Win(n) = result {

@@ -1,4 +1,4 @@
-use crate::{options::Options, mcts::SearchTree};
+use crate::{mcts::SearchTree, options::Options};
 
 use super::search_params::SearchInfo;
 

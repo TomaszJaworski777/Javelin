@@ -11,14 +11,8 @@ pub struct PhantomNode {
 }
 #[allow(unused)]
 impl PhantomNode {
-    pub fn new(node_index: i32, mv: Move, policy: f32) -> Self{
-        Self {
-            node_index,
-            mv,
-            policy: (policy * f32::from(i16::MAX)) as i16,
-            total_score: 0.0,
-            visits: 0
-        }
+    pub fn new(node_index: i32, mv: Move, policy: f32) -> Self {
+        Self { node_index, mv, policy: (policy * f32::from(i16::MAX)) as i16, total_score: 0.0, visits: 0 }
     }
 
     pub fn index(&self) -> i32 {
@@ -65,7 +59,7 @@ impl PhantomNode {
         heat_min_value: f32,
         heat_max_value: f32,
         has_promotion: bool,
-        game_result: GameResult
+        game_result: GameResult,
     ) {
         let move_str = if self.mv == Move::NULL {
             "root".truecolor(192, 210, 255).to_string()
@@ -78,7 +72,7 @@ impl PhantomNode {
                 GameResult::None => self.avg_score(),
                 GameResult::Draw => 0.5,
                 GameResult::Lose(_) => 1.0,
-                GameResult::Win(_) => 0.0
+                GameResult::Win(_) => 0.0,
             }
         };
 

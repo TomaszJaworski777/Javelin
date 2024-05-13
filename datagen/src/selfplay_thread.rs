@@ -43,10 +43,8 @@ impl SelfPlayThread {
                         ChessPolicyData { board: piece_board, moves: [ChessMoveInfo::default(); 104] };
 
                     for (index, child_phantom) in tree[0].children().into_iter().enumerate() {
-                        policy_data.moves[index] = ChessMoveInfo {
-                            mv: child_phantom.mv().get_value(),
-                            visits: child_phantom.visits() as u16,
-                        };
+                        policy_data.moves[index] =
+                            ChessMoveInfo { mv: child_phantom.mv().get_value(), visits: child_phantom.visits() as u16 };
                     }
 
                     //save policy to temp
