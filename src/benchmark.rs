@@ -75,14 +75,14 @@ impl Benchmark {
             let search_timer = Instant::now();
             let (_, _, result) = search.run::<false>();
             let eclapsed = search_timer.elapsed().as_secs_f32();
-            total_nodes = total_nodes + result.curernt_iterations;
+            total_nodes = total_nodes + result.current_iterations;
             total_time = total_time + eclapsed;
-            let nps = result.curernt_iterations as f32 / eclapsed;
+            let nps = result.current_iterations as f32 / eclapsed;
             total_nps = total_nps + nps as u32;
         }
         total_nps = total_nps / Benchmark::FENS.len() as u32;
 
-        let nodes_string = number_processor(total_nodes).truecolor(200, 200, 0).to_string();
+        let nodes_string = number_processor(total_nodes as u32).truecolor(200, 200, 0).to_string();
         let duration_string = format!("{:.2}s", total_time).truecolor(200, 200, 0).to_string();
         let nps_string = format!("{}n/s", number_processor(total_nps)).truecolor(200, 200, 0).to_string();
         let result = format!(

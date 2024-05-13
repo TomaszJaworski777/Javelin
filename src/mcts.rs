@@ -14,7 +14,7 @@ use self::{node::Node, phantom_node::PhantomNode, qsearch::qsearch};
 use crate::{
     core::{Board, Move, MoveList, MoveProvider},
     eval::Evaluation,
-    search_raport::SearchRaport,
+    search_report::SearchReport,
 };
 use std::{sync::mpsc::Receiver, time::Instant};
 
@@ -41,6 +41,7 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
         let timer = Instant::now();
         let mut search_info = SearchInfo::new();
         let mut current_avg_depth = 0;
+        let mut last_report: String = String::new();
 
         //We extend root node before search starts
         let mut root_node = Node::new(GameResult::None, -1, 0);
@@ -50,7 +51,6 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
         //Iteration loop that breaks, when search rules decide seach should not longer continue
         //or when iteration returns 'true' which is search-break token
         while self.search_rules.continue_search(&search_info, &self.tree) {
-            search_info.curernt_iterations += 1;
 
             //Initialize and perform one iteration cycle. This cycle covers whole mcts loop
             //including selection, expansion, simulation and backpropagation
@@ -58,13 +58,14 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
             let mut current_depth = 0;
             self.perform_iteration_step(0, &mut root_position, &mut current_depth);
 
-            if search_info.curernt_iterations % 128 == 0 {
+            if search_info.current_iterations % 128 == 0 {
                 search_info.time_passed = timer.elapsed().as_millis();
             }
 
             //We are upadating all search parameters to prepare it for next iteration or end of the search
-            search_info.max_depth = search_info.max_depth.max(current_depth);
+            search_info.max_depth = search_info.max_depth.max(current_depth - 1);
             search_info.total_depth += current_depth - 1;
+            search_info.current_iterations += 1;
             search_info.nodes = self.tree.node_count();
 
             //If interruption signal was send ('stop' command), we force exit the search
@@ -79,20 +80,22 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
                 break;
             }
 
-            //Draws the search report, when average selection depth improved
+            //Draws the search report, when average selection depth improved, we provide
+            //last raport to make sure we don't print duplicates
             if search_info.get_avg_depth() > current_avg_depth {
                 search_info.time_passed = timer.elapsed().as_millis();
                 if LOG {
-                    self.print_raport::<PRETTY_PRINT>(&search_info);
+                    self.print_report::<PRETTY_PRINT>(&search_info, &mut last_report);
                 }
                 current_avg_depth = search_info.get_avg_depth();
             }
         }
 
-        //We want to print final search report, if search ended due to any reason but reaching max depth
+        //We want to print final search report, we provide
+        //last raport to make sure we don't print duplicates
         search_info.time_passed = timer.elapsed().as_millis();
-        if LOG && (self.search_rules.max_depth == 0 || search_info.get_avg_depth() < self.search_rules.max_depth) {
-            self.print_raport::<PRETTY_PRINT>(&search_info);
+        if LOG {
+            self.print_report::<PRETTY_PRINT>(&search_info, &mut last_report);
         }
 
         (self.tree.get_best_phantom().mv(), &self.tree, search_info)
@@ -262,15 +265,21 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
         GameResult::None
     }
 
-    fn print_raport<const PRETTY_PRINT: bool>(&self, search_info: &SearchInfo) {
+    fn print_report<const PRETTY_PRINT: bool>(&mut self, search_info: &SearchInfo, last_report: &mut String) {
         let best_phantom = self.tree.get_best_phantom();
-        SearchRaport::print_raport::<PRETTY_PRINT>(
+        let report = SearchReport::print_report::<PRETTY_PRINT>(
             &search_info,
             self.tree.get_pv_line(),
             best_phantom.avg_score(),
             self.tree[best_phantom.index()].result(),
             &self.tree,
         );
+
+        if report != *last_report {
+            println!("{report}");
+        }
+
+        *last_report = report
     }
 }
 

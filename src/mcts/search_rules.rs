@@ -14,7 +14,7 @@ impl SearchRules {
         Self { time_for_move: 0, max_depth: 0, max_nodes: 0, infinite: false }
     }
 
-    pub fn continue_search(&self, search_params: &SearchInfo, tree: &SearchTree) -> bool {
+    pub fn continue_search(&self, search_info: &SearchInfo, tree: &SearchTree) -> bool {
         if tree.node_count() + 218 >= tree.capacity() as u32 {
             return false;
         }
@@ -23,15 +23,15 @@ impl SearchRules {
             return true;
         }
 
-        if self.max_nodes > 0 && search_params.curernt_iterations >= self.max_nodes {
+        if self.max_nodes > 0 && search_info.current_iterations >= self.max_nodes as i32 {
             return false;
         }
 
-        if self.max_depth > 0 && search_params.get_avg_depth() >= self.max_depth {
+        if self.max_depth > 0 && search_info.get_avg_depth() >= self.max_depth {
             return false;
         }
 
-        if self.time_for_move > 0 && search_params.time_passed >= self.time_for_move as u128 {
+        if self.time_for_move > 0 && search_info.time_passed >= self.time_for_move as u128 {
             return false;
         }
 
