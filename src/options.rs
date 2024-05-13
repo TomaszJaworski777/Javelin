@@ -12,7 +12,7 @@ impl Options {
     fn new() -> Self {
         let mut options = Self { map: DashMap::new() };
 
-        options.add_option("Hash", "1024", OptionType::Spin(1, 262144));
+        options.add_option("Hash", "64", OptionType::Spin(1, 65536));
         options.add_option("MoveOverhead", "10", OptionType::Spin(0, 500));
 
         options

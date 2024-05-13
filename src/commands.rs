@@ -234,7 +234,7 @@ impl Commands {
                 context.search_tree.lock().unwrap().draw_tree_from_root(args[0].parse::<i32>().unwrap())
             }
             2 => context.search_tree.lock().unwrap().draw_tree_from_node(
-                args[1].parse::<u32>().unwrap(),
+                args[1].parse::<i32>().unwrap(),
                 args[0].parse::<i32>().unwrap(),
             ),
             _ => return,

@@ -30,8 +30,8 @@ impl SelfPlayThread {
                 let (mv, tree, _) = search.run::<false>();
 
                 let mut piece_board = PieceBoard::from_board(&current_board);
-                piece_board.score = tree.get_best_node().avg_value();
-                piece_board.num = tree[0].children_count as u8;
+                piece_board.score = tree.get_best_phantom().avg_score();
+                piece_board.num = tree[0].children().len() as u8;
 
                 //save board to temp
                 if !temp.push_value(&piece_board, false) {
@@ -42,10 +42,10 @@ impl SelfPlayThread {
                     let mut policy_data =
                         ChessPolicyData { board: piece_board, moves: [ChessMoveInfo::default(); 104] };
 
-                    for (index, child_index) in tree[0].children().into_iter().enumerate() {
+                    for (index, child_phantom) in tree[0].children().into_iter().enumerate() {
                         policy_data.moves[index] = ChessMoveInfo {
-                            mv: tree[child_index].mv.value,
-                            visits: tree[child_index].visit_count as u16,
+                            mv: child_phantom.mv().get_value(),
+                            visits: child_phantom.visits() as u16,
                         };
                     }
 

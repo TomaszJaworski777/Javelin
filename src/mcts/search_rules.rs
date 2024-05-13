@@ -1,6 +1,6 @@
-use crate::options::Options;
+use crate::{options::Options, mcts::SearchTree};
 
-use super::{node::Node, search_params::SearchParams};
+use super::search_params::SearchInfo;
 
 #[derive(Clone, Copy)]
 pub struct SearchRules {
@@ -14,8 +14,8 @@ impl SearchRules {
         Self { time_for_move: 0, max_depth: 0, max_nodes: 0, infinite: false }
     }
 
-    pub fn continue_search(&self, search_params: &SearchParams) -> bool {
-        if SearchRules::get_memory_usage_percentage(search_params.nodes as usize + 218) >= 1.0 {
+    pub fn continue_search(&self, search_params: &SearchInfo, tree: &SearchTree) -> bool {
+        if tree.node_count() + 218 >= tree.capacity() as u32 {
             return false;
         }
 
@@ -36,12 +36,6 @@ impl SearchRules {
         }
 
         true
-    }
-
-    pub fn get_memory_usage_percentage(nodes: usize) -> f32 {
-        let current_memory_usage = nodes * std::mem::size_of::<Node>();
-        let memory_capacity = Options::get("Hash").get_value::<usize>() * 1024 * 1024;
-        current_memory_usage as f32 / memory_capacity as f32
     }
 
     pub fn calculate_time(time_remaining: u64, time_increment: u64, moves_to_go: u64) -> u64 {

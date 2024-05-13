@@ -1,359 +1,246 @@
 mod node;
+mod phantom_node;
 mod qsearch;
 mod search_params;
 mod search_rules;
 mod search_tree;
 
 pub use node::GameResult;
-pub use search_params::SearchParams;
+pub use search_params::SearchInfo;
 pub use search_rules::SearchRules;
 pub use search_tree::SearchTree;
 
-use self::{node::Node, qsearch::qsearch};
+use self::{node::Node, phantom_node::PhantomNode, qsearch::qsearch};
 use crate::{
-    core::{Board, Move, MoveList, MoveProvider, Side},
+    core::{Board, Move, MoveList, MoveProvider},
     eval::Evaluation,
     search_raport::SearchRaport,
 };
 use std::{sync::mpsc::Receiver, time::Instant};
 
-type NodeIndex = u32;
-type SelectionHistory = Vec<NodeIndex>;
-
 pub struct Search<'a, const LOG: bool> {
-    search_tree: SearchTree,
-    root_position: Board,
+    tree: SearchTree,
     interruption_channel: Option<&'a Receiver<()>>,
-    timer: Instant,
-    search_params: SearchParams,
     search_rules: SearchRules,
-    selection_history: SelectionHistory,
-    root_node: Node,
-    current_avg_depth: u32,
+    root_position: &'a Board
 }
 impl<'a, const LOG: bool> Search<'a, LOG> {
-    pub fn new(board: &Board, interruption_channel: Option<&'a Receiver<()>>, search_rules: SearchRules) -> Self {
-        let mut search = Self {
-            search_tree: SearchTree::new(),
-            root_position: *board,
+    pub fn new(root_position: &'a Board, interruption_channel: Option<&'a Receiver<()>>, search_rules: SearchRules) -> Self {
+        Self {
+            tree: SearchTree::new(),
             interruption_channel,
-            timer: Instant::now(),
-            search_params: SearchParams::new(),
             search_rules,
-            selection_history: SelectionHistory::new(),
-            root_node: Node::new(Move::NULL),
-            current_avg_depth: 0,
-        };
-
-        //Initialize root node, add it to a tree and expand it
-        let root_node = Node::new(Move::NULL);
-        search.search_tree.push(&root_node);
-        let board = search.root_position;
-        search.expand_node(0, &board);
-        search.root_node = root_node;
-
-        search
+            root_position
+        }
     }
 
-    pub fn run<const PRETTY_PRINT: bool>(&mut self) -> (Move, &SearchTree, SearchParams) {
+    pub fn run<const PRETTY_PRINT: bool>(&mut self) -> (Move, &SearchTree, SearchInfo) {
         if PRETTY_PRINT && LOG {
             println!("   Depth   Score    Time      Nodes     Speed        Usage   Pv Line");
         }
 
+        let timer = Instant::now();
+        let mut search_info = SearchInfo::new();
+        let mut current_avg_depth = 0;
+
+        let mut root_node = Node::new(GameResult::None, -1, 0);
+        root_node.expand(&self.root_position);
+        self.tree.push(&root_node);
+
         //Iteration loop that breaks, when search rules decide seach should not longer continue
         //or when iteration returns 'true' which is search-break token
-        while self.search_rules.continue_search(&self.search_params) {
-            if self.init_next_iteration::<PRETTY_PRINT>() {
-                return self.end_step::<PRETTY_PRINT>(true);
+        while self.search_rules.continue_search(&search_info, &self.tree) {
+
+            search_info.curernt_iterations += 1;
+
+            let mut root_position = *self.root_position;
+            let mut current_depth = 0;
+            self.perform_iteration_step(0, &mut root_position, &mut current_depth);
+
+            if search_info.curernt_iterations % 128 == 0 {
+                search_info.time_passed = timer.elapsed().as_millis();
             }
-        }
-
-        //We only want to print final search report, if search ended not because of reaching max depth
-        self.end_step::<PRETTY_PRINT>(
-            self.search_rules.max_depth == 0 || self.search_params.get_avg_depth() < self.search_rules.max_depth,
-        )
-    }
-
-    fn init_next_iteration<const PRETTY_PRINT: bool>(&mut self) -> bool {
-        self.selection_history.clear();
-        self.selection_history.push(0);
-        self.search_params.curernt_iterations += 1;
-
-        //Start selection loop for root node and root position
-        let mut board = self.root_position;
-        self.selection_step::<PRETTY_PRINT>(0, &mut board, 0)
-    }
-
-    fn selection_step<const PRETTY_PRINT: bool>(
-        &mut self,
-        mut current_node_index: u32,
-        current_board: &mut Board,
-        mut depth: u32,
-    ) -> bool {
-        //We select best child of a node. If selected child is checkmate
-        //or if it's root. Then we can end the search, due to all children
-        //of root being terminal nodes. TODO: what if the node is in the stalemate?
-        //we probb should not visit it anymore
-        current_node_index = self.select_best_child(current_node_index);
-
-        if let GameResult::Win(_) = self.search_tree[current_node_index].result {
-            return true;
-        }
-
-        if current_node_index == 0 {
-            return true;
-        }
-
-        //We apply the selected move, and increase selection depth
-        self.selection_history.push(current_node_index);
-        current_board.make_move(self.search_tree[current_node_index].mv);
-        depth += 1;
-
-        //If selected node is a leaf, we move to expansion step.
-        //Otherwise we want to select further
-        if self.search_tree[current_node_index].is_leaf() {
-            return self.expand_step::<PRETTY_PRINT>(current_node_index, current_board, depth);
-        }
-
-        self.selection_step::<PRETTY_PRINT>(current_node_index, current_board, depth)
-    }
-
-    fn expand_step<const PRETTY_PRINT: bool>(
-        &mut self,
-        current_node_index: u32,
-        current_board: &mut Board,
-        depth: u32,
-    ) -> bool {
-        //If node has beem visited before, we want to expand it further
-        //and select one of its children as current node for simulation
-        //If no, then we want to simulate it first
-        if !self.search_tree[current_node_index].is_terminal() && self.search_tree[current_node_index].visit_count > 0 {
-            self.expand_node(current_node_index, current_board);
-            return self.selection_step::<PRETTY_PRINT>(current_node_index, current_board, depth);
-        }
-
-        self.simulation_step::<PRETTY_PRINT>(current_node_index, current_board, depth)
-    }
-
-    fn simulation_step<const PRETTY_PRINT: bool>(
-        &mut self,
-        current_node_index: u32,
-        current_board: &Board,
-        depth: u32,
-    ) -> bool {
-        //We simulate currently selected node and then backpropage the result
-        //down the tree
-        let node_score = self.simulate_node(current_node_index, &current_board);
-        self.backpropagation_step::<PRETTY_PRINT>(depth, node_score)
-    }
-
-    fn backpropagation_step<const PRETTY_PRINT: bool>(
-        &mut self,
-        depth: u32,
-        score: f32,
-    ) -> bool {
-        self.backpropagate_score(score);
-        return self.end_iteration::<PRETTY_PRINT>(depth);
-    }
-
-    fn end_iteration<const PRETTY_PRINT: bool>(&mut self, depth: u32) -> bool {
-        //We update time only every 128 iterations to reduce workload during search
-        if self.search_params.curernt_iterations % 128 == 0 {
-            self.search_params.time_passed = self.timer.elapsed().as_millis();
-        }
-
-        //We are upadating all search parameters to prepare it for next iteration or end of the search
-        self.search_params.max_depth = self.search_params.max_depth.max(depth);
-        self.search_params.total_depth += depth;
-        self.search_params.nodes = self.search_tree.node_count();
-
-        //If interruption signal was send ('stop' command), we force exit the search
-        if let Some(reciver) = self.interruption_channel {
-            if let Ok(_) = reciver.try_recv() {
-                return true;
-            }
-        }
-
-        //Draws the search report, when average selection depth improved
-        if self.search_params.get_avg_depth() > self.current_avg_depth {
-            self.search_params.time_passed = self.timer.elapsed().as_millis();
-            let best_node = self.search_tree.get_best_node();
-            if LOG {
-                SearchRaport::print_raport::<PRETTY_PRINT>(
-                    &self.search_params,
-                    self.search_tree.get_pv_line(),
-                    best_node.avg_value(),
-                    best_node.result,
-                );
-            }
-            self.current_avg_depth = self.search_params.get_avg_depth();
-        }
-
-        false
-    }
-
-    fn end_step<const PRETTY_PRINT: bool>(&mut self, show_report: bool) -> (Move, &SearchTree, SearchParams) {
-        self.search_params.time_passed = self.timer.elapsed().as_millis();
-        let best_node = self.search_tree.get_best_node();
-
-        if LOG && show_report {
-            SearchRaport::print_raport::<PRETTY_PRINT>(
-                &self.search_params,
-                self.search_tree.get_pv_line(),
-                best_node.avg_value(),
-                best_node.result,
-            );
-        }
-
-        (self.search_tree.get_best_node().mv, &self.search_tree, self.search_params)
-    }
-
-    fn expand_node(&mut self, node_index: NodeIndex, board: &Board) {
-        //Generate all possible moves from the node
-        let mut move_list = MoveList::new();
-        MoveProvider::generate_moves::<false>(&mut move_list, &board);
-
-        //Save children data to the parent node
-        self.search_tree[node_index].first_child_index = self.search_tree.node_count();
-        self.search_tree[node_index].children_count = move_list.len() as NodeIndex;
-
-        //Get policy values from the policy network
-        let policy_values = Evaluation::get_policy_values(&board, &move_list);
-
-        for mv in move_list {
-            //Create a new node and initialize it's default values
-            let mut new_node = Node::new(mv);
-            new_node.index = self.search_tree.node_count();
-
-            //Calculate policy index -> piece_type * 64 + target_square
-            //We flip the board for neural network to always present it from side to move POV
-            //So we also need to flip the target_square of the move
-            let base_index = (board.get_piece_on_square(mv.get_from_square()).0 - 1) * 64;
-            let index = base_index
-                + if board.side_to_move == Side::WHITE {
-                    mv.get_to_square().get_value()
-                } else {
-                    mv.get_to_square().get_value() ^ 56
-                };
-
-            //Apply policy and push the node to the tree
-            new_node.policy_value = policy_values[index];
-            self.search_tree.push(&new_node);
-        }
-    }
-
-    fn select_best_child(&self, parent_index: NodeIndex) -> NodeIndex {
-        //We select the best child node, based on the PUCT formula
-        let mut best_index = 0;
-        let mut best_value = f32::MIN;
-        for child_index in self.search_tree[parent_index].children() {
-            //We don't want to select terminal node
-            //If all children are terminal we will return root index
-            if self.search_tree[child_index].is_terminal() {
-                if matches!(self.search_tree[child_index].result, GameResult::Win(_))
-                    && self.search_tree[parent_index].index == 0
-                {
-                    return child_index;
+    
+            //We are upadating all search parameters to prepare it for next iteration or end of the search
+            search_info.max_depth = search_info.max_depth.max(current_depth);
+            search_info.total_depth += current_depth - 1;
+            search_info.nodes = self.tree.node_count();
+    
+            //If interruption signal was send ('stop' command), we force exit the search
+            if let Some(reciver) = self.interruption_channel {
+                if let Ok(_) = reciver.try_recv() {
+                    break;
                 }
-                continue;
+            }
+    
+            if self.tree[0].is_terminal() {
+                break;
             }
 
-            //Calculate current PUCT based on the formula
-            let current_value = puct(&self.search_tree, parent_index, child_index, 1.41);
-
-            if current_value > best_value {
-                best_index = child_index;
-                best_value = current_value;
+            //Draws the search report, when average selection depth improved
+            if search_info.get_avg_depth() > current_avg_depth {
+                search_info.time_passed = timer.elapsed().as_millis();
+                if LOG {
+                    self.print_raport::<PRETTY_PRINT>(&search_info);
+                }
+                current_avg_depth = search_info.get_avg_depth();
             }
         }
-        best_index
+
+        //We want to print final search report, if search ended due to any reason but reaching max depth
+        search_info.time_passed = timer.elapsed().as_millis();
+        if LOG && (self.search_rules.max_depth == 0 || search_info.get_avg_depth() < self.search_rules.max_depth) {
+            self.print_raport::<PRETTY_PRINT>(&search_info);
+        }
+
+        (self.tree.get_best_phantom().mv(), &self.tree, search_info)
     }
 
-    fn simulate_node(&mut self, node_index: NodeIndex, board: &Board) -> f32 {
-        //we are checking all draw conditions and return draw state if it occurs
-        if board.is_insufficient_material() || board.three_fold() || board.half_moves >= 100 {
-            self.search_tree[node_index].result = GameResult::Draw;
-            return 0.5;
+    fn perform_iteration_step(&mut self, current_node_index: i32, current_board: &mut Board, current_depth: &mut u32) -> f32{
+        *current_depth += 1;
+
+        let parent_index = self.tree[current_node_index].parent();
+        let child_index = self.tree[current_node_index].child();
+        
+        let mut child_result = GameResult::None;
+        let parent_visits = self.tree.child(parent_index, child_index).visits();
+
+        let mut score = if self.tree[current_node_index].is_terminal() || parent_visits == 0 {
+            self.get_node_score(current_node_index, &current_board)
+        } else {
+
+            if !self.tree[current_node_index].is_extended() {
+                self.tree[current_node_index].expand(&current_board);
+            }
+
+            let new_child_index = self.select_node(current_node_index);
+
+            if new_child_index == usize::MAX {
+                self.get_node_score(current_node_index, &current_board)
+            } else {
+                let selected_node_phantom = self.tree.child(current_node_index, new_child_index);
+                let mut child_node_index = selected_node_phantom.index();
+
+                current_board.make_move(selected_node_phantom.mv());
+
+                if child_node_index == -1 {
+                    let selected_node_result = self.get_node_result(&current_board);
+                    child_node_index = self.tree.push(&Node::new(selected_node_result, current_node_index, new_child_index));
+                    self.tree.child_mut(current_node_index, new_child_index).set_index(child_node_index);
+                }
+
+                child_result = self.tree[child_node_index].result();
+                self.perform_iteration_step(child_node_index, current_board, current_depth)
+            }
+        };
+        
+        score = 1.0 - score;
+
+        self.tree.child_mut(parent_index, child_index).apply_score(score);
+
+        if let GameResult::Lose(n) = child_result {
+            self.tree[current_node_index].set_result(GameResult::Win(n + 1));
         }
 
-        //We are generating move list in order to detect stalemates and checkmates
+        score
+    }
+
+    fn select_node(&mut self, current_node_index: i32) -> usize {
+        if self.tree[current_node_index].children().len() == 0 {
+            panic!("trying to pick from no children!");
+        }
+
+        let node = &self.tree[current_node_index];
+        let parent = node.parent();
+        let action = node.child();
+        let parent_phantom = self.tree.child(parent, action);
+
+        let mut proven_loss = true;
+        let mut win_len = 0;
+        let mut best = 0;
+        let mut max = f32::NEG_INFINITY;
+        let c = 1.41;
+
+        for (i, child_phantom) in node.children().iter().enumerate() {
+            let puct = if child_phantom.visits() == 0 {
+                proven_loss = false;
+                puct(parent_phantom, child_phantom, c)
+            } else {
+                if child_phantom.index() != -1 {
+                    let child_node = &self.tree[child_phantom.index()];
+
+                    if let GameResult::Win(n) = child_node.result() {
+                        win_len = n.max(win_len);
+                    } else {
+                        proven_loss = false;
+                    }
+                } else {
+                    proven_loss = false;
+                }
+
+                puct(parent_phantom, child_phantom, c)
+            };
+
+            if puct > max {
+                max = puct;
+                best = i;
+            }
+        }
+
+        if proven_loss {
+            self.tree[current_node_index].set_result(GameResult::Lose(win_len + 1));
+            return usize::MAX;
+        }
+
+        best
+    }
+
+    fn get_node_score(&self, node_index: i32, board: &Board) -> f32 {
+        match self.tree[node_index].result() {
+            GameResult::None => sigmoid(qsearch(board, -30_000, 30_000, 0)),
+            GameResult::Win(_) => 1.0,
+            GameResult::Lose(_) => 0.0,
+            GameResult::Draw => 0.5
+        }
+    }
+
+    fn get_node_result(&self, board: &Board) -> GameResult {
+        if board.is_insufficient_material() || board.three_fold() || board.half_moves >= 100 {
+            return GameResult::Draw;
+        }
+
         let mut move_list = MoveList::new();
         MoveProvider::generate_moves::<false>(&mut move_list, &board);
 
         if move_list.len() == 0 {
-            let score = if board.is_in_check() { 0.0 } else { 0.5 };
-            if score == 0.0 {
-                self.search_tree[node_index].result = GameResult::Win(0);
-            } else {
-                self.search_tree[node_index].result = GameResult::Draw;
+            return if board.is_in_check() { 
+                GameResult::Lose(0) 
+            } else { 
+                GameResult::Draw 
             }
-            return score;
         }
 
-        //Finally if position is not a draw, we return the sigmoid of qsearch result based on
-        //value neural network
-        sigmoid(qsearch(&board, -30000, 30000, 0))
+        GameResult::None
     }
 
-    fn backpropagate_score(&mut self, mut result: f32) {
-        //We are iterating through selectiong history and selecting nodes one by one.
-        //Then we are applying alternating score to them (score = 1 - score), in order to
-        //help with evaluating the position from engine perspective. Mcts always wants to pick
-        //best node, so we are inverting the score for oppotent to make sure that it picks best move for
-        //the opponent
-        let mut previous_node_index = 0;
-        while let Some(node_index) = self.selection_history.pop() {
-            result = 1.0 - result;
-
-            //This occurs when node that we are currently modifying is a leaf-node
-            //For this node we don't want to do any operations that depend on state of it's children
-            if previous_node_index == 0 {
-                self.search_tree[node_index].total_value += result;
-                self.search_tree[node_index].visit_count += 1;
-                previous_node_index = node_index;
-                continue;
-            }
-
-            //Here we are backpropagating the game result.
-
-            //If any node is winning for player, we can assume that it will be chosen,
-            //therefore we can backpropgage it to it's parent
-            if let GameResult::Win(n) = self.search_tree[previous_node_index].result {
-                self.search_tree[node_index].result = GameResult::Lose(n + 1);
-                self.search_tree[node_index].visit_count += 1;
-                self.search_tree[node_index].total_value = 0.0;
-
-            //If all children are losing then this node has to be winning for the other player,
-            //because no matter what player will chose, it is always lost
-            } else if let Some(n) = self.search_tree[node_index].all_children_lost(&self.search_tree) {
-                self.search_tree[node_index].result = GameResult::Win(n + 1);
-                self.search_tree[node_index].visit_count += 1;
-                self.search_tree[node_index].total_value = self.search_tree[node_index].visit_count as f32;
-
-            //When all children result in draw then we can backpropgate draw down the tree,
-            //due to it's being forced
-            } else if self.search_tree[node_index].all_children_draw(&self.search_tree) {
-                self.search_tree[node_index].result = GameResult::Draw;
-                self.search_tree[node_index].visit_count += 1;
-                self.search_tree[node_index].total_value = (self.search_tree[node_index].visit_count as f32) / 2.0;
-            } else {
-                self.search_tree[node_index].total_value += result;
-                self.search_tree[node_index].visit_count += 1;
-            }
-
-            previous_node_index = node_index;
-        }
+    fn print_raport<const PRETTY_PRINT: bool>(&self, search_info: &SearchInfo) {
+        let best_phantom = self.tree.get_best_phantom();
+        SearchRaport::print_raport::<PRETTY_PRINT>(
+            &search_info,
+            self.tree.get_pv_line(),
+            best_phantom.avg_score(),
+            self.tree[best_phantom.index()].result(),
+            &self.tree
+        );
     }
 }
 
 //PUCT formula V + C * P * (N.max(1).sqrt()/n + 1) where N = number of visits to parent node, n = number of visits to a child
-fn puct(search_tree: &SearchTree, parent_index: NodeIndex, child_index: NodeIndex, c: f32) -> f32 {
-    let parent_node = &search_tree[parent_index];
-    let child_node = &search_tree[child_index];
-    let n = parent_node.visit_count;
-    let ni = child_node.visit_count;
-    let v = child_node.avg_value();
-    let p = child_node.policy_value;
+fn puct(parent: &PhantomNode, child: &PhantomNode, c: f32) -> f32 {
+    let n = parent.visits();
+    let ni = child.visits();
+    let v = child.avg_score();
+    let p = child.policy();
 
     let numerator = (n.max(1) as f32).sqrt();
     let denominator = ni as f32 + 1.0;

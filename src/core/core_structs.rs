@@ -14,7 +14,7 @@ pub type MoveList = ArrayVec<Move, 256>;
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct Move {
-    pub value: u16,
+    value: u16,
 }
 impl Move {
     pub const PROMOTION: u16 = 0b1000_000000_000000;
@@ -49,6 +49,11 @@ impl Move {
         }
         result
     };
+
+    #[allow(unused)]
+    pub fn get_value(&self) -> u16 {
+        self.value
+    }
 
     #[allow(unused)]
     pub fn from_raw(value: u16) -> Self {

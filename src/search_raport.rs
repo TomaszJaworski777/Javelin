@@ -1,25 +1,25 @@
-use crate::mcts::{GameResult, SearchParams, SearchRules};
+use crate::mcts::{GameResult, SearchInfo, SearchTree};
 use colored::*;
 
 pub struct SearchRaport;
 impl SearchRaport {
     pub fn print_raport<const PRETTY_PRINT: bool>(
-        search_params: &SearchParams,
+        search_params: &SearchInfo,
         pv_line: String,
         best_score: f32,
         result: GameResult,
+        tree: &SearchTree
     ) {
         let depth = search_params.get_avg_depth();
         let seldepth = search_params.max_depth;
         let time: u128 = search_params.time_passed;
         let iterations = search_params.curernt_iterations;
-        let nodes = search_params.nodes;
         let nps = (iterations as u128) * 1000 / time.max(1);
 
         if PRETTY_PRINT {
-            SearchRaport::pretty_report(depth, seldepth, time, nodes, iterations, nps, best_score, result, pv_line);
+            SearchRaport::pretty_report(depth, seldepth, time, iterations, nps, best_score, result, pv_line, tree);
         } else {
-            SearchRaport::uci_report(depth, seldepth, time, nodes, iterations, nps, best_score, result, pv_line);
+            SearchRaport::uci_report(depth, seldepth, time, iterations, nps, best_score, result, pv_line, tree);
         }
     }
 
@@ -27,18 +27,18 @@ impl SearchRaport {
         depth: u32,
         seldepth: u32,
         time: u128,
-        nodes: u32,
         iterations: u32,
         nps: u128,
         best_score: f32,
         result: GameResult,
         pv_line: String,
+        tree: &SearchTree
     ) {
         let score_text: String;
         if let GameResult::Win(n) = result {
-            score_text = format!("M{n}").as_str().green().to_string();
+            score_text = format!("-M{n}").as_str().red().to_string();
         } else if let GameResult::Lose(n) = result {
-            score_text = format!("M{n}").as_str().red().to_string();
+            score_text = format!("+M{n}").as_str().green().to_string();
         } else {
             let score = -400.0 * (1.0 / best_score.clamp(0.0, 1.0) - 1.0).ln();
             if score > 0.0 {
@@ -75,7 +75,7 @@ impl SearchRaport {
             nps_text = format!("{:.1}mn/s", nps as f32 / 1_000_000.0);
         }
 
-        let usage_permill = (SearchRules::get_memory_usage_percentage(nodes as usize) * 100.0) as usize;
+        let usage_permill = (tree.usage() * 100.0) as usize;
         let hashfull_text = format!("{usage_permill}%");
 
         println!(
@@ -88,12 +88,12 @@ impl SearchRaport {
         depth: u32,
         seldepth: u32,
         time: u128,
-        nodes: u32,
         iterations: u32,
         nps: u128,
         best_score: f32,
         result: GameResult,
         pv_line: String,
+        tree: &SearchTree
     ) {
         let score_text: String;
         if let GameResult::Win(n) = result {
@@ -103,7 +103,7 @@ impl SearchRaport {
         } else {
             score_text = format!("cp {}", (-400.0 * (1.0 / best_score.clamp(0.0, 1.0) - 1.0).ln()) as i32);
         }
-        let usage_permill = (SearchRules::get_memory_usage_percentage(nodes as usize) * 1000.0) as usize;
+        let usage_permill = (tree.usage() * 100.0) as usize;
         println!(
             "info depth {depth} seldepth {seldepth} score {score_text} time {time} nodes {iterations} nps {nps} hashfull {usage_permill} pv {pv_line}"
         );
