@@ -103,7 +103,7 @@ impl SearchRaport {
         } else {
             score_text = format!("cp {}", (-400.0 * (1.0 / best_score.clamp(0.0, 1.0) - 1.0).ln()) as i32);
         }
-        let usage_permill = (tree.usage() * 100.0) as usize;
+        let usage_permill = (tree.usage() * 1000.0) as usize;
         println!(
             "info depth {depth} seldepth {seldepth} score {score_text} time {time} nodes {iterations} nps {nps} hashfull {usage_permill} pv {pv_line}"
         );
