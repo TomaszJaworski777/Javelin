@@ -1,55 +1,86 @@
-use crate::{core::Board, options::Options};
+use crate::{core::Move, mcts::GameResult, options::Options};
 use colored::*;
 use std::ops::{Index, IndexMut};
 
-use super::node::Node;
+use super::{node::Node, phantom_node::PhantomNode};
 
 #[derive(Clone)]
-pub struct SearchTree(Vec<Node>);
+pub struct SearchTree {
+    tree: Vec<Node>,
+    root: PhantomNode,
+    tree_capacity: usize,
+}
 impl SearchTree {
     pub fn new() -> Self {
-        Self(Vec::new())
+        Self {
+            tree: Vec::new(),
+            root: PhantomNode::new(0, Move::NULL, 0.0),
+            tree_capacity: Options::get("Hash").get_value::<usize>() * 1024 * 1024 / (std::mem::size_of::<Node>() * 8),
+        }
     }
 
-    pub fn push(&mut self, node: &Node) {
-        self.0.push(*node);
+    pub fn push(&mut self, node: &Node) -> i32 {
+        self.tree.push(node.clone());
+        (self.tree.len() - 1) as i32
     }
 
     pub fn node_count(&self) -> u32 {
-        self.0.len() as u32
+        self.tree.len() as u32
     }
 
-    pub fn get_best_node(&self) -> &Node {
+    pub fn capacity(&self) -> usize {
+        self.tree_capacity
+    }
+
+    pub fn usage(&self) -> f32 {
+        self.node_count() as f32 / self.tree_capacity as f32
+    }
+
+    pub fn child(&self, node_index: i32, child_index: usize) -> &PhantomNode {
+        if node_index == -1 {
+            &self.root
+        } else {
+            &self[node_index].children()[child_index]
+        }
+    }
+
+    pub fn child_mut(&mut self, node_index: i32, child_index: usize) -> &mut PhantomNode {
+        if node_index == -1 {
+            &mut self.root
+        } else {
+            &mut self[node_index].children_mut()[child_index]
+        }
+    }
+
+    pub fn get_best_phantom(&self) -> &PhantomNode {
         self.get_best_child_for_node(0)
     }
 
     pub fn get_pv_line(&self) -> String {
         let mut pv_line: Vec<String> = Vec::new();
-        let mut current_best_node = self.get_best_child_for_node(0);
-        pv_line.push(current_best_node.mv.to_string());
+        let mut phantom_node = self.get_best_child_for_node(0);
+        pv_line.push(phantom_node.mv().to_string());
 
-        while !current_best_node.is_leaf() {
-            current_best_node = self.get_best_child_for_node(current_best_node.index);
-            pv_line.push(current_best_node.mv.to_string());
+        while !self[phantom_node.index()].children().is_empty() {
+            phantom_node = self.get_best_child_for_node(phantom_node.index());
+            pv_line.push(phantom_node.mv().to_string());
         }
 
         pv_line.join(" ")
     }
 
-    fn get_best_child_for_node(&self, node_index: u32) -> &Node {
-        let mut best_node = &self[node_index];
+    fn get_best_child_for_node(&self, node_index: i32) -> &PhantomNode {
+        let mut best_node = &self.root;
         let mut best_score = f32::MIN;
 
-        for child_index in self[node_index].children() {
-            let child = &self[child_index];
-
-            if child.visit_count == 0 {
+        for child_phantom in self[node_index].children() {
+            if child_phantom.visits() == 0 {
                 continue;
             }
 
-            if child.avg_value() > best_score {
-                best_score = child.avg_value();
-                best_node = child;
+            if child_phantom.avg_score() > best_score {
+                best_score = child_phantom.avg_score();
+                best_node = child_phantom;
             }
         }
 
@@ -57,53 +88,40 @@ impl SearchTree {
     }
 
     #[allow(unused)]
-    pub fn draw_tree_from_root(&self, max_depth: i32, board: &Board) {
+    pub fn draw_tree_from_root(&self, max_depth: i32) {
         self.print_tree_usage();
-        if !self.0.is_empty() {
-            self.draw_tree(0, "".to_string(), false, true, max_depth, 0, &board, 0.0, 0.0, false);
+        if !self.tree.is_empty() {
+            self.draw_tree(&self.root, "".to_string(), false, true, max_depth, 0, 0.0, 0.0, false);
         }
     }
 
     #[allow(unused)]
-    pub fn draw_tree_from_node(&self, node_index: u32, max_depth: i32, board: &Board) {
+    pub fn draw_tree_from_node(&self, node_index: i32, max_depth: i32) {
+        let (node_phantom, node_depth) = self.find_node_phantom(node_index);
         self.print_tree_usage();
-        if !self.0.is_empty() {
-            self.draw_tree(
-                node_index,
-                "".to_string(),
-                false,
-                true,
-                max_depth,
-                self.depth_of_node(node_index).unwrap(),
-                &board,
-                0.0,
-                0.0,
-                false,
-            );
+        if !self.tree.is_empty() {
+            self.draw_tree(&node_phantom, "".to_string(), false, true, max_depth, node_depth, 0.0, 0.0, false);
         }
     }
 
-    fn print_tree_usage(&self){
-        let tree_cap = (Options::get("Hash").get_value::<u32>() * 1024 * 1024) / std::mem::size_of::<Node>() as u32;
-        let usage_percentage = self.0.len() as f32 / tree_cap as f32;
-        let usage_text = format!("{:.2}%", usage_percentage);
+    fn print_tree_usage(&self) {
+        let usage_text = format!("{:.2}%", self.usage());
         println!(
             "Tree usage: {}/{} ({})",
-            convert_number_memory_string(self.0.len() as u32),
-            convert_number_memory_string(tree_cap),
-            heat_color(usage_text.as_str(), 1.0 - usage_percentage, 0.0, 1.0)
+            convert_number_memory_string(self.node_count()),
+            convert_number_memory_string(self.capacity() as u32),
+            heat_color(usage_text.as_str(), 1.0 - self.usage(), 0.0, 1.0)
         );
     }
 
     fn draw_tree(
         &self,
-        node_index: u32,
+        phantom_node: &PhantomNode,
         prefix: String,
         last: bool,
         is_root: bool,
         max_depth: i32,
         current_depth: u32,
-        board: &Board,
         heat_min_value: f32,
         heat_max_value: f32,
         has_promotion: bool,
@@ -112,46 +130,45 @@ impl SearchTree {
             return;
         }
 
-        let node = self[node_index];
         let new_prefix = if last { "    ".to_string() } else { "│   ".to_string() };
         let connector = if last { "└─> " } else { "├─> " };
 
         let prefix_string = prefix.clone() + connector;
-        node.print_node(
+        let game_result =
+            if phantom_node.index() != -1 { self[phantom_node.index()].result() } else { GameResult::None };
+        phantom_node.print_node(
             if is_root { "" } else { prefix_string.as_str() },
             is_root,
             heat_min_value,
             heat_max_value,
             has_promotion,
+            game_result,
         );
 
-        if max_depth == 0 {
+        if max_depth == 0 || phantom_node.visits() == 0 {
             return;
         }
 
-        let children = node.children();
-        let children_count = children.end - children.start;
+        let children = self[phantom_node.index()].children();
         let mut heat_min_value = f32::MAX;
         let mut heat_max_value = f32::MIN;
         let mut has_promotion = false;
-        for child_index in children.clone() {
-            let child = self[child_index];
-            heat_min_value = heat_min_value.min(child.policy_value);
-            heat_max_value = heat_max_value.max(child.policy_value);
-            if child.mv.is_promotion() {
+        for child_phantom in children {
+            heat_min_value = heat_min_value.min(child_phantom.policy());
+            heat_max_value = heat_max_value.max(child_phantom.policy());
+            if child_phantom.mv().is_promotion() {
                 has_promotion = true;
             }
         }
-        for (i, child_index) in children.enumerate() {
-            let is_last_child = i as u32 == children_count - 1;
+        for (i, child_phantom) in children.iter().enumerate() {
+            let is_last_child = i == children.len() - 1;
             self.draw_tree(
-                child_index,
+                child_phantom,
                 prefix.clone() + if is_root { "" } else { &new_prefix },
                 is_last_child,
                 false,
                 max_depth - 1,
                 current_depth + 1,
-                &board,
                 heat_min_value,
                 heat_max_value,
                 has_promotion,
@@ -159,42 +176,50 @@ impl SearchTree {
         }
     }
 
-    fn depth_of_node(&self, target_index: u32) -> Option<u32> {
-        self.depth_of_node_recursive(target_index, 0, 0)
+    fn find_node_phantom(&self, node_index: i32) -> (PhantomNode, u32) {
+        self.find_node_phantom_step(node_index, &self.root)
     }
 
-    fn depth_of_node_recursive(&self, target_index: u32, current_index: u32, current_depth: u32) -> Option<u32> {
-        if current_index == target_index {
-            return Some(current_depth);
+    fn find_node_phantom_step<'a>(
+        &self,
+        target_node_index: i32,
+        phantom_to_process: &'a PhantomNode,
+    ) -> (PhantomNode, u32) {
+        if phantom_to_process.index() == target_node_index {
+            return (*phantom_to_process, 0);
         }
 
-        let node = self[current_index];
-        for child_index in node.children() {
-            if let Some(depth) = self.depth_of_node_recursive(target_index, child_index, current_depth + 1) {
-                return Some(depth);
+        if phantom_to_process.visits() == 0 || self[phantom_to_process.index()].is_terminal() {
+            return (self.root, 0);
+        }
+
+        for child_phantom in self[phantom_to_process.index()].children() {
+            let result = self.find_node_phantom_step(target_node_index, child_phantom);
+            if result.0 != self.root {
+                return result;
             }
         }
 
-        None
+        return (self.root, 0);
     }
 }
 
-impl Index<u32> for SearchTree {
+impl Index<i32> for SearchTree {
     type Output = Node;
 
-    fn index(&self, index: u32) -> &Self::Output {
-        &self.0[index as usize]
+    fn index(&self, index: i32) -> &Self::Output {
+        &self.tree[index as usize]
     }
 }
 
-impl IndexMut<u32> for SearchTree {
-    fn index_mut(&mut self, index: u32) -> &mut Self::Output {
-        &mut self.0[index as usize]
+impl IndexMut<i32> for SearchTree {
+    fn index_mut(&mut self, index: i32) -> &mut Self::Output {
+        &mut self.tree[index as usize]
     }
 }
 
 fn convert_number_memory_string(number: u32) -> String {
-    let byte_count = number as usize * std::mem::size_of::<Node>();
+    let byte_count = number as usize * std::mem::size_of::<Node>() * 8;
     if byte_count < 1024 {
         format!("{}B", byte_count).truecolor(192, 210, 255).to_string()
     } else if byte_count < (1024.0 * 1023.99) as usize {

@@ -6,7 +6,7 @@ mod mcts;
 mod neural_core;
 mod options;
 mod perft;
-mod search_raport;
+mod search_report;
 mod see;
 
 use commands::Commands;
