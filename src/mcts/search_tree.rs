@@ -7,38 +7,137 @@ use super::{node::Node, phantom_node::PhantomNode};
 #[derive(Clone)]
 pub struct SearchTree {
     tree: Vec<Node>,
-    root: PhantomNode,
-    tree_capacity: usize,
+    root_phantom: PhantomNode,
+    root_index: i32,
+    empty_node_index: i32,
+    used_nodes_count: usize,
+    lru_head: i32,
+    lru_tail: i32,
 }
 impl SearchTree {
     pub fn new() -> Self {
-        Self {
-            tree: Vec::new(),
-            root: PhantomNode::new(0, Move::NULL, 0.0),
-            tree_capacity: Options::get("Hash").get_value::<usize>() * 1024 * 1024 / (std::mem::size_of::<Node>() * 8),
+        let tree_capacity = Options::get("Hash").get_value::<usize>() * 1024 * 1024 / (std::mem::size_of::<Node>() * 8);
+        let mut tree = Self {
+            tree: vec![Node::new(GameResult::None, -1, 0); tree_capacity],
+            root_phantom: PhantomNode::new(0, Move::NULL, 0.0),
+            root_index: -1,
+            empty_node_index: 0,
+            used_nodes_count: 0,
+            lru_head: -1,
+            lru_tail: -1,
+        };
+
+        //Initialize linked list in the tree for replacing
+        //nodes that weren't used recently, when tree is full
+        let end_index = tree.capacity() as i32 - 1;
+
+        for index in 0..end_index {
+            tree[index].set_forward_link(index + 1);
         }
+
+        tree
     }
 
-    pub fn push(&mut self, node: &Node) -> i32 {
-        self.tree.push(node.clone());
-        (self.tree.len() - 1) as i32
+    pub fn push(&mut self, node: Node) -> i32 {
+        let mut new_node_index = self.empty_node_index;
+
+        //New node index being equal to -1 means there is no more
+        //space in the tree and we have to remove a node
+        if new_node_index == -1 {
+            new_node_index = self.lru_tail;
+            let parent_index = self[new_node_index].parent();
+            let child_index = self[new_node_index].child();
+
+            self.child_mut(parent_index, child_index).set_index(-1);
+
+            self.delete_node(new_node_index);
+        }
+
+        assert_ne!(new_node_index, -1);
+
+        self.used_nodes_count += 1;
+        self.empty_node_index = self[self.empty_node_index].forward_link();
+        self[new_node_index] = node;
+
+        self.append_to_lru(new_node_index);
+
+        if self.used_nodes_count == 1 {
+            self.lru_tail = new_node_index;
+        }
+
+        new_node_index
     }
 
-    pub fn node_count(&self) -> u32 {
-        self.tree.len() as u32
+    pub fn delete_node(&mut self, node_index: i32) {
+        self.remove_from_lru(node_index);
+        self[node_index].clear();
+
+        let empty_node_index = self.empty_node_index;
+        self[node_index].set_forward_link(empty_node_index);
+
+        self.empty_node_index = node_index;
+        self.used_nodes_count -= 1;
+        assert!(self.used_nodes_count < self.capacity());
+    }
+
+    pub fn make_recently_used(&mut self, node_index: i32) {
+        self.remove_from_lru(node_index);
+        self.append_to_lru(node_index);
+    }
+
+    fn append_to_lru(&mut self, node_index: i32) {
+        let old_head = self.lru_head;
+        if old_head != -1 {
+            self[old_head].set_backward_link(node_index);
+        }
+        self.lru_head = node_index;
+        self[node_index].set_forward_link(old_head);
+        self[node_index].set_backward_link(-1);
+    }
+
+    fn remove_from_lru(&mut self, node_index: i32) {
+        let backward_link = self[node_index].backward_link_link();
+        let forward_link = self[node_index].forward_link();
+
+        if backward_link != -1 {
+            self[backward_link].set_forward_link(forward_link);
+        } else {
+            self.lru_head = forward_link;
+        }
+
+        if forward_link != -1 {
+            self[forward_link].set_backward_link(backward_link);
+        } else {
+            self.lru_tail = backward_link;
+        }
+
+        self[node_index].set_backward_link(-1);
+        self[node_index].set_forward_link(-1);
+    }
+
+    pub fn node_count(&self) -> usize {
+        self.used_nodes_count
     }
 
     pub fn capacity(&self) -> usize {
-        self.tree_capacity
+        self.tree.len()
     }
 
     pub fn usage(&self) -> f32 {
-        self.node_count() as f32 / self.tree_capacity as f32
+        self.node_count() as f32 / self.capacity() as f32
+    }
+
+    pub fn root_index(&self) -> i32 {
+        self.root_index
+    }
+
+    pub fn set_root_index(&mut self, new_value: i32) {
+        self.root_index = new_value
     }
 
     pub fn child(&self, node_index: i32, child_index: usize) -> &PhantomNode {
         if node_index == -1 {
-            &self.root
+            &self.root_phantom
         } else {
             &self[node_index].children()[child_index]
         }
@@ -46,7 +145,7 @@ impl SearchTree {
 
     pub fn child_mut(&mut self, node_index: i32, child_index: usize) -> &mut PhantomNode {
         if node_index == -1 {
-            &mut self.root
+            &mut self.root_phantom
         } else {
             &mut self[node_index].children_mut()[child_index]
         }
@@ -70,7 +169,7 @@ impl SearchTree {
     }
 
     fn get_best_child_for_node(&self, node_index: i32) -> &PhantomNode {
-        let mut best_node = &self.root;
+        let mut best_node = &self.root_phantom;
         let mut best_score = f32::MIN;
 
         for child_phantom in self[node_index].children() {
@@ -91,7 +190,7 @@ impl SearchTree {
     pub fn draw_tree_from_root(&self, max_depth: i32) {
         self.print_tree_usage();
         if !self.tree.is_empty() {
-            self.draw_tree(&self.root, "".to_string(), false, true, max_depth, 0, 0.0, 0.0, false);
+            self.draw_tree(&self.root_phantom, "".to_string(), false, true, max_depth, 0, 0.0, 0.0, false);
         }
     }
 
@@ -109,7 +208,7 @@ impl SearchTree {
         println!(
             "Tree usage: {}/{} ({})",
             convert_number_memory_string(self.node_count()),
-            convert_number_memory_string(self.capacity() as u32),
+            convert_number_memory_string(self.capacity()),
             heat_color(usage_text.as_str(), 1.0 - self.usage(), 0.0, 1.0)
         );
     }
@@ -177,7 +276,7 @@ impl SearchTree {
     }
 
     fn find_node_phantom(&self, node_index: i32) -> (PhantomNode, u32) {
-        self.find_node_phantom_step(node_index, &self.root)
+        self.find_node_phantom_step(node_index, &self.root_phantom)
     }
 
     fn find_node_phantom_step<'a>(
@@ -190,17 +289,17 @@ impl SearchTree {
         }
 
         if phantom_to_process.visits() == 0 || self[phantom_to_process.index()].is_terminal() {
-            return (self.root, 0);
+            return (self.root_phantom, 0);
         }
 
         for child_phantom in self[phantom_to_process.index()].children() {
             let result = self.find_node_phantom_step(target_node_index, child_phantom);
-            if result.0 != self.root {
+            if result.0 != self.root_phantom {
                 return result;
             }
         }
 
-        return (self.root, 0);
+        return (self.root_phantom, 0);
     }
 }
 
@@ -218,8 +317,8 @@ impl IndexMut<i32> for SearchTree {
     }
 }
 
-fn convert_number_memory_string(number: u32) -> String {
-    let byte_count = number as usize * std::mem::size_of::<Node>() * 8;
+fn convert_number_memory_string(number: usize) -> String {
+    let byte_count = number * std::mem::size_of::<Node>() * 8;
     if byte_count < 1024 {
         format!("{}B", byte_count).truecolor(192, 210, 255).to_string()
     } else if byte_count < (1024.0 * 1023.99) as usize {
