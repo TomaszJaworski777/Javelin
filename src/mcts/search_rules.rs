@@ -15,7 +15,7 @@ impl SearchRules {
     }
 
     pub fn continue_search(&self, search_info: &SearchInfo, tree: &SearchTree) -> bool {
-        if tree.node_count() + 218 >= tree.capacity() as u32 {
+        if tree.node_count() + 218 >= tree.capacity() && false {
             return false;
         }
 

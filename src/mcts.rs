@@ -46,17 +46,17 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
         //We extend root node before search starts
         let mut root_node = Node::new(GameResult::None, -1, 0);
         root_node.expand(&self.root_position);
-        self.tree.push(&root_node);
+        let root_index = self.tree.push(root_node);
+        self.tree.set_root_index(root_index);
 
         //Iteration loop that breaks, when search rules decide seach should not longer continue
         //or when iteration returns 'true' which is search-break token
         while self.search_rules.continue_search(&search_info, &self.tree) {
-
             //Initialize and perform one iteration cycle. This cycle covers whole mcts loop
             //including selection, expansion, simulation and backpropagation
             let mut root_position = *self.root_position;
             let mut current_depth = 0;
-            self.perform_iteration_step(0, &mut root_position, &mut current_depth);
+            self.perform_iteration_step(self.tree.root_index(), &mut root_position, &mut current_depth);
 
             if search_info.current_iterations % 128 == 0 {
                 search_info.time_passed = timer.elapsed().as_millis();
@@ -66,7 +66,7 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
             search_info.max_depth = search_info.max_depth.max(current_depth - 1);
             search_info.total_depth += current_depth - 1;
             search_info.current_iterations += 1;
-            search_info.nodes = self.tree.node_count();
+            search_info.nodes = self.tree.node_count() as u32;
 
             //If interruption signal was send ('stop' command), we force exit the search
             if let Some(reciver) = self.interruption_channel {
@@ -108,6 +108,8 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
         current_depth: &mut u32,
     ) -> f32 {
         *current_depth += 1;
+
+        self.tree.make_recently_used(current_node_index);
 
         //Data to trace phantom parent of currently processed node
         let parent_index = self.tree[current_node_index].parent();
@@ -151,7 +153,7 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
                     //Create new node, assaign it's default values and it's game result and add it to the tree
                     let selected_node_result = self.get_node_result(&current_board);
                     child_node_index =
-                        self.tree.push(&Node::new(selected_node_result, current_node_index, new_child_index));
+                        self.tree.push(Node::new(selected_node_result, current_node_index, new_child_index));
                     self.tree.child_mut(current_node_index, new_child_index).set_index(child_node_index);
                 }
 
@@ -178,6 +180,8 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
         if let GameResult::Lose(n) = child_result {
             self.tree[current_node_index].set_result(GameResult::Win(n + 1));
         }
+
+        self.tree.make_recently_used(current_node_index);
 
         score
     }
@@ -267,11 +271,13 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
 
     fn print_report<const PRETTY_PRINT: bool>(&mut self, search_info: &SearchInfo, last_report: &mut String) {
         let best_phantom = self.tree.get_best_phantom();
+        let game_result =
+            if best_phantom.index() != -1 { self.tree[best_phantom.index()].result() } else { GameResult::None };
         let report = SearchReport::print_report::<PRETTY_PRINT>(
             &search_info,
             self.tree.get_pv_line(),
             best_phantom.avg_score(),
-            self.tree[best_phantom.index()].result(),
+            game_result,
             &self.tree,
         );
 

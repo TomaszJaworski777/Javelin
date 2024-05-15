@@ -9,7 +9,7 @@ impl SearchReport {
         best_score: f32,
         result: GameResult,
         tree: &SearchTree,
-    ) -> String{
+    ) -> String {
         let depth = search_params.get_avg_depth();
         let seldepth = search_params.max_depth;
         let time: u128 = search_params.time_passed;
@@ -33,7 +33,7 @@ impl SearchReport {
         result: GameResult,
         pv_line: String,
         tree: &SearchTree,
-    ) -> String{
+    ) -> String {
         let score_text: String;
         if let GameResult::Win(n) = result {
             score_text = format!("-M{n}").as_str().red().to_string();
@@ -93,7 +93,7 @@ impl SearchReport {
         result: GameResult,
         pv_line: String,
         tree: &SearchTree,
-    ) -> String{
+    ) -> String {
         let score_text: String;
         if let GameResult::Win(n) = result {
             score_text = format!("mate {n}");

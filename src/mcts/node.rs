@@ -19,10 +19,12 @@ pub struct Node {
     result: GameResult,
     parent: i32,
     child: u16,
+    forward_link: i32,
+    backward_link: i32,
 }
 impl Node {
     pub fn new(result: GameResult, parent: i32, child: usize) -> Self {
-        Self { children: Vec::new(), result, parent, child: child as u16 }
+        Self { children: Vec::new(), result, parent, child: child as u16, forward_link: -1, backward_link: -1 }
     }
 
     pub fn is_terminal(&self) -> bool {
@@ -55,6 +57,29 @@ impl Node {
 
     pub fn child(&self) -> usize {
         self.child as usize
+    }
+
+    pub fn forward_link(&self) -> i32 {
+        self.forward_link
+    }
+
+    pub fn set_forward_link(&mut self, new_value: i32) {
+        self.forward_link = new_value
+    }
+
+    pub fn backward_link_link(&self) -> i32 {
+        self.backward_link
+    }
+
+    pub fn set_backward_link(&mut self, new_value: i32) {
+        self.backward_link = new_value
+    }
+
+    pub fn clear(&mut self) {
+        self.children.clear();
+        self.result = GameResult::None;
+        self.forward_link = -1;
+        self.backward_link = -1;
     }
 
     pub fn expand(&mut self, board: &Board) {
