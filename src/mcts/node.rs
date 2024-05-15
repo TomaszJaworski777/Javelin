@@ -87,8 +87,13 @@ impl Node {
         let mut move_list = MoveList::new();
         MoveProvider::generate_moves::<false>(&mut move_list, &board);
 
-        //Get policy values from the policy network
-        let policy_values = Evaluation::get_policy_values(&board, &move_list);
+        //Get policy values from the policy network, if there is only one move, policy is not needed
+        let is_single_move = move_list.len() == 1;
+        let policy_values = if is_single_move {
+            Vec::new()
+        } else {
+            Evaluation::get_policy_values(&board, &move_list)
+        };
 
         for mv in move_list {
             //Calculate policy index -> piece_type * 64 + target_square
@@ -102,7 +107,9 @@ impl Node {
                     mv.get_to_square().get_value() ^ 56
                 };
 
-            self.children.push(PhantomNode::new(-1, mv, policy_values[index]));
+            //If there is only one move, policy is not needed
+            let policy = if is_single_move { 1.0 } else { policy_values[index] };
+            self.children.push(PhantomNode::new(-1, mv, policy));
         }
     }
 }
