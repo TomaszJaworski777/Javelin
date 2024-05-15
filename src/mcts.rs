@@ -52,7 +52,6 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
         //Iteration loop that breaks, when search rules decide seach should not longer continue
         //or when iteration returns 'true' which is search-break token
         while self.search_rules.continue_search(&search_info, &self.tree) {
-
             //Initialize and perform one iteration cycle. This cycle covers whole mcts loop
             //including selection, expansion, simulation and backpropagation
             let mut root_position = *self.root_position;
@@ -272,11 +271,13 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
 
     fn print_report<const PRETTY_PRINT: bool>(&mut self, search_info: &SearchInfo, last_report: &mut String) {
         let best_phantom = self.tree.get_best_phantom();
+        let game_result =
+            if best_phantom.index() != -1 { self.tree[best_phantom.index()].result() } else { GameResult::None };
         let report = SearchReport::print_report::<PRETTY_PRINT>(
             &search_info,
             self.tree.get_pv_line(),
             best_phantom.avg_score(),
-            self.tree[best_phantom.index()].result(),
+            game_result,
             &self.tree,
         );
 

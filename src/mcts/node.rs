@@ -20,18 +20,11 @@ pub struct Node {
     parent: i32,
     child: u16,
     forward_link: i32,
-    backward_link: i32
+    backward_link: i32,
 }
 impl Node {
     pub fn new(result: GameResult, parent: i32, child: usize) -> Self {
-        Self { 
-            children: Vec::new(), 
-            result, 
-            parent, 
-            child: child as u16,
-            forward_link: -1,
-            backward_link: -1
-        }
+        Self { children: Vec::new(), result, parent, child: child as u16, forward_link: -1, backward_link: -1 }
     }
 
     pub fn is_terminal(&self) -> bool {

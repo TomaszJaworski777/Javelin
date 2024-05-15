@@ -160,7 +160,7 @@ impl SearchTree {
         let mut phantom_node = self.get_best_child_for_node(0);
         pv_line.push(phantom_node.mv().to_string());
 
-        while !self[phantom_node.index()].children().is_empty() {
+        while (phantom_node.index() as usize) < self.capacity() && !self[phantom_node.index()].children().is_empty() {
             phantom_node = self.get_best_child_for_node(phantom_node.index());
             pv_line.push(phantom_node.mv().to_string());
         }
@@ -170,14 +170,26 @@ impl SearchTree {
 
     fn get_best_child_for_node(&self, node_index: i32) -> &PhantomNode {
         let mut best_node = &self.root_phantom;
-        let mut best_score = f32::MIN;
+        let mut best_score = f32::NEG_INFINITY;
 
         for child_phantom in self[node_index].children() {
-            if child_phantom.visits() == 0 {
-                continue;
-            }
+            let score = if child_phantom.visits() == 0 {
+                f32::NEG_INFINITY
+            } else {
+                let child_index = child_phantom.index();
+                if child_index != -1 {
+                    match self[child_index].result() {
+                        GameResult::None => child_phantom.avg_score(),
+                        GameResult::Draw => 0.5,
+                        GameResult::Lose(n) => 1.0 + f32::from(n),
+                        GameResult::Win(n) => f32::from(n) - 256.0,
+                    }
+                } else {
+                    child_phantom.avg_score()
+                }
+            };
 
-            if child_phantom.avg_score() > best_score {
+            if score > best_score {
                 best_score = child_phantom.avg_score();
                 best_node = child_phantom;
             }
@@ -196,6 +208,10 @@ impl SearchTree {
 
     #[allow(unused)]
     pub fn draw_tree_from_node(&self, node_index: i32, max_depth: i32) {
+        if node_index == -1 {
+            return;
+        }
+
         let (node_phantom, node_depth) = self.find_node_phantom(node_index);
         self.print_tree_usage();
         if !self.tree.is_empty() {
@@ -284,6 +300,10 @@ impl SearchTree {
         target_node_index: i32,
         phantom_to_process: &'a PhantomNode,
     ) -> (PhantomNode, u32) {
+        if phantom_to_process.index() == -1 {
+            return (self.root_phantom, 0);
+        }
+
         if phantom_to_process.index() == target_node_index {
             return (*phantom_to_process, 0);
         }
