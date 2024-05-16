@@ -16,7 +16,7 @@ fn main() {
 
 #[allow(unused)]
 fn value_trainer() {
-    let mut trainer = SimpleTrainer::new("base_value");
+    let mut trainer = SimpleTrainer::new("value_001b");
     let mut structure = seq()
         .add(linear(trainer.var_store.root() / format!("0"), 768, 16, Default::default()))
         .add_fn(move |xs: &Tensor| xs.clamp(0.0, 1.0).pow_tensor_scalar(2))
@@ -24,7 +24,7 @@ fn value_trainer() {
         .add_fn(move |xs: &Tensor| xs.sigmoid());
 
     trainer.add_structure(structure);
-    trainer.change_learning_rate(0.001, 0.75, 12);
+    trainer.change_learning_rate(0.001, 0.8, 7);
     trainer.change_batch_size(16_384);
     trainer.change_batch_per_superbatch_count(100);
     trainer.change_epoch_count(400);

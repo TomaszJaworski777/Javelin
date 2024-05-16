@@ -19,7 +19,10 @@ pub struct ValueNetwork {
 #[allow(unused)]
 impl ValueNetwork {
     pub const fn new() -> Self {
-        Self { input_layer: NetworkLayer::new(), output_layer: NetworkLayer::new() }
+        Self { 
+            input_layer: NetworkLayer::new(), 
+            output_layer: NetworkLayer::new() 
+        }
     }
 
     pub fn set_layer_weights(&mut self, index: usize, weights: Vec<Vec<f32>>) {
