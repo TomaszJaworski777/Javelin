@@ -36,9 +36,9 @@ impl SearchReport {
     ) -> String {
         let score_text: String;
         if let GameResult::Win(n) = result {
-            score_text = format!("-M{n}").as_str().red().to_string();
+            score_text = format!("-M{}", n-1).as_str().red().to_string();
         } else if let GameResult::Lose(n) = result {
-            score_text = format!("+M{n}").as_str().green().to_string();
+            score_text = format!("+M{}", n-1).as_str().green().to_string();
         } else {
             let score = -400.0 * (1.0 / best_score.clamp(0.0, 1.0) - 1.0).ln();
             if score > 0.0 {
@@ -96,9 +96,9 @@ impl SearchReport {
     ) -> String {
         let score_text: String;
         if let GameResult::Win(n) = result {
-            score_text = format!("mate {n}");
+            score_text = format!("mate {}", n-1);
         } else if let GameResult::Lose(n) = result {
-            score_text = format!("mate -{n}");
+            score_text = format!("mate -{}", n-1);
         } else {
             score_text = format!("cp {}", (-400.0 * (1.0 / best_score.clamp(0.0, 1.0) - 1.0).ln()) as i32);
         }
