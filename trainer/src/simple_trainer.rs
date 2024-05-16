@@ -17,17 +17,14 @@ pub struct SimpleTrainer<'a> {
     drop_delay: u8,
     batch_size: usize,
     batches_per_superbatch: usize,
-    epoch_count: u32,
-    export_path: String,
+    epoch_count: u32
 }
 impl<'a> SimpleTrainer<'a> {
     const TRAINING_PATH: &'static str = "../../resources/training/";
-    const EXPORT_PATH: &'static str = "../../resources/nets/";
     const CHECKPOINT_PATH: &'static str = "../../resources/training/checkpoints/";
 
     pub fn new(name: &'a str) -> Self {
         let var_store = VarStore::new(tch::Device::Cpu);
-        let export_path = SimpleTrainer::EXPORT_PATH.to_string() + name + ".net";
         Self {
             var_store,
             net_structure: seq(),
@@ -37,8 +34,7 @@ impl<'a> SimpleTrainer<'a> {
             drop_delay: 5,
             batch_size: 16384,
             batches_per_superbatch: 100,
-            epoch_count: 400,
-            export_path,
+            epoch_count: 400
         }
     }
 
@@ -129,10 +125,9 @@ impl<'a> SimpleTrainer<'a> {
             self.var_store
                 .save(SimpleTrainer::TRAINING_PATH.to_string() + self.name + ".ot")
                 .expect("Failed to save training progress!");
-            export_value(&self.var_store, &self.export_path, [768, 16, 1]);
             let checkpoint_path =
                 SimpleTrainer::CHECKPOINT_PATH.to_string() + format!("{}-epoch{}.net", self.name, epoch).as_str();
-            export_value(&self.var_store, &checkpoint_path, [768, 16, 1]);
+            export_value(&self.var_store, &checkpoint_path, [768, 16, 2, 1]);
         }
     }
 
@@ -179,7 +174,6 @@ impl<'a> SimpleTrainer<'a> {
             self.var_store
                 .save(SimpleTrainer::TRAINING_PATH.to_string() + self.name + ".ot")
                 .expect("Failed to save training progress!");
-            export_policy(&self.var_store, &self.export_path, [768, 384]);
             let checkpoint_path =
                 SimpleTrainer::CHECKPOINT_PATH.to_string() + format!("{}-epoch{}.net", self.name, epoch).as_str();
             export_policy(&self.var_store, &checkpoint_path, [768, 384]);
@@ -215,7 +209,7 @@ fn clear_terminal_screen() {
     };
 }
 
-fn export_value(var_store: &VarStore, path: &str, architecture: [usize; 3]) {
+fn export_value(var_store: &VarStore, path: &str, architecture: [usize; 4]) {
     let mut value_network = boxed_and_zeroed::<ValueNetwork>();
     for (name, tensor) in var_store.variables() {
         let name_split: Vec<&str> = name.split(".").collect();

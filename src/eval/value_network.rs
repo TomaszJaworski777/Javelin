@@ -14,12 +14,17 @@ const SIGMOID_FUNCTION: u8 = 3;
 #[derive(Clone, Copy)]
 pub struct ValueNetwork {
     input_layer: NetworkLayer<768, 16, SCRELU_FUNCTION>,
-    output_layer: NetworkLayer<16, 1, NO_FUNCTION>,
+    hidden_layer_1: NetworkLayer<16, 2, NO_FUNCTION>,
+    output_layer: NetworkLayer<2, 1, NO_FUNCTION>,
 }
 #[allow(unused)]
 impl ValueNetwork {
     pub const fn new() -> Self {
-        Self { input_layer: NetworkLayer::new(), output_layer: NetworkLayer::new() }
+        Self { 
+            input_layer: NetworkLayer::new(), 
+            hidden_layer_1: NetworkLayer::new(), 
+            output_layer: NetworkLayer::new() 
+        }
     }
 
     pub fn set_layer_weights(&mut self, index: usize, weights: Vec<Vec<f32>>) {
@@ -45,7 +50,8 @@ impl ValueNetwork {
 
     pub fn evaluate(&self, board: &Board) -> f32 {
         let input_layer_result = self.input_layer.feed_input_layer(&board);
-        let output_layer_result = self.output_layer.feed_forward(&input_layer_result);
+        let hidden_layer_output_1 = self.hidden_layer_1.feed_forward(&input_layer_result);
+        let output_layer_result = self.output_layer.feed_forward(&hidden_layer_output_1);
         output_layer_result[0]
     }
 }
