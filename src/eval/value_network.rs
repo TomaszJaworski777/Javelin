@@ -13,8 +13,8 @@ const SIGMOID_FUNCTION: u8 = 3;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct ValueNetwork {
-    input_layer: NetworkLayer<768, 16, SCRELU_FUNCTION>,
-    output_layer: NetworkLayer<16, 1, NO_FUNCTION>,
+    input_layer: NetworkLayer<768, 16, NO_FUNCTION>,
+    output_layer: NetworkLayer<16, 1, SCRELU_FUNCTION>,
 }
 #[allow(unused)]
 impl ValueNetwork {
