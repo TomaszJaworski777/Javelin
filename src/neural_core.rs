@@ -50,15 +50,15 @@ impl<const INPUTS: usize, const OUTPUTS: usize, const ACTIVATION: u8> NetworkLay
 
         for output_index in 0..OUTPUTS {
             for input_index in 0..INPUTS {
-                result[output_index] += inputs[input_index] * self.weights[output_index][input_index];
-            }
-
-            result[output_index] = match ACTIVATION {
-                0 => continue,
-                1 => screlu(result[output_index]),
-                2 => relu(result[output_index]),
-                3 => sigmoid(result[output_index]),
-                _ => continue,
+                let input = match ACTIVATION {
+                    0 => inputs[input_index],
+                    1 => screlu(inputs[input_index]),
+                    2 => relu(inputs[input_index]),
+                    3 => sigmoid(inputs[input_index]),
+                    _ => inputs[input_index],
+                };
+                
+                result[output_index] += input * self.weights[output_index][input_index];
             }
         }
 
@@ -86,16 +86,6 @@ impl<const INPUTS: usize, const OUTPUTS: usize, const ACTIVATION: u8> NetworkLay
                     result[output_index] +=
                         self.weights[output_index][384 + (piece_index - 1) * 64 + square.get_value()];
                 }
-            }
-        }
-
-        for output_index in 0..OUTPUTS {
-            result[output_index] = match ACTIVATION {
-                0 => continue,
-                1 => screlu(result[output_index]),
-                2 => relu(result[output_index]),
-                3 => sigmoid(result[output_index]),
-                _ => continue,
             }
         }
 
