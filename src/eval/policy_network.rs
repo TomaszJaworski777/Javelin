@@ -1,5 +1,4 @@
-use crate::core::Board;
-use crate::neural_core::NetworkLayer;
+use crate::{core::Board, neural::{NoActivation, SpareLayer}};
 
 #[allow(unused)]
 const NO_FUNCTION: u8 = 0;
@@ -11,32 +10,32 @@ const RELU_FUNCTION: u8 = 2;
 const SIGMOID_FUNCTION: u8 = 3;
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct PolicyNetwork {
-    input_layer: NetworkLayer<768, 384, NO_FUNCTION>,
+    input_layer: SpareLayer<768, 384, NoActivation>,
 }
 #[allow(unused)]
 impl PolicyNetwork {
-    pub const fn new() -> Self {
-        Self { input_layer: NetworkLayer::new() }
-    }
-
     pub fn set_layer_weights(&mut self, index: usize, weights: Vec<Vec<f32>>) {
         match index {
-            0 => self.input_layer.set_weights(weights),
+            0 => self.input_layer.layer_mut().set_weights(weights),
             _ => return,
         }
     }
 
     pub fn set_layer_biases(&mut self, index: usize, biases: Vec<f32>) {
         match index {
-            0 => self.input_layer.set_biases(biases),
+            0 => self.input_layer.layer_mut().set_biases(biases),
             _ => return,
         }
     }
+    
+    pub fn print(&self) {
+        self.input_layer.layer().print();
+    }
 
     pub fn evaluate(&self, board: &Board, mask: &[bool; 384]) -> Vec<f32> {
-        let input_layer_result = self.input_layer.feed_input_layer(&board);
+        let input_layer_result = self.input_layer.forward(&board);
         let masked_output: Vec<f32> =
             input_layer_result.iter().zip(mask.iter()).map(|(&x, &y)| if y { x } else { f32::NEG_INFINITY }).collect();
         softmax(&masked_output)
