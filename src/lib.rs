@@ -3,11 +3,11 @@ mod commands;
 mod core;
 mod eval;
 mod mcts;
-mod neural_core;
 mod options;
 mod perft;
 mod search_report;
 mod see;
+mod neural;
 
 pub use commands::Commands;
 pub use core::Side;
@@ -19,4 +19,4 @@ pub use mcts::GameResult;
 pub use mcts::Search;
 pub use mcts::SearchRules;
 pub use mcts::SearchTree;
-pub use neural_core::NetworkLayer;
+pub use neural::DenseLayer;
