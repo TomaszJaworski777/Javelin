@@ -127,7 +127,7 @@ impl<'a> SimpleTrainer<'a> {
                 .expect("Failed to save training progress!");
             let checkpoint_path =
                 SimpleTrainer::CHECKPOINT_PATH.to_string() + format!("{}-epoch{}.net", self.name, epoch).as_str();
-            export_value(&self.var_store, &checkpoint_path, [768, 16, 1]);
+            export_value(&self.var_store, &checkpoint_path, [768, 16, 2, 1]);
         }
     }
 
@@ -209,7 +209,7 @@ fn clear_terminal_screen() {
     };
 }
 
-fn export_value(var_store: &VarStore, path: &str, architecture: [usize; 3]) {
+fn export_value(var_store: &VarStore, path: &str, architecture: [usize; 4]) {
     let mut value_network = boxed_and_zeroed::<ValueNetwork>();
     for (name, tensor) in var_store.variables() {
         let name_split: Vec<&str> = name.split(".").collect();

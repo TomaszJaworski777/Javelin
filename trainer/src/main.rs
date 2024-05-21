@@ -20,7 +20,9 @@ fn value_trainer() {
     let mut structure = seq()
         .add(linear(trainer.var_store.root() / format!("0"), 768, 16, Default::default()))
         .add_fn(move |xs: &Tensor| xs.clamp(0.0, 1.0).pow_tensor_scalar(2))
-        .add(linear(trainer.var_store.root() / format!("1"), 16, 1, Default::default()))
+        .add(linear(trainer.var_store.root() / format!("1"), 16, 2, Default::default()))
+        .add_fn(move |xs: &Tensor| xs.clamp(0.0, 1.0).pow_tensor_scalar(2))
+        .add(linear(trainer.var_store.root() / format!("2"), 2, 1, Default::default()))
         .add_fn(move |xs: &Tensor| xs.sigmoid());
 
     trainer.add_structure(structure);
