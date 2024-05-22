@@ -82,7 +82,7 @@ impl Node {
         self.backward_link = -1;
     }
 
-    pub fn expand(&mut self, board: &Board) {
+    pub fn expand<const ROOT: bool>(&mut self, board: &Board) {
         //Generate all possible moves from the node
         let mut move_list = MoveList::new();
         MoveProvider::generate_moves::<false>(&mut move_list, &board);
@@ -92,7 +92,7 @@ impl Node {
         let policy_values = if is_single_move {
             Vec::new()
         } else {
-            Evaluation::get_policy_values(&board, &move_list)
+            Evaluation::get_policy_values::<ROOT>(&board, &move_list)
         };
 
         for mv in move_list {
