@@ -13,6 +13,8 @@ use commands::Commands;
 use std::{io::stdin, process::Command};
 
 fn main() {
+    println!("Javelin v{} by Tomasz Jaworski\n", env!("CARGO_PKG_VERSION"));
+
     let mut uci = Commands::new();
 
     loop {
