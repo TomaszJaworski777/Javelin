@@ -14,6 +14,7 @@ impl Options {
 
         options.add_option("Hash", "64", OptionType::Spin(1, 65536));
         options.add_option("MoveOverhead", "10", OptionType::Spin(0, 500));
+        options.add_option("RootPST", "450", OptionType::Spin(100, 1000));
 
         options
     }

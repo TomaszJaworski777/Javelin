@@ -21,7 +21,7 @@ impl Evaluation {
         (VALUE_NETWORK.evaluate(&board) * 400.0) as i32
     }
 
-    pub fn get_policy_values(board: &Board, move_list: &MoveList) -> Vec<f32> {
+    pub fn get_policy_values<const ROOT: bool>(board: &Board, move_list: &MoveList) -> Vec<f32> {
         let mut mask = [false; 384];
         for mv in move_list {
             let base_index = (board.get_piece_on_square(mv.get_from_square()).0 - 1) * 64;
@@ -33,6 +33,6 @@ impl Evaluation {
                 };
             mask[index] = true;
         }
-        POLICY_NETWORK.evaluate(&board, &mask)
+        POLICY_NETWORK.evaluate::<ROOT>(&board, &mask)
     }
 }

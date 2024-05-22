@@ -45,7 +45,7 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
 
         //We extend root node before search starts
         let mut root_node = Node::new(GameResult::None, -1, 0);
-        root_node.expand(&self.root_position);
+        root_node.expand::<true>(&self.root_position);
         let root_index = self.tree.push(root_node);
         self.tree.set_root_index(root_index);
 
@@ -127,7 +127,7 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
             //On second visit we extend the node, if it wasn't already extended.
             //This allows us to reduce amount of time we evaluate policy net
             if !self.tree[current_node_index].is_extended() {
-                self.tree[current_node_index].expand(&current_board);
+                self.tree[current_node_index].expand::<false>(&current_board);
             }
 
             //Select best phantom child (selection returns index of the move from it's parent)
