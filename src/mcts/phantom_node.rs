@@ -55,13 +55,13 @@ impl PhantomNode {
     pub fn print_node(
         &self,
         prefix: &str,
-        reverse_q: bool,
+        is_root: bool,
         heat_min_value: f32,
         heat_max_value: f32,
         has_promotion: bool,
         game_result: GameResult,
     ) {
-        let move_str = if self.mv == Move::NULL {
+        let move_str = if is_root {
             "root".truecolor(192, 210, 255).to_string()
         } else {
             format!("{:<6} {}", self.index().to_string() + ".", self.mv.to_string().truecolor(192, 210, 255))
@@ -76,7 +76,7 @@ impl PhantomNode {
             }
         };
 
-        let q_value = if reverse_q { 1.0 - get_node_value() } else { get_node_value() } * 100.0;
+        let q_value = if is_root { 1.0 - get_node_value() } else { get_node_value() } * 100.0;
         let q_text = format!("Q({})", heat_color(format!("{:.2}%", q_value).as_str(), q_value, 0.0, 100.0));
         let n_text = format!("N({})", self.visits().to_string().truecolor(192, 210, 255).to_string());
         let p_text = format!(

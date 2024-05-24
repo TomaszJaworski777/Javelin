@@ -30,7 +30,7 @@ impl SelfPlayThread {
                 rules.max_nodes = nodes;
 
                 search.reuse_tree(&current_board, &previous_board);
-                let (mv, _) = search.run::<false>(rules, &current_board);
+                let mv = search.run::<false>(rules, &current_board);
 
                 previous_board = current_board;
                 let mut piece_board = PieceBoard::from_board(&current_board);

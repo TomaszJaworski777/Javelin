@@ -67,7 +67,7 @@ impl Node {
         self.forward_link = new_value
     }
 
-    pub fn backward_link_link(&self) -> i32 {
+    pub fn backward_link(&self) -> i32 {
         self.backward_link
     }
 
@@ -80,6 +80,11 @@ impl Node {
         self.result = GameResult::None;
         self.forward_link = -1;
         self.backward_link = -1;
+    }
+
+    pub fn clear_parent(&mut self) {
+        self.parent = -1;
+        self.child = 0;
     }
 
     pub fn expand<const ROOT: bool>(&mut self, board: &Board) {

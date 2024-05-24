@@ -117,6 +117,7 @@ impl Commands {
 
     fn new_game_command(context: &mut ContextVariables, args: &[String]) {
         context.board = create_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        context.search = Arc::new(Mutex::new(Search::new(SearchTree::new(), Some(Arc::clone(&context.interruption_token)))));
     }
 
     fn position_command(context: &mut ContextVariables, args: &[String]) {
@@ -213,7 +214,7 @@ impl Commands {
             } else { 
                 search_clone.lock().unwrap().run::<true>(rules_final, &board) 
             };
-            println!("bestmove {}", result.0.to_string());
+            println!("bestmove {}", result.to_string());
             *previous_board_clone.lock().unwrap() = board;
         });
     }

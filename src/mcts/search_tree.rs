@@ -1,4 +1,4 @@
-use crate::{core::Move, mcts::GameResult, options::Options};
+use crate::{core::{Move, Board}, mcts::GameResult, options::Options};
 use colored::*;
 use std::ops::{Index, IndexMut};
 
@@ -48,7 +48,7 @@ impl SearchTree {
             let parent_index = self[new_node_index].parent();
             let child_index = self[new_node_index].child();
 
-            self.child_mut(parent_index, child_index).set_index(-1);
+            self.get_phantom_mut(parent_index, child_index).set_index(-1);
 
             self.delete_node(new_node_index);
         }
@@ -66,6 +66,77 @@ impl SearchTree {
         }
 
         new_node_index
+    }
+
+    pub fn reuse_tree(&mut self, current_board: &Board, previous_board: &Board) -> bool{
+        let new_root = self.find_position(self.root_index(), current_board, previous_board, 2);
+        println!("Found new root: {}", new_root);
+
+        let mut found = false;
+        if new_root != -1 && self[new_root].children().len() > 0 {
+            found = true;
+
+            if new_root != self.root_index() {
+                self.set_root_index(new_root);
+                println!("info string found subtree");
+            } else {
+                println!("info string using current tree");
+            }
+        }
+
+        if !found {
+            self.reset_tree(current_board);
+        }
+
+        found
+    }
+
+    pub fn find_position(&mut self, start_index: i32, board: &Board, previous_board: &Board, depth: i32) -> i32 {
+        if board == previous_board {
+            return start_index;
+        }
+
+        if start_index == -1 || depth == 0 {
+            return -1;
+        }
+
+        for child_phantom in self.tree[start_index as usize].clone().children() {
+            let child_index = child_phantom.index();
+            let mut child_board = previous_board.clone();
+
+            child_board.make_move(child_phantom.mv());
+
+            let found = self.find_position(child_index, board, &child_board, depth - 1);
+
+            if found != -1 {
+                return found;
+            }
+        }
+
+        -1
+    }
+
+    pub fn reset_tree(&mut self, current_board: &Board) {
+        self.tree = vec![Node::new(GameResult::None, -1, 0); self.capacity()];
+        self.root_phantom = PhantomNode::new(0, Move::NULL, 0.0);
+        self.root_index = -1;
+        self.empty_node_index = 0;
+        self.used_nodes_count = 0;
+        self.lru_head = -1;
+        self.lru_tail = -1;
+
+        let end_index = self.capacity() as i32 - 1;
+
+        for index in 0..end_index {
+            self[index].set_forward_link(index + 1);
+        }
+
+        self[end_index].set_forward_link(-1);
+
+        let mut root_node = Node::new(GameResult::None, -1, 0);
+        root_node.expand::<true>(&current_board);
+        let root_index = self.push(root_node);
+        self.set_root_index(root_index);
     }
 
     pub fn delete_node(&mut self, node_index: i32) {
@@ -96,7 +167,7 @@ impl SearchTree {
     }
 
     fn remove_from_lru(&mut self, node_index: i32) {
-        let backward_link = self[node_index].backward_link_link();
+        let backward_link = self[node_index].backward_link();
         let forward_link = self[node_index].forward_link();
 
         if backward_link != -1 {
@@ -132,10 +203,13 @@ impl SearchTree {
     }
 
     pub fn set_root_index(&mut self, new_value: i32) {
-        self.root_index = new_value
+        self.root_index = new_value;
+        self.root_phantom = *self.get_phantom(self[new_value].parent(), self[new_value].child());
+        self[new_value].clear_parent();
+        self[new_value].set_result(GameResult::None);
     }
 
-    pub fn child(&self, node_index: i32, child_index: usize) -> &PhantomNode {
+    pub fn get_phantom(&self, node_index: i32, child_index: usize) -> &PhantomNode {
         if node_index == -1 {
             &self.root_phantom
         } else {
@@ -143,7 +217,7 @@ impl SearchTree {
         }
     }
 
-    pub fn child_mut(&mut self, node_index: i32, child_index: usize) -> &mut PhantomNode {
+    pub fn get_phantom_mut(&mut self, node_index: i32, child_index: usize) -> &mut PhantomNode {
         if node_index == -1 {
             &mut self.root_phantom
         } else {
@@ -152,12 +226,12 @@ impl SearchTree {
     }
 
     pub fn get_best_phantom(&self) -> &PhantomNode {
-        self.get_best_child_for_node(0)
+        self.get_best_child_for_node(self.root_index())
     }
 
     pub fn get_pv_line(&self) -> String {
         let mut pv_line: Vec<String> = Vec::new();
-        let mut phantom_node = self.get_best_child_for_node(0);
+        let mut phantom_node = self.get_best_child_for_node(self.root_index());
         pv_line.push(phantom_node.mv().to_string());
 
         while (phantom_node.index() as usize) < self.capacity() && !self[phantom_node.index()].children().is_empty() {
@@ -260,7 +334,7 @@ impl SearchTree {
             game_result,
         );
 
-        if max_depth == 0 || phantom_node.visits() == 0 {
+        if max_depth == 0 || phantom_node.visits() == 0 || phantom_node.index() == -1{
             return;
         }
 

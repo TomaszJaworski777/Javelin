@@ -73,11 +73,11 @@ impl Benchmark {
             let board = create_board(fen);
             let mut search = Search::<false>::new(SearchTree::new(), None);
             let search_timer = Instant::now();
-            let (_, result) = search.run::<false>(rules, &board);
+            search.run::<false>(rules, &board);
             let eclapsed = search_timer.elapsed().as_secs_f32();
-            total_nodes = total_nodes + result.current_iterations;
+            total_nodes = total_nodes + search.search_info().current_iterations;
             total_time = total_time + eclapsed;
-            let nps = result.current_iterations as f32 / eclapsed;
+            let nps = search.search_info().current_iterations as f32 / eclapsed;
             total_nps = total_nps + nps as u32;
         }
         total_nps = total_nps / Benchmark::FENS.len() as u32;

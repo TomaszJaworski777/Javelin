@@ -1,6 +1,6 @@
 use crate::{mcts::SearchTree, options::Options};
 
-use super::search_params::SearchInfo;
+use super::search_info::SearchInfo;
 
 #[derive(Clone, Copy)]
 pub struct SearchRules {
