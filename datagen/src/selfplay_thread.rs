@@ -2,7 +2,7 @@ use rand::Rng;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use javelin::{create_board, Board, GameResult, MoveList, MoveProvider, Search, SearchRules};
+use javelin::{create_board, Board, GameResult, MoveList, MoveProvider, Search, SearchRules, SearchTree};
 
 use crate::file_manager::Files;
 use crate::structs::{ChessMoveInfo, ChessPolicyData, PieceBoard};
@@ -21,17 +21,21 @@ impl SelfPlayThread {
         let gen_data_clone = self.gen_data.clone();
         thread::spawn(move || {
             let mut current_board = get_new_board();
+            let mut previous_board = current_board;
             let mut game_result = GameResult::None;
             let mut temp = Files::new();
+            let mut search = Search::<false>::new(SearchTree::new(), None);
             loop {
                 let mut rules = SearchRules::new();
                 rules.max_nodes = nodes;
-                let mut search = Search::<false>::new(&current_board, None, rules);
-                let (mv, tree, _) = search.run::<false>();
 
+                search.reuse_tree(&current_board, &previous_board);
+                let (mv, _) = search.run::<false>(rules, &current_board);
+
+                previous_board = current_board;
                 let mut piece_board = PieceBoard::from_board(&current_board);
-                piece_board.score = tree.get_best_phantom().avg_score();
-                piece_board.num = tree[0].children().len() as u8;
+                piece_board.score = search.tree().get_best_phantom().avg_score();
+                piece_board.num = search.tree()[0].children().len() as u8;
 
                 //save board to temp
                 if !temp.push_value(&piece_board, false) {
@@ -42,7 +46,7 @@ impl SelfPlayThread {
                     let mut policy_data =
                         ChessPolicyData { board: piece_board, moves: [ChessMoveInfo::default(); 104] };
 
-                    for (index, child_phantom) in tree[0].children().into_iter().enumerate() {
+                    for (index, child_phantom) in search.tree()[0].children().into_iter().enumerate() {
                         policy_data.moves[index] =
                             ChessMoveInfo { mv: child_phantom.mv().get_value(), visits: child_phantom.visits() as u16 };
                     }

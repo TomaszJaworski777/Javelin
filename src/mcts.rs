@@ -5,6 +5,7 @@ mod search_params;
 mod search_rules;
 mod search_tree;
 
+use std::sync::RwLock;
 pub use node::GameResult;
 pub use search_params::SearchInfo;
 pub use search_rules::SearchRules;
@@ -16,24 +17,30 @@ use crate::{
     eval::Evaluation,
     search_report::SearchReport,
 };
-use std::{sync::mpsc::Receiver, time::Instant};
+use std::{sync::Arc, time::Instant};
 
-pub struct Search<'a, const LOG: bool> {
+pub struct Search<const LOG: bool> {
     tree: SearchTree,
-    interruption_channel: Option<&'a Receiver<()>>,
-    search_rules: SearchRules,
-    root_position: &'a Board,
+    interrupt_token: Option<Arc<RwLock<bool>>>
 }
-impl<'a, const LOG: bool> Search<'a, LOG> {
+impl<'a, const LOG: bool> Search<LOG> {
     pub fn new(
-        root_position: &'a Board,
-        interruption_channel: Option<&'a Receiver<()>>,
-        search_rules: SearchRules,
+        tree: SearchTree,
+        interrupt_token: Option<Arc<RwLock<bool>>>
     ) -> Self {
-        Self { tree: SearchTree::new(), interruption_channel, search_rules, root_position }
+        Self { tree, interrupt_token }
     }
 
-    pub fn run<const PRETTY_PRINT: bool>(&mut self) -> (Move, &SearchTree, SearchInfo) {
+    pub fn tree(&self) -> &SearchTree {
+        &self.tree
+    }
+
+    pub fn reuse_tree(&mut self, board: &Board, previous_board: &Board) {
+        println!("info string {}", board == previous_board);
+        self.tree = SearchTree::new()
+    }
+
+    pub fn run<const PRETTY_PRINT: bool>(&mut self, search_rules: SearchRules, root_position: &Board) -> (Move, SearchInfo) {
         if PRETTY_PRINT && LOG {
             println!("   Depth   Score    Time      Nodes     Speed        Usage   Pv Line");
         }
@@ -45,18 +52,18 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
 
         //We extend root node before search starts
         let mut root_node = Node::new(GameResult::None, -1, 0);
-        root_node.expand::<true>(&self.root_position);
+        root_node.expand::<true>(&root_position);
         let root_index = self.tree.push(root_node);
         self.tree.set_root_index(root_index);
 
         //Iteration loop that breaks, when search rules decide seach should not longer continue
         //or when iteration returns 'true' which is search-break token
-        while self.search_rules.continue_search(&search_info, &self.tree) {
+        while search_rules.continue_search(&search_info, &self.tree) {
             //Initialize and perform one iteration cycle. This cycle covers whole mcts loop
             //including selection, expansion, simulation and backpropagation
-            let mut root_position = *self.root_position;
+            let mut position = *root_position;
             let mut current_depth = 0;
-            self.perform_iteration_step(self.tree.root_index(), &mut root_position, &mut current_depth);
+            self.perform_iteration_step(self.tree.root_index(), &mut position, &mut current_depth);
 
             if search_info.current_iterations % 128 == 0 {
                 search_info.time_passed = timer.elapsed().as_millis();
@@ -69,8 +76,8 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
             search_info.nodes = self.tree.node_count() as u32;
 
             //If interruption signal was send ('stop' command), we force exit the search
-            if let Some(reciver) = self.interruption_channel {
-                if let Ok(_) = reciver.try_recv() {
+            if let Some(token) = &self.interrupt_token {
+                if *token.read().unwrap() {
                     break;
                 }
             }
@@ -98,7 +105,7 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
             self.print_report::<PRETTY_PRINT>(&search_info, &mut last_report);
         }
 
-        (self.tree.get_best_phantom().mv(), &self.tree, search_info)
+        (self.tree.get_best_phantom().mv(), search_info)
     }
 
     fn perform_iteration_step(

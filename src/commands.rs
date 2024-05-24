@@ -1,9 +1,6 @@
 use std::{
     collections::HashMap,
-    sync::{
-        mpsc::{self, Sender},
-        Arc, Mutex,
-    },
+    sync::{Arc, Mutex, RwLock},
     thread,
 };
 
@@ -19,19 +16,22 @@ type CommandFn = Box<dyn Fn(&mut ContextVariables, &[String]) + Send + Sync + 's
 
 struct ContextVariables {
     board: Board,
-    interruption_channel: Option<Sender<()>>,
-    search_active: Arc<Mutex<bool>>,
-    search_tree: Arc<Mutex<SearchTree>>,
+    previous_board: Arc<Mutex<Board>>,
+    search: Arc<Mutex<Search<true>>>,
+    interruption_token: Arc<RwLock<bool>>,
     uci_initialized: bool,
 }
 
 impl ContextVariables {
     fn new() -> Self {
-        ContextVariables {
-            board: create_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
-            interruption_channel: None,
-            search_active: Arc::new(Mutex::new(false)),
-            search_tree: Arc::new(Mutex::new(SearchTree::new())),
+        let board = create_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let interruption_token = Arc::new(RwLock::new(false));
+        let search = Arc::new(Mutex::new(Search::new(SearchTree::new(), Some(Arc::clone(&interruption_token)))));
+        Self {
+            board,
+            previous_board: Arc::new(Mutex::new(board)),
+            search,
+            interruption_token,
             uci_initialized: false,
         }
     }
@@ -199,42 +199,38 @@ impl Commands {
             rules.time_for_move = SearchRules::calculate_time(time, increment, moves_to_go)
         }
 
-        let (sender, reciever) = mpsc::channel::<()>();
-        context.interruption_channel = Some(sender);
+        context.search.lock().unwrap().reuse_tree(&context.board, &*context.previous_board.lock().unwrap());
+
         let board = context.board;
         let rules_final = rules;
-        *context.search_active.lock().unwrap() = true;
-        let search_active_clone = Arc::clone(&context.search_active);
-        let tree_clone = Arc::clone(&context.search_tree);
-        *tree_clone.lock().unwrap() = SearchTree::new(); //replace it later with test to reuse the tree
+        let search_clone = Arc::clone(&context.search);
+        let previous_board_clone = Arc::clone(&context.previous_board);
         let uci_initialized = context.uci_initialized;
+        *context.interruption_token.write().unwrap() = false;
         thread::spawn(move || {
-            let mut search = Search::<true>::new(&board, Some(&reciever), rules_final);
-            let result = if uci_initialized { search.run::<false>() } else { search.run::<true>() };
+            let result = if uci_initialized { 
+                search_clone.lock().unwrap().run::<false>(rules_final, &board) 
+            } else { 
+                search_clone.lock().unwrap().run::<true>(rules_final, &board) 
+            };
             println!("bestmove {}", result.0.to_string());
-            *tree_clone.lock().unwrap() = result.1.clone();
-            *search_active_clone.lock().unwrap() = false;
+            *previous_board_clone.lock().unwrap() = board;
         });
     }
 
     fn stop_search_command(context: &mut ContextVariables, args: &[String]) {
-        if !*context.search_active.lock().unwrap() {
-            return;
-        }
-
-        if let Some(sender) = &context.interruption_channel {
-            sender.send(()).expect("Failed to send stop signal");
-        }
+        *context.interruption_token.write().unwrap() = true;
     }
 
     fn tree_command(context: &mut ContextVariables, args: &[String]) {
         match args.len() {
-            0 => context.search_tree.lock().unwrap().draw_tree_from_root(1),
-            1 => context.search_tree.lock().unwrap().draw_tree_from_root(args[0].parse::<i32>().unwrap()),
+            0 => context.search.lock().unwrap().tree().draw_tree_from_root(1),
+            1 => context.search.lock().unwrap().tree().draw_tree_from_root(args[0].parse::<i32>().unwrap()),
             2 => context
-                .search_tree
+                .search
                 .lock()
                 .unwrap()
+                .tree()
                 .draw_tree_from_node(args[1].parse::<i32>().unwrap(), args[0].parse::<i32>().unwrap()),
             _ => return,
         }

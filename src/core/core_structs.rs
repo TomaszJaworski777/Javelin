@@ -290,7 +290,7 @@ impl Side {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct CastleRights {
     value: u8,
 }
