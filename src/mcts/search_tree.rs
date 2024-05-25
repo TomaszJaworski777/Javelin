@@ -70,7 +70,6 @@ impl SearchTree {
 
     pub fn reuse_tree(&mut self, current_board: &Board, previous_board: &Board) -> bool{
         let new_root = self.find_position(self.root_index(), current_board, previous_board, 2);
-        println!("Found new root: {}", new_root);
 
         let mut found = false;
         if new_root != -1 && self[new_root].children().len() > 0 {
@@ -78,9 +77,6 @@ impl SearchTree {
 
             if new_root != self.root_index() {
                 self.set_root_index(new_root);
-                println!("info string found subtree");
-            } else {
-                println!("info string using current tree");
             }
         }
 
@@ -334,11 +330,12 @@ impl SearchTree {
             game_result,
         );
 
-        if max_depth == 0 || phantom_node.visits() == 0 || phantom_node.index() == -1{
+        let index = if is_root { self.root_index() } else { phantom_node.index() };
+        if max_depth == 0 || phantom_node.visits() == 0 || index == -1{
             return;
         }
 
-        let children = self[phantom_node.index()].children();
+        let children = self[index].children();
         let mut heat_min_value = f32::MAX;
         let mut heat_max_value = f32::MIN;
         let mut has_promotion = false;

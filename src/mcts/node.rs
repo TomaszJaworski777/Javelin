@@ -117,4 +117,37 @@ impl Node {
             self.children.push(PhantomNode::new(-1, mv, policy));
         }
     }
+
+    pub fn recalculate_policies<const ROOT: bool>(&mut self, board: &Board) {
+        //Rebuild move list
+        let mut move_list = MoveList::new();
+        for child in self.children() {
+            move_list.push(child.mv());
+        }
+
+        //Get policy values from the policy network, if there is only one move, policy is not needed
+        let is_single_move = move_list.len() == 1;
+        let policy_values = if is_single_move {
+            Vec::new()
+        } else {
+            Evaluation::get_policy_values::<ROOT>(&board, &move_list)
+        };
+
+        for child in self.children_mut() {
+            //Calculate policy index -> piece_type * 64 + target_square
+            //We flip the board for neural network to always present it from side to move POV
+            //So we also need to flip the target_square of the move
+            let base_index = (board.get_piece_on_square(child.mv().get_from_square()).0 - 1) * 64;
+            let index = base_index
+                + if board.side_to_move == Side::WHITE {
+                    child.mv().get_to_square().get_value()
+                } else {
+                    child.mv().get_to_square().get_value() ^ 56
+                };
+
+            //If there is only one move, policy is not needed
+            let policy = if is_single_move { 1.0 } else { policy_values[index] };
+            child.update_policy(policy);
+        }
+    }
 }

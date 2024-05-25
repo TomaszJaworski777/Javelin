@@ -23,11 +23,11 @@ impl SearchRules {
             return true;
         }
 
-        if self.max_nodes > 0 && search_info.current_iterations >= self.max_nodes as i32 {
+        if self.max_nodes > 0 && (search_info.current_iterations - search_info.previous_iterations) >= self.max_nodes as i32 {
             return false;
         }
 
-        if self.max_depth > 0 && search_info.get_avg_depth() >= self.max_depth {
+        if self.max_depth > 0 && (search_info.get_avg_depth() - search_info.start_avg_depth) >= self.max_depth {
             return false;
         }
 

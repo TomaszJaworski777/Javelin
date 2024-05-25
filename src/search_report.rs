@@ -10,7 +10,7 @@ impl SearchReport {
         result: GameResult,
         tree: &SearchTree,
     ) -> String {
-        let depth = search_info.get_avg_depth();
+        let depth = search_info.get_avg_depth() - search_info.start_avg_depth;
         let seldepth = search_info.max_depth;
         let time: u128 = search_info.time_passed;
         let iterations = search_info.current_iterations - search_info.previous_iterations;

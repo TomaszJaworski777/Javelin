@@ -52,9 +52,16 @@ impl<'a, const LOG: bool> Search<LOG> {
                 //to maintain consistancy in avg depth
                 let mut new_search_info = SearchInfo::new();
                 new_search_info.current_iterations = self.search_info.current_iterations;
-                new_search_info.previous_iterations = self.search_info.current_iterations;
+                new_search_info.previous_iterations = self.search_info.current_iterations - 1;
+                new_search_info.start_avg_depth = self.search_info.get_avg_depth();
                 new_search_info.total_depth = self.search_info.total_depth;
                 self.search_info = new_search_info;
+
+                //We also want to recalculate policies due to change of root
+                //(we flatten policies at root to reduce the chance of 
+                //missing good move with low policy)
+                let root_index = self.tree.root_index();
+                self.tree[root_index].recalculate_policies::<true>(board);
             } else {
                 self.search_info = SearchInfo::new();
             }
@@ -83,6 +90,12 @@ impl<'a, const LOG: bool> Search<LOG> {
         let timer = Instant::now();
         let mut current_avg_depth = 0;
         let mut last_report: String = String::new();
+
+        //If tree is complitly empty we want to reset it in order to spawn
+        //and expand root node
+        if self.tree.node_count() == 0 {
+            self.tree.reset_tree(root_position);
+        }
 
         //Iteration loop that breaks, when search rules decide seach should not longer continue
         //or when iteration returns 'true' which is search-break token
@@ -144,6 +157,11 @@ impl<'a, const LOG: bool> Search<LOG> {
     ) -> f32 {
         *current_depth += 1;
 
+        if current_node_index == -1 {
+            println!("WTF");
+            println!("DEPTH {current_depth}");
+            println!("ROOT {}", self.tree.root_index());
+        }
         self.tree.make_recently_used(current_node_index);
 
         //Data to trace phantom parent of currently processed node

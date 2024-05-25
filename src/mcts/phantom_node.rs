@@ -52,6 +52,10 @@ impl PhantomNode {
         self.total_score += score;
     }
 
+    pub fn update_policy(&mut self, new_policy: f32) {
+        self.policy = (new_policy * f32::from(i16::MAX)) as i16
+    }
+
     pub fn print_node(
         &self,
         prefix: &str,
@@ -89,7 +93,7 @@ impl PhantomNode {
             )
         );
 
-        if self.mv == Move::NULL {
+        if is_root {
             println!("{}{:<30}{:<33}{:<35}", prefix, move_str, q_text, n_text);
         } else if has_promotion {
             println!("{}{:<36}{:<33}{:<35}{}", prefix, move_str, q_text, n_text, p_text);

@@ -180,7 +180,7 @@ impl Commands {
                         "winc" => timers.2 = value,
                         "binc" => timers.3 = value,
                         "movestogo" => timers.4 = value,
-                        "depth" => rules.max_depth = value as u32,
+                        "depth" => rules.max_depth = value as u32 + context.search.lock().unwrap().search_info().get_avg_depth(),
                         "nodes" => rules.max_nodes = value as u32,
                         "movetime" => rules.time_for_move = value,
                         _ => {}
