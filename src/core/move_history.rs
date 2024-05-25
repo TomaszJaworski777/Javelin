@@ -2,7 +2,7 @@ use std::ops::{Index, IndexMut, Range};
 
 use super::zobrist::ZobristKey;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct MoveHistory {
     values: [u64; 256],
     length: u8,

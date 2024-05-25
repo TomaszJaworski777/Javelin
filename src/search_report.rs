@@ -4,16 +4,16 @@ use colored::*;
 pub struct SearchReport;
 impl SearchReport {
     pub fn print_report<const PRETTY_PRINT: bool>(
-        search_params: &SearchInfo,
+        search_info: &SearchInfo,
         pv_line: String,
         best_score: f32,
         result: GameResult,
         tree: &SearchTree,
     ) -> String {
-        let depth = search_params.get_avg_depth();
-        let seldepth = search_params.max_depth;
-        let time: u128 = search_params.time_passed;
-        let iterations = search_params.current_iterations;
+        let depth = search_info.get_avg_depth() - search_info.start_avg_depth;
+        let seldepth = search_info.max_depth;
+        let time: u128 = search_info.time_passed;
+        let iterations = search_info.current_iterations - search_info.previous_iterations;
         let nps = (iterations as u128) * 1000 / time.max(1);
 
         if PRETTY_PRINT {

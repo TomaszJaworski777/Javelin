@@ -11,7 +11,7 @@ use colored::*;
 
 use super::move_history::MoveHistory;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct Board {
     pieces: [Bitboard; 6],
     piece_maps: [Bitboard; 2],

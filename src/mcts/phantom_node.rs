@@ -52,16 +52,20 @@ impl PhantomNode {
         self.total_score += score;
     }
 
+    pub fn update_policy(&mut self, new_policy: f32) {
+        self.policy = (new_policy * f32::from(i16::MAX)) as i16
+    }
+
     pub fn print_node(
         &self,
         prefix: &str,
-        reverse_q: bool,
+        is_root: bool,
         heat_min_value: f32,
         heat_max_value: f32,
         has_promotion: bool,
         game_result: GameResult,
     ) {
-        let move_str = if self.mv == Move::NULL {
+        let move_str = if is_root {
             "root".truecolor(192, 210, 255).to_string()
         } else {
             format!("{:<6} {}", self.index().to_string() + ".", self.mv.to_string().truecolor(192, 210, 255))
@@ -76,7 +80,7 @@ impl PhantomNode {
             }
         };
 
-        let q_value = if reverse_q { 1.0 - get_node_value() } else { get_node_value() } * 100.0;
+        let q_value = if is_root { 1.0 - get_node_value() } else { get_node_value() } * 100.0;
         let q_text = format!("Q({})", heat_color(format!("{:.2}%", q_value).as_str(), q_value, 0.0, 100.0));
         let n_text = format!("N({})", self.visits().to_string().truecolor(192, 210, 255).to_string());
         let p_text = format!(
@@ -89,7 +93,7 @@ impl PhantomNode {
             )
         );
 
-        if self.mv == Move::NULL {
+        if is_root {
             println!("{}{:<30}{:<33}{:<35}", prefix, move_str, q_text, n_text);
         } else if has_promotion {
             println!("{}{:<36}{:<33}{:<35}{}", prefix, move_str, q_text, n_text, p_text);

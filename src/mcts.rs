@@ -1,12 +1,13 @@
 mod node;
 mod phantom_node;
 mod qsearch;
-mod search_params;
+mod search_info;
 mod search_rules;
 mod search_tree;
 
+use std::sync::RwLock;
 pub use node::GameResult;
-pub use search_params::SearchInfo;
+pub use search_info::SearchInfo;
 pub use search_rules::SearchRules;
 pub use search_tree::SearchTree;
 
@@ -16,61 +17,108 @@ use crate::{
     eval::Evaluation,
     search_report::SearchReport,
 };
-use std::{sync::mpsc::Receiver, time::Instant};
+use std::{sync::Arc, time::Instant};
 
-pub struct Search<'a, const LOG: bool> {
+pub struct Search<const LOG: bool> {
     tree: SearchTree,
-    interruption_channel: Option<&'a Receiver<()>>,
-    search_rules: SearchRules,
-    root_position: &'a Board,
+    interrupt_token: Option<Arc<RwLock<bool>>>,
+    search_info: SearchInfo
 }
-impl<'a, const LOG: bool> Search<'a, LOG> {
+impl<'a, const LOG: bool> Search<LOG> {
     pub fn new(
-        root_position: &'a Board,
-        interruption_channel: Option<&'a Receiver<()>>,
-        search_rules: SearchRules,
+        tree: SearchTree,
+        interrupt_token: Option<Arc<RwLock<bool>>>
     ) -> Self {
-        Self { tree: SearchTree::new(), interruption_channel, search_rules, root_position }
+        Self { tree, interrupt_token, search_info: SearchInfo::new() }
     }
 
-    pub fn run<const PRETTY_PRINT: bool>(&mut self) -> (Move, &SearchTree, SearchInfo) {
+    pub fn tree(&self) -> &SearchTree {
+        &self.tree
+    }
+
+    pub fn search_info(&self) -> &SearchInfo {
+        &self.search_info
+    }
+
+    pub fn reuse_tree(&mut self, board: &Board, previous_board: &Board) {
+        println!("info string {}", board == previous_board);
+        if board != previous_board {
+
+            //If positions are not equal we try to find the new position in the tree
+            //and reuse the tree. We also reset the search info.
+            if self.tree.reuse_tree(board, previous_board) {
+
+                //If reuse was successful we want to copy some values from search info 
+                //to maintain consistancy in avg depth
+                let mut new_search_info = SearchInfo::new();
+                new_search_info.current_iterations = self.search_info.current_iterations;
+                new_search_info.previous_iterations = self.search_info.current_iterations - 1;
+                new_search_info.start_avg_depth = self.search_info.get_avg_depth();
+                new_search_info.total_depth = self.search_info.total_depth;
+                self.search_info = new_search_info;
+
+                //We also want to recalculate policies due to change of root
+                //(we flatten policies at root to reduce the chance of 
+                //missing good move with low policy)
+                let root_index = self.tree.root_index();
+                self.tree[root_index].recalculate_policies::<true>(board);
+            } else {
+                self.search_info = SearchInfo::new();
+            }
+        } else if self.tree.node_count() == 0 {
+
+            //If we are using the same tree we want to make sure it has a root
+            //(if its a first search there is no previous tree, so root doesn't exist)
+            //If that's the case we reset the tree
+            self.tree.reset_tree(board);
+
+            //We have brand new tree so we want to reset search info too
+            self.search_info = SearchInfo::new();
+        } else {
+
+            //On repeat of the position we want to reset search time and save previous iterations
+            self.search_info.time_passed = 0;
+            self.search_info.previous_iterations = self.search_info.current_iterations;
+        }
+    }
+
+    pub fn run<const PRETTY_PRINT: bool>(&mut self, search_rules: SearchRules, root_position: &Board) -> Move {
         if PRETTY_PRINT && LOG {
             println!("   Depth   Score    Time      Nodes     Speed        Usage   Pv Line");
         }
 
         let timer = Instant::now();
-        let mut search_info = SearchInfo::new();
         let mut current_avg_depth = 0;
         let mut last_report: String = String::new();
 
-        //We extend root node before search starts
-        let mut root_node = Node::new(GameResult::None, -1, 0);
-        root_node.expand::<true>(&self.root_position);
-        let root_index = self.tree.push(root_node);
-        self.tree.set_root_index(root_index);
+        //If tree is complitly empty we want to reset it in order to spawn
+        //and expand root node
+        if self.tree.node_count() == 0 {
+            self.tree.reset_tree(root_position);
+        }
 
         //Iteration loop that breaks, when search rules decide seach should not longer continue
         //or when iteration returns 'true' which is search-break token
-        while self.search_rules.continue_search(&search_info, &self.tree) {
+        while search_rules.continue_search(&self.search_info, &self.tree) {
             //Initialize and perform one iteration cycle. This cycle covers whole mcts loop
             //including selection, expansion, simulation and backpropagation
-            let mut root_position = *self.root_position;
+            let mut position = *root_position;
             let mut current_depth = 0;
-            self.perform_iteration_step(self.tree.root_index(), &mut root_position, &mut current_depth);
+            self.perform_iteration_step(self.tree.root_index(), &mut position, &mut current_depth);
 
-            if search_info.current_iterations % 128 == 0 {
-                search_info.time_passed = timer.elapsed().as_millis();
+            if self.search_info.current_iterations % 128 == 0 {
+                self.search_info.time_passed = timer.elapsed().as_millis();
             }
 
             //We are upadating all search parameters to prepare it for next iteration or end of the search
-            search_info.max_depth = search_info.max_depth.max(current_depth - 1);
-            search_info.total_depth += current_depth - 1;
-            search_info.current_iterations += 1;
-            search_info.nodes = self.tree.node_count() as u32;
+            self.search_info.max_depth = self.search_info.max_depth.max(current_depth - 1);
+            self.search_info.total_depth += current_depth - 1;
+            self.search_info.current_iterations += 1;
+            self.search_info.nodes = self.tree.node_count() as u32;
 
             //If interruption signal was send ('stop' command), we force exit the search
-            if let Some(reciver) = self.interruption_channel {
-                if let Ok(_) = reciver.try_recv() {
+            if let Some(token) = &self.interrupt_token {
+                if *token.read().unwrap() {
                     break;
                 }
             }
@@ -82,23 +130,23 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
 
             //Draws the search report, when average selection depth improved, we provide
             //last raport to make sure we don't print duplicates
-            if search_info.get_avg_depth() > current_avg_depth {
-                search_info.time_passed = timer.elapsed().as_millis();
+            if self.search_info.get_avg_depth() > current_avg_depth {
+                self.search_info.time_passed = timer.elapsed().as_millis();
                 if LOG {
-                    self.print_report::<PRETTY_PRINT>(&search_info, &mut last_report);
+                    self.print_report::<PRETTY_PRINT>(self.search_info, &mut last_report);
                 }
-                current_avg_depth = search_info.get_avg_depth();
+                current_avg_depth = self.search_info.get_avg_depth();
             }
         }
 
         //We want to print final search report, we provide
         //last raport to make sure we don't print duplicates
-        search_info.time_passed = timer.elapsed().as_millis();
+        self.search_info.time_passed = timer.elapsed().as_millis();
         if LOG {
-            self.print_report::<PRETTY_PRINT>(&search_info, &mut last_report);
+            self.print_report::<PRETTY_PRINT>(self.search_info, &mut last_report);
         }
 
-        (self.tree.get_best_phantom().mv(), &self.tree, search_info)
+        self.tree.get_best_phantom().mv()
     }
 
     fn perform_iteration_step(
@@ -109,6 +157,11 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
     ) -> f32 {
         *current_depth += 1;
 
+        if current_node_index == -1 {
+            println!("WTF");
+            println!("DEPTH {current_depth}");
+            println!("ROOT {}", self.tree.root_index());
+        }
         self.tree.make_recently_used(current_node_index);
 
         //Data to trace phantom parent of currently processed node
@@ -116,7 +169,7 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
         let child_index = self.tree[current_node_index].child();
 
         let mut child_result = GameResult::None;
-        let parent_visits = self.tree.child(parent_index, child_index).visits();
+        let parent_visits = self.tree.get_phantom(parent_index, child_index).visits();
 
         //If node is terminal we don't need to look fuether. We can just return the value of terminal state
         //of this node. If node had no visits (leaf node), then we simulate the node and return it's value. We will
@@ -142,7 +195,7 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
                 self.get_node_score(current_node_index, &current_board)
             } else {
                 //Extract phantom of selected child and save index of corresponding tree node
-                let selected_node_phantom = self.tree.child(current_node_index, new_child_index);
+                let selected_node_phantom = self.tree.get_phantom(current_node_index, new_child_index);
                 let mut child_node_index = selected_node_phantom.index();
 
                 current_board.make_move(selected_node_phantom.mv());
@@ -154,7 +207,7 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
                     let selected_node_result = self.get_node_result(&current_board);
                     child_node_index =
                         self.tree.push(Node::new(selected_node_result, current_node_index, new_child_index));
-                    self.tree.child_mut(current_node_index, new_child_index).set_index(child_node_index);
+                    self.tree.get_phantom_mut(current_node_index, new_child_index).set_index(child_node_index);
                 }
 
                 //Save result of processed node for backpropagation stage and
@@ -173,7 +226,7 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
         //Updates currently processed phantom node. Separation of phantom node and actual node,
         //allows for easier implementation of MCGS and replacing old nodes with new ones, when tree
         //is full
-        self.tree.child_mut(parent_index, child_index).apply_score(score);
+        self.tree.get_phantom_mut(parent_index, child_index).apply_score(score);
 
         //If this node lost then we can backpropagate win one step up, because we can assume
         //that our opponent will select mate as their move
@@ -195,7 +248,7 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
         let node = &self.tree[current_node_index];
         let parent = node.parent();
         let action = node.child();
-        let parent_phantom = self.tree.child(parent, action);
+        let parent_phantom = self.tree.get_phantom(parent, action);
 
         let mut proven_loss = true;
         let mut win_len = 0;
@@ -269,7 +322,7 @@ impl<'a, const LOG: bool> Search<'a, LOG> {
         GameResult::None
     }
 
-    fn print_report<const PRETTY_PRINT: bool>(&mut self, search_info: &SearchInfo, last_report: &mut String) {
+    fn print_report<const PRETTY_PRINT: bool>(&mut self, search_info: SearchInfo, last_report: &mut String) {
         let best_phantom = self.tree.get_best_phantom();
         let game_result =
             if best_phantom.index() != -1 { self.tree[best_phantom.index()].result() } else { GameResult::None };
