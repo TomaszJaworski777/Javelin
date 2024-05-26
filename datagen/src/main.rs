@@ -54,6 +54,7 @@ fn main() {
         selfplay_thread.run(nodes_per_move as u32);
     }
 
+    let mut index = 0u128;
     loop {
         {
             let data = gen_data.lock().unwrap();
@@ -62,7 +63,11 @@ fn main() {
             println!("W/D/L: {}/{}/{}", data.wins, data.draws, data.loses);
             println!("Nodes per move: {}", nodes_per_move);
             println!("Concurrency: {}", concurrency);
-            let _ = data.files.save();
+            index += 1;
+
+            if index % 5 == 0 {
+                let _ = data.files.save();
+            }
         }
         thread::sleep(Duration::from_secs(1));
     }
