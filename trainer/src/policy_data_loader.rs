@@ -10,7 +10,7 @@ pub struct PolicyDataLoader;
 #[allow(unused)]
 impl PolicyDataLoader {
     pub fn get_batches(data_set: &Vec<ChessPolicyData>, batch_size: usize) -> Vec<(Tensor, Tensor, Tensor, Tensor)> {
-        let mut data = prepare_value_dataset(&data_set);
+        let mut data = prepare_policy_dataset(&data_set);
         data.shuffle(&mut thread_rng());
 
         let mut result: Vec<(Tensor, Tensor, Tensor, Tensor)> = Vec::new();
@@ -51,7 +51,7 @@ impl PolicyDataLoader {
     }
 }
 
-fn prepare_value_dataset(data: &Vec<ChessPolicyData>) -> Vec<([f32; 768], [f32; 384])> {
+fn prepare_policy_dataset(data: &Vec<ChessPolicyData>) -> Vec<([f32; 768], [f32; 384])> {
     let mut result: Vec<([f32; 768], [f32; 384])> = Vec::new();
     for data_entry in data {
         if data_entry.board.num == 0 {

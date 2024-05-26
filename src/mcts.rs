@@ -41,7 +41,6 @@ impl<'a, const LOG: bool> Search<LOG> {
     }
 
     pub fn reuse_tree(&mut self, board: &Board, previous_board: &Board) {
-        println!("info string {}", board == previous_board);
         if board != previous_board {
 
             //If positions are not equal we try to find the new position in the tree

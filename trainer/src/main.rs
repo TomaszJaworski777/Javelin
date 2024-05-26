@@ -11,7 +11,7 @@ use tch::{
 };
 
 fn main() {
-    value_trainer();
+    policy_trainer();
 }
 
 #[allow(unused)]
@@ -35,12 +35,12 @@ fn value_trainer() {
 
 #[allow(unused)]
 fn policy_trainer() {
-    let mut trainer = SimpleTrainer::new("base_policy");
+    let mut trainer = SimpleTrainer::new("policy_002b");
 
     let mut structure = seq().add(linear(trainer.var_store.root() / format!("0"), 768, 384, Default::default()));
 
     trainer.add_structure(structure);
-    trainer.change_learning_rate(0.001, 0.75, 20);
+    trainer.change_learning_rate(0.001, 0.9, 6);
     trainer.change_batch_size(16_384);
     trainer.change_batch_per_superbatch_count(100);
     trainer.change_epoch_count(400);

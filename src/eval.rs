@@ -13,7 +13,7 @@ pub const VALUE_NETWORK: ValueNetwork =
     unsafe { std::mem::transmute(*include_bytes!("../resources/nets/value_001.net")) };
 
 pub const POLICY_NETWORK: PolicyNetwork =
-    unsafe { std::mem::transmute(*include_bytes!("../resources/nets/policy_001.net")) };
+    unsafe { std::mem::transmute(*include_bytes!("../resources/nets/policy_002.net")) };
 
 pub struct Evaluation;
 impl Evaluation {

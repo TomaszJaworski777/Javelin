@@ -35,7 +35,8 @@ impl SelfPlayThread {
                 previous_board = current_board;
                 let mut piece_board = PieceBoard::from_board(&current_board);
                 piece_board.score = search.tree().get_best_phantom().avg_score();
-                piece_board.num = search.tree()[0].children().len() as u8;
+                let root_index = search.tree().root_index();
+                piece_board.num = search.tree()[root_index].children().len() as u8;
 
                 //save board to temp
                 if !temp.push_value(&piece_board, false) {
@@ -46,7 +47,7 @@ impl SelfPlayThread {
                     let mut policy_data =
                         ChessPolicyData { board: piece_board, moves: [ChessMoveInfo::default(); 104] };
 
-                    for (index, child_phantom) in search.tree()[0].children().into_iter().enumerate() {
+                    for (index, child_phantom) in search.tree()[root_index].children().into_iter().enumerate() {
                         policy_data.moves[index] =
                             ChessMoveInfo { mv: child_phantom.mv().get_value(), visits: child_phantom.visits() as u16 };
                     }
