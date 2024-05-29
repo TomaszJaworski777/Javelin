@@ -3,11 +3,11 @@ mod commands;
 mod core;
 mod eval;
 mod mcts;
+mod neural;
 mod options;
 mod perft;
 mod search_report;
 mod see;
-mod neural;
 
 pub use commands::Commands;
 pub use core::Side;

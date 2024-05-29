@@ -27,13 +27,7 @@ impl ContextVariables {
         let board = create_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         let interruption_token = Arc::new(RwLock::new(false));
         let search = Arc::new(Mutex::new(Search::new(SearchTree::new(), Some(Arc::clone(&interruption_token)))));
-        Self {
-            board,
-            previous_board: Arc::new(Mutex::new(board)),
-            search,
-            interruption_token,
-            uci_initialized: false,
-        }
+        Self { board, previous_board: Arc::new(Mutex::new(board)), search, interruption_token, uci_initialized: false }
     }
 }
 
@@ -117,7 +111,8 @@ impl Commands {
 
     fn new_game_command(context: &mut ContextVariables, args: &[String]) {
         context.board = create_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        context.search = Arc::new(Mutex::new(Search::new(SearchTree::new(), Some(Arc::clone(&context.interruption_token)))));
+        context.search =
+            Arc::new(Mutex::new(Search::new(SearchTree::new(), Some(Arc::clone(&context.interruption_token)))));
     }
 
     fn position_command(context: &mut ContextVariables, args: &[String]) {
@@ -180,7 +175,10 @@ impl Commands {
                         "winc" => timers.2 = value,
                         "binc" => timers.3 = value,
                         "movestogo" => timers.4 = value,
-                        "depth" => rules.max_depth = value as u32 + context.search.lock().unwrap().search_info().get_avg_depth(),
+                        "depth" => {
+                            rules.max_depth =
+                                value as u32 + context.search.lock().unwrap().search_info().get_avg_depth()
+                        }
                         "nodes" => rules.max_nodes = value as u32,
                         "movetime" => rules.time_for_move = value,
                         _ => {}
@@ -209,10 +207,10 @@ impl Commands {
         let uci_initialized = context.uci_initialized;
         *context.interruption_token.write().unwrap() = false;
         thread::spawn(move || {
-            let result = if uci_initialized { 
-                search_clone.lock().unwrap().run::<false>(rules_final, &board) 
-            } else { 
-                search_clone.lock().unwrap().run::<true>(rules_final, &board) 
+            let result = if uci_initialized {
+                search_clone.lock().unwrap().run::<false>(rules_final, &board)
+            } else {
+                search_clone.lock().unwrap().run::<true>(rules_final, &board)
             };
             println!("bestmove {}", result.to_string());
             *previous_board_clone.lock().unwrap() = board;

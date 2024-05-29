@@ -3,11 +3,11 @@ mod commands;
 mod core;
 mod eval;
 mod mcts;
+mod neural;
 mod options;
 mod perft;
 mod search_report;
 mod see;
-mod neural;
 
 use commands::Commands;
 use std::{io::stdin, process::Command};

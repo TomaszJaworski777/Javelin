@@ -1,4 +1,8 @@
-use crate::{core::{Move, Board}, mcts::GameResult, options::Options};
+use crate::{
+    core::{Board, Move},
+    mcts::GameResult,
+    options::Options,
+};
 use colored::*;
 use std::ops::{Index, IndexMut};
 
@@ -68,7 +72,7 @@ impl SearchTree {
         new_node_index
     }
 
-    pub fn reuse_tree(&mut self, current_board: &Board, previous_board: &Board) -> bool{
+    pub fn reuse_tree(&mut self, current_board: &Board, previous_board: &Board) -> bool {
         let new_root = self.find_position(self.root_index(), current_board, previous_board, 2);
 
         let mut found = false;
@@ -331,7 +335,7 @@ impl SearchTree {
         );
 
         let index = if is_root { self.root_index() } else { phantom_node.index() };
-        if max_depth == 0 || phantom_node.visits() == 0 || index == -1{
+        if max_depth == 0 || phantom_node.visits() == 0 || index == -1 {
             return;
         }
 
