@@ -5,11 +5,11 @@ mod search_info;
 mod search_rules;
 mod search_tree;
 
-use std::sync::RwLock;
 pub use node::GameResult;
 pub use search_info::SearchInfo;
 pub use search_rules::SearchRules;
 pub use search_tree::SearchTree;
+use std::sync::RwLock;
 
 use self::{node::Node, phantom_node::PhantomNode, qsearch::qsearch};
 use crate::{
@@ -22,13 +22,10 @@ use std::{sync::Arc, time::Instant};
 pub struct Search<const LOG: bool> {
     tree: SearchTree,
     interrupt_token: Option<Arc<RwLock<bool>>>,
-    search_info: SearchInfo
+    search_info: SearchInfo,
 }
 impl<'a, const LOG: bool> Search<LOG> {
-    pub fn new(
-        tree: SearchTree,
-        interrupt_token: Option<Arc<RwLock<bool>>>
-    ) -> Self {
+    pub fn new(tree: SearchTree, interrupt_token: Option<Arc<RwLock<bool>>>) -> Self {
         Self { tree, interrupt_token, search_info: SearchInfo::new() }
     }
 
@@ -42,43 +39,23 @@ impl<'a, const LOG: bool> Search<LOG> {
 
     pub fn reuse_tree(&mut self, board: &Board, previous_board: &Board) {
         if board != previous_board {
-
             //If positions are not equal we try to find the new position in the tree
             //and reuse the tree. We also reset the search info.
             if self.tree.reuse_tree(board, previous_board) {
-
-                //If reuse was successful we want to copy some values from search info 
-                //to maintain consistancy in avg depth
-                let mut new_search_info = SearchInfo::new();
-                new_search_info.current_iterations = self.search_info.current_iterations;
-                new_search_info.previous_iterations = self.search_info.current_iterations - 1;
-                new_search_info.start_avg_depth = self.search_info.get_avg_depth();
-                new_search_info.total_depth = self.search_info.total_depth;
-                self.search_info = new_search_info;
-
-                //We also want to recalculate policies due to change of root
-                //(we flatten policies at root to reduce the chance of 
+                //We want to recalculate policies due to change of root
+                //(we flatten policies at root to reduce the chance of
                 //missing good move with low policy)
                 let root_index = self.tree.root_index();
                 self.tree[root_index].recalculate_policies::<true>(board);
-            } else {
-                self.search_info = SearchInfo::new();
             }
         } else if self.tree.node_count() == 0 {
-
             //If we are using the same tree we want to make sure it has a root
             //(if its a first search there is no previous tree, so root doesn't exist)
             //If that's the case we reset the tree
             self.tree.reset_tree(board);
-
-            //We have brand new tree so we want to reset search info too
-            self.search_info = SearchInfo::new();
-        } else {
-
-            //On repeat of the position we want to reset search time and save previous iterations
-            self.search_info.time_passed = 0;
-            self.search_info.previous_iterations = self.search_info.current_iterations;
         }
+
+        self.search_info = SearchInfo::new();
     }
 
     pub fn run<const PRETTY_PRINT: bool>(&mut self, search_rules: SearchRules, root_position: &Board) -> Move {
@@ -88,6 +65,7 @@ impl<'a, const LOG: bool> Search<LOG> {
 
         let timer = Instant::now();
         let mut current_avg_depth = 0;
+        let mut current_max_depth = 0;
         let mut last_report: String = String::new();
 
         //If tree is complitly empty we want to reset it in order to spawn
@@ -127,14 +105,18 @@ impl<'a, const LOG: bool> Search<LOG> {
                 break;
             }
 
-            //Draws the search report, when average selection depth improved, we provide
-            //last raport to make sure we don't print duplicates
-            if self.search_info.get_avg_depth() > current_avg_depth {
+            //Draws the search report, when average selection depth or max selection depth improved,
+            //we provide last raport to make sure we don't print duplicates
+            if self.search_info.get_avg_depth() > current_avg_depth
+                || (self.search_info.get_avg_depth() != current_avg_depth
+                    && self.search_info.max_depth > current_max_depth)
+            {
                 self.search_info.time_passed = timer.elapsed().as_millis();
                 if LOG {
                     self.print_report::<PRETTY_PRINT>(self.search_info, &mut last_report);
                 }
-                current_avg_depth = self.search_info.get_avg_depth();
+                current_avg_depth = current_avg_depth.max(self.search_info.get_avg_depth());
+                current_max_depth = current_max_depth.max(self.search_info.max_depth);
             }
         }
 

@@ -1,4 +1,8 @@
-use crate::{core::Board, neural::{NoActivation, SpareLayer}, options::Options};
+use crate::{
+    core::Board,
+    neural::{NoActivation, SpareLayer},
+    options::Options,
+};
 
 #[allow(unused)]
 const NO_FUNCTION: u8 = 0;
@@ -29,7 +33,7 @@ impl PolicyNetwork {
             _ => return,
         }
     }
-    
+
     pub fn print(&self) {
         self.input_layer.layer().print();
     }
@@ -47,18 +51,21 @@ fn softmax<const ROOT: bool>(x: &Vec<f32>) -> Vec<f32> {
         return Vec::new();
     }
     let max_val = x.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
-    let exps: Vec<f32> =
-        x.iter().map(|&num| 
-            if num == f32::NEG_INFINITY { 
-                0.0 
-            } else { 
+    let exps: Vec<f32> = x
+        .iter()
+        .map(|&num| {
+            if num == f32::NEG_INFINITY {
+                0.0
+            } else {
                 if ROOT {
                     let root_pst = Options::get("RootPST").get_value::<i32>() as f32 / 100.0;
-                    ((num - max_val)/root_pst).exp() 
+                    ((num - max_val) / root_pst).exp()
                 } else {
-                    (num - max_val).exp() 
+                    (num - max_val).exp()
                 }
-            }).collect();
+            }
+        })
+        .collect();
 
     let sum_exps: f32 = exps.iter().sum();
     exps.iter().map(|&exp| exp / sum_exps).collect()

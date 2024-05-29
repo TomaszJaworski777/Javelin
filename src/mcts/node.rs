@@ -94,11 +94,8 @@ impl Node {
 
         //Get policy values from the policy network, if there is only one move, policy is not needed
         let is_single_move = move_list.len() == 1;
-        let policy_values = if is_single_move {
-            Vec::new()
-        } else {
-            Evaluation::get_policy_values::<ROOT>(&board, &move_list)
-        };
+        let policy_values =
+            if is_single_move { Vec::new() } else { Evaluation::get_policy_values::<ROOT>(&board, &move_list) };
 
         for mv in move_list {
             //Calculate policy index -> piece_type * 64 + target_square
@@ -127,11 +124,8 @@ impl Node {
 
         //Get policy values from the policy network, if there is only one move, policy is not needed
         let is_single_move = move_list.len() == 1;
-        let policy_values = if is_single_move {
-            Vec::new()
-        } else {
-            Evaluation::get_policy_values::<ROOT>(&board, &move_list)
-        };
+        let policy_values =
+            if is_single_move { Vec::new() } else { Evaluation::get_policy_values::<ROOT>(&board, &move_list) };
 
         for child in self.children_mut() {
             //Calculate policy index -> piece_type * 64 + target_square

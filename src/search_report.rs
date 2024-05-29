@@ -10,10 +10,10 @@ impl SearchReport {
         result: GameResult,
         tree: &SearchTree,
     ) -> String {
-        let depth = search_info.get_avg_depth() - search_info.start_avg_depth;
+        let depth = search_info.get_avg_depth();
         let seldepth = search_info.max_depth;
         let time: u128 = search_info.time_passed;
-        let iterations = search_info.current_iterations - search_info.previous_iterations;
+        let iterations = search_info.current_iterations;
         let nps = (iterations as u128) * 1000 / time.max(1);
 
         if PRETTY_PRINT {
@@ -36,9 +36,9 @@ impl SearchReport {
     ) -> String {
         let score_text: String;
         if let GameResult::Win(n) = result {
-            score_text = format!("-M{}", n-1).as_str().red().to_string();
+            score_text = format!("-M{}", (n - 1).max(1)).as_str().red().to_string();
         } else if let GameResult::Lose(n) = result {
-            score_text = format!("+M{}", n-1).as_str().green().to_string();
+            score_text = format!("+M{}", (n - 1).max(1)).as_str().green().to_string();
         } else {
             let score = -400.0 * (1.0 / best_score.clamp(0.0, 1.0) - 1.0).ln();
             if score > 0.0 {
@@ -96,9 +96,9 @@ impl SearchReport {
     ) -> String {
         let score_text: String;
         if let GameResult::Win(n) = result {
-            score_text = format!("mate {}", n-1);
+            score_text = format!("mate {}", (n - 1).max(1));
         } else if let GameResult::Lose(n) = result {
-            score_text = format!("mate -{}", n-1);
+            score_text = format!("mate -{}", (n - 1).max(1));
         } else {
             score_text = format!("cp {}", (-400.0 * (1.0 / best_score.clamp(0.0, 1.0) - 1.0).ln()) as i32);
         }

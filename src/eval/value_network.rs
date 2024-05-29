@@ -1,4 +1,7 @@
-use crate::{core::Board, neural::{NoActivation, ScReLUActivation, SpareLayer, DenseLayer}};
+use crate::{
+    core::Board,
+    neural::{DenseLayer, NoActivation, ScReLUActivation, SpareLayer},
+};
 
 #[allow(unused)]
 const NO_FUNCTION: u8 = 0;

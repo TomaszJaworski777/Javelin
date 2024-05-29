@@ -6,27 +6,39 @@ use super::activation::ActivationFunction;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
-pub struct DenseLayer<const INPUTS: usize, const OUTPUTS: usize, Activation> where Activation: ActivationFunction {
+pub struct DenseLayer<const INPUTS: usize, const OUTPUTS: usize, Activation>
+where
+    Activation: ActivationFunction,
+{
     layer: NetworkLayer<INPUTS, OUTPUTS>,
     _marker: PhantomData<Activation>,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
-pub struct SpareLayer<const INPUTS: usize, const OUTPUTS: usize, Activation> where Activation: ActivationFunction  {
+pub struct SpareLayer<const INPUTS: usize, const OUTPUTS: usize, Activation>
+where
+    Activation: ActivationFunction,
+{
     layer: NetworkLayer<INPUTS, OUTPUTS>,
     _marker: PhantomData<Activation>,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
-pub struct CustomLayer<const INPUTS: usize, const OUTPUTS: usize, Activation> where Activation: ActivationFunction  {
+pub struct CustomLayer<const INPUTS: usize, const OUTPUTS: usize, Activation>
+where
+    Activation: ActivationFunction,
+{
     layer: NetworkLayer<INPUTS, OUTPUTS>,
     _marker: PhantomData<Activation>,
 }
 
 #[allow(unused)]
-impl<const INPUTS: usize, const OUTPUTS: usize, Activation> DenseLayer<INPUTS, OUTPUTS, Activation> where Activation : ActivationFunction {
+impl<const INPUTS: usize, const OUTPUTS: usize, Activation> DenseLayer<INPUTS, OUTPUTS, Activation>
+where
+    Activation: ActivationFunction,
+{
     pub fn layer(&self) -> &NetworkLayer<INPUTS, OUTPUTS> {
         &self.layer
     }
@@ -50,7 +62,10 @@ impl<const INPUTS: usize, const OUTPUTS: usize, Activation> DenseLayer<INPUTS, O
 }
 
 #[allow(unused)]
-impl<const INPUTS: usize, const OUTPUTS: usize, Activation> SpareLayer<INPUTS, OUTPUTS, Activation> where Activation : ActivationFunction  {
+impl<const INPUTS: usize, const OUTPUTS: usize, Activation> SpareLayer<INPUTS, OUTPUTS, Activation>
+where
+    Activation: ActivationFunction,
+{
     pub fn layer(&self) -> &NetworkLayer<INPUTS, OUTPUTS> {
         &self.layer
     }
@@ -73,12 +88,13 @@ impl<const INPUTS: usize, const OUTPUTS: usize, Activation> SpareLayer<INPUTS, O
 
             for output_index in 0..OUTPUTS {
                 for square in stm_bitboard {
-                    result[output_index] += self.layer.weights[output_index][(piece_index - 1) * 64 + square.get_value()];
+                    result[output_index] +=
+                        self.layer.weights[output_index][(piece_index - 1) * 64 + square.get_value()];
                 }
 
                 for square in nstm_bitboard {
                     result[output_index] +=
-                    self.layer.weights[output_index][384 + (piece_index - 1) * 64 + square.get_value()];
+                        self.layer.weights[output_index][384 + (piece_index - 1) * 64 + square.get_value()];
                 }
             }
         }
@@ -88,7 +104,10 @@ impl<const INPUTS: usize, const OUTPUTS: usize, Activation> SpareLayer<INPUTS, O
 }
 
 #[allow(unused)]
-impl<const INPUTS: usize, const OUTPUTS: usize, Activation> CustomLayer<INPUTS, OUTPUTS, Activation> where Activation : ActivationFunction  {
+impl<const INPUTS: usize, const OUTPUTS: usize, Activation> CustomLayer<INPUTS, OUTPUTS, Activation>
+where
+    Activation: ActivationFunction,
+{
     pub fn layer(&self) -> &NetworkLayer<INPUTS, OUTPUTS> {
         &self.layer
     }
@@ -97,19 +116,26 @@ impl<const INPUTS: usize, const OUTPUTS: usize, Activation> CustomLayer<INPUTS, 
         &mut self.layer
     }
 
-    pub fn forward(&self, method: fn(weights: [[f32; INPUTS]; OUTPUTS], biases:[f32; OUTPUTS], activation: fn(f32)->f32) -> [f32; OUTPUTS]) -> [f32; OUTPUTS] {
+    pub fn forward(
+        &self,
+        method: fn(
+            weights: [[f32; INPUTS]; OUTPUTS],
+            biases: [f32; OUTPUTS],
+            activation: fn(f32) -> f32,
+        ) -> [f32; OUTPUTS],
+    ) -> [f32; OUTPUTS] {
         method(self.layer.weights, self.layer.biases, Activation::execute)
     }
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
-pub struct NetworkLayer<const INPUTS: usize, const OUTPUTS: usize>  {
+pub struct NetworkLayer<const INPUTS: usize, const OUTPUTS: usize> {
     weights: [[f32; INPUTS]; OUTPUTS],
     biases: [f32; OUTPUTS],
 }
 
-impl<const INPUTS: usize, const OUTPUTS: usize> Default for NetworkLayer<INPUTS, OUTPUTS>  {
+impl<const INPUTS: usize, const OUTPUTS: usize> Default for NetworkLayer<INPUTS, OUTPUTS> {
     fn default() -> Self {
         Self { weights: [[0.1; INPUTS]; OUTPUTS], biases: [0.1; OUTPUTS] }
     }

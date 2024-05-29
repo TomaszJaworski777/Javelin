@@ -17,7 +17,7 @@ pub struct SimpleTrainer<'a> {
     drop_delay: u8,
     batch_size: usize,
     batches_per_superbatch: usize,
-    epoch_count: u32
+    epoch_count: u32,
 }
 impl<'a> SimpleTrainer<'a> {
     const TRAINING_PATH: &'static str = "../../resources/training/";
@@ -34,7 +34,7 @@ impl<'a> SimpleTrainer<'a> {
             drop_delay: 5,
             batch_size: 16384,
             batches_per_superbatch: 100,
-            epoch_count: 400
+            epoch_count: 400,
         }
     }
 
