@@ -165,7 +165,7 @@ impl Commands {
         while i < args.len() {
             match args[i].as_str() {
                 "infinite" => rules.infinite = true,
-                "wtime" | "btime" | "winc" | "binc" | "movestogo" | "depth" | "nodes" | "iterations" | "movetime"
+                "wtime" | "btime" | "winc" | "binc" | "movestogo" | "depth" | "nodes" | "movetime"
                     if i + 1 < args.len() =>
                 {
                     let value = args[i + 1].parse().unwrap_or_default();
