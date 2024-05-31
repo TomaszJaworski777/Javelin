@@ -10,7 +10,7 @@
 <br>
 <br>
 
-![License](https://img.shields.io/github/license/TomaszJaworski777/Javelin?style=for-the-badge)
+[![License](https://img.shields.io/github/license/TomaszJaworski777/Javelin?style=for-the-badge)](https://opensource.org/license/mit)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/TomaszJaworski777/Javelin?style=for-the-badge)](https://github.com/TomaszJaworski777/Javelin/releases/latest)
 [![Commits](https://img.shields.io/github/commits-since/TomaszJaworski777/Javelin/latest?style=for-the-badge)](https://github.com/TomaszJaworski777/Javelin/commits/main)
 <br>
