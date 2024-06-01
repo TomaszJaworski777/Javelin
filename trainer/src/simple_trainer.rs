@@ -127,7 +127,7 @@ impl<'a> SimpleTrainer<'a> {
                 .expect("Failed to save training progress!");
             let checkpoint_path =
                 SimpleTrainer::CHECKPOINT_PATH.to_string() + format!("{}-epoch{}.net", self.name, epoch).as_str();
-            export_value(&self.var_store, &checkpoint_path, [768, 16, 1]);
+            export_value(&self.var_store, &checkpoint_path, [768, 32, 1]);
         }
     }
 
