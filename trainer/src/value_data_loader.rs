@@ -16,7 +16,7 @@ impl ValueDataLoader {
         let mut batch_inputs: Vec<[f32; 768]> = Vec::new();
         let mut batch_outputs: Vec<[f32; 1]> = Vec::new();
         for (index, data_entry) in data.iter().enumerate() {
-            if index != 0 && index % batch_size == 0 {
+            if (index + 1) % batch_size == 0 {
                 let inputs_tensor = Tensor::from_slice2(&batch_inputs).to_kind(Kind::Float);
                 let outputs_tensor = Tensor::from_slice2(&batch_outputs).to_kind(Kind::Float);
                 result.push((inputs_tensor, outputs_tensor));

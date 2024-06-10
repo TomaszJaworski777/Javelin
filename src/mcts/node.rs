@@ -1,6 +1,6 @@
 use crate::{
-    core::{Board, MoveList, MoveProvider, Side},
-    mcts::Evaluation,
+    core::{Board, MoveList, MoveProvider},
+    mcts::Evaluation, options::Options,
 };
 
 use super::phantom_node::PhantomNode;
@@ -92,56 +92,89 @@ impl Node {
         let mut move_list = MoveList::new();
         MoveProvider::generate_moves::<false>(&mut move_list, &board);
 
-        //Get policy values from the policy network, if there is only one move, policy is not needed
         let is_single_move = move_list.len() == 1;
-        let policy_values =
-            if is_single_move { Vec::new() } else { Evaluation::get_policy_values::<ROOT>(&board, &move_list) };
+        let mut max_policy_value = f32::NEG_INFINITY;
+        
+        //Generate inputs for the policy network
+        let policy_inputs = Evaluation::get_policy_inputs(board);
 
+        //Prebake new children with raw policy
         for mv in move_list {
-            //Calculate policy index -> piece_type * 64 + target_square
-            //We flip the board for neural network to always present it from side to move POV
-            //So we also need to flip the target_square of the move
-            let base_index = (board.get_piece_on_square(mv.get_from_square()).0 - 1) * 64;
-            let index = base_index
-                + if board.side_to_move == Side::WHITE {
-                    mv.get_to_square().get_value()
-                } else {
-                    mv.get_to_square().get_value() ^ 56
-                };
 
             //If there is only one move, policy is not needed
-            let policy = if is_single_move { 1.0 } else { policy_values[index] };
+            let policy = if is_single_move { 1.0 } else { Evaluation::get_policy_value(board, &mv, &policy_inputs) };
             self.children.push(PhantomNode::new(-1, mv, policy));
+
+            //Save highest policy for later softmax
+            max_policy_value = max_policy_value.max(policy);
+        }
+
+        let mut total_policy = 0.0;
+
+        //Iterate through created children to apply first part of softmax and pst dampening
+        for child_phantom in self.children_mut() {
+            let mut policy: f32 = child_phantom.policy();
+
+            let root_pst = Options::get("RootPST").get_value::<i32>() as f32 / 100.0;
+            policy = if ROOT {
+                ((policy - max_policy_value) / root_pst).exp()
+            } else {
+                (policy - max_policy_value).exp()
+            };
+
+            child_phantom.update_policy(policy);
+
+            total_policy += policy;
+        }
+
+        //Iterate again to apply second part of softmax
+        for child_phantom in self.children_mut() {
+            let policy = child_phantom.policy() / total_policy;
+            child_phantom.update_policy(policy);
         }
     }
 
     pub fn recalculate_policies<const ROOT: bool>(&mut self, board: &Board) {
-        //Rebuild move list
-        let mut move_list = MoveList::new();
-        for child in self.children() {
-            move_list.push(child.mv());
-        }
 
-        //Get policy values from the policy network, if there is only one move, policy is not needed
-        let is_single_move = move_list.len() == 1;
-        let policy_values =
-            if is_single_move { Vec::new() } else { Evaluation::get_policy_values::<ROOT>(&board, &move_list) };
+        let is_single_move = self.children().len() == 1;
+        let mut max_policy_value = f32::NEG_INFINITY;
+        
+        //Generate inputs for the policy network
+        let policy_inputs = Evaluation::get_policy_inputs(board);
 
-        for child in self.children_mut() {
-            //Calculate policy index -> piece_type * 64 + target_square
-            //We flip the board for neural network to always present it from side to move POV
-            //So we also need to flip the target_square of the move
-            let base_index = (board.get_piece_on_square(child.mv().get_from_square()).0 - 1) * 64;
-            let index = base_index
-                + if board.side_to_move == Side::WHITE {
-                    child.mv().get_to_square().get_value()
-                } else {
-                    child.mv().get_to_square().get_value() ^ 56
-                };
+        //Update children
+        for child_phantom in self.children_mut() {
 
             //If there is only one move, policy is not needed
-            let policy = if is_single_move { 1.0 } else { policy_values[index] };
-            child.update_policy(policy);
+            let policy = if is_single_move { 1.0 } else { Evaluation::get_policy_value(board, &child_phantom.mv(), &policy_inputs) };
+            child_phantom.update_policy(policy);
+
+            //Save highest policy for later softmax
+            max_policy_value = max_policy_value.max(policy);
+        }
+
+        let mut total_policy = 0.0;
+
+        //Iterate through created children to apply first part of softmax and pst dampening
+        for child_phantom in self.children_mut() {
+            let mut policy: f32 = child_phantom.policy();
+
+            let root_pst = Options::get("RootPST").get_value::<i32>() as f32 / 100.0;
+            policy = if ROOT {
+                ((policy - max_policy_value) / root_pst).exp()
+            } else {
+                (policy - max_policy_value).exp()
+            };
+
+            child_phantom.update_policy(policy);
+
+            total_policy += policy;
+        }
+
+        //Iterate again to apply second part of softmax
+        for child_phantom in self.children_mut() {
+            let policy = child_phantom.policy() / total_policy;
+            child_phantom.update_policy(policy);
         }
     }
 }

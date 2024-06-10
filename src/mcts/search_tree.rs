@@ -294,7 +294,7 @@ impl SearchTree {
     }
 
     fn print_tree_usage(&self) {
-        let usage_text = format!("{:.2}%", self.usage());
+        let usage_text = format!("{:.2}%", self.usage() * 100.0);
         println!(
             "Tree usage: {}/{} ({})",
             convert_number_memory_string(self.node_count()),

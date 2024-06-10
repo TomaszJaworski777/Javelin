@@ -16,7 +16,7 @@ where
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
-pub struct SpareLayer<const INPUTS: usize, const OUTPUTS: usize, Activation>
+pub struct SparseLayer<const INPUTS: usize, const OUTPUTS: usize, Activation>
 where
     Activation: ActivationFunction,
 {
@@ -62,7 +62,7 @@ where
 }
 
 #[allow(unused)]
-impl<const INPUTS: usize, const OUTPUTS: usize, Activation> SpareLayer<INPUTS, OUTPUTS, Activation>
+impl<const INPUTS: usize, const OUTPUTS: usize, Activation> SparseLayer<INPUTS, OUTPUTS, Activation>
 where
     Activation: ActivationFunction,
 {

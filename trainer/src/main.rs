@@ -1,22 +1,23 @@
+mod policy_trainer;
+mod value_trainer;
 mod policy_data_loader;
-mod simple_trainer;
 mod value_data_loader;
 
 use colored::Colorize;
 use javelin::{Bitboard, Side, Square};
-use simple_trainer::SimpleTrainer;
+use policy_trainer::{PolicyStructure, PolicyTrainer};
+use value_trainer::ValueTrainer;
 use tch::{
-    nn::{linear, seq},
-    Tensor,
+    nn::{linear, seq, VarStore}, Tensor
 };
 
 fn main() {
-    value_trainer();
+    policy_trainer();
 }
 
 #[allow(unused)]
 fn value_trainer() {
-    let mut trainer = SimpleTrainer::new("value_004");
+    let mut trainer = ValueTrainer::new("value_004");
     let mut structure = seq()
         .add(linear(trainer.var_store.root() / format!("0"), 768, 32, Default::default()))
         .add_fn(move |xs: &Tensor| xs.clamp(0.0, 1.0).pow_tensor_scalar(2))
@@ -30,23 +31,28 @@ fn value_trainer() {
     trainer.change_epoch_count(400);
     trainer.build();
 
-    trainer.run::<true>();
+    trainer.run();
 }
 
 #[allow(unused)]
 fn policy_trainer() {
-    let mut trainer = SimpleTrainer::new("policy_004");
-
-    let mut structure = seq().add(linear(trainer.var_store.root() / format!("0"), 768, 384, Default::default()));
+    let var_store = VarStore::new(tch::Device::Cpu);
+    
+    let mut structure = PolicyStructure::new(&var_store, |i, root| {
+        seq()
+        .add(linear(root / format!("{}", i) / format!("0"), 768, 16, Default::default()))
+        .add_fn(move |xs: &Tensor| xs.relu())
+    });
+    
+    let mut trainer = PolicyTrainer::new("policy_004", var_store);
 
     trainer.add_structure(structure);
-    trainer.change_learning_rate(0.001, 0.9, 3);
+    trainer.change_learning_rate(0.001, 0.5, 7);
     trainer.change_batch_size(16_384);
-    trainer.change_batch_per_superbatch_count(100);
+    trainer.change_batch_per_superbatch_count(1);
     trainer.change_epoch_count(400);
     trainer.build();
-
-    trainer.run::<false>();
+    trainer.run();
 }
 
 #[allow(unused)]

@@ -1,17 +1,55 @@
 use std::{fs::File, io::Write, path::Path, process::Command, time::Instant};
 
-use crate::{policy_data_loader::PolicyDataLoader, value_data_loader::ValueDataLoader};
+use crate::policy_data_loader::PolicyDataLoader;
 use datagen::Files;
-use javelin::{PolicyNetwork, ValueNetwork};
+use javelin::PolicyNetwork;
 use tch::{
-    nn::{seq, Module, Optimizer, OptimizerConfig, Sequential, VarStore},
-    Kind,
+    nn::{Module, OptimizerConfig, Sequential, VarStore},
+    Kind, Tensor,
 };
 
-pub struct SimpleTrainer<'a> {
+#[derive(Default)]
+pub struct PolicyStructure {
+    subnets: Vec<Sequential>
+}
+
+impl PolicyStructure {
+    pub fn new<F: Fn(i32, &tch::nn::Path)->Sequential>(var_store: &VarStore, func: F) -> Self {
+        let root: &tch::nn::Path = &var_store.root();
+        let subnets = (0..128).map(|i| { func(i, root) }).collect();
+        Self { subnets }
+    }
+
+    pub fn forward(&self, input: &Tensor, indices: &Vec<Vec<(usize, usize)>>) -> Tensor {
+        let mut subnet_results = Vec::with_capacity(128);
+    
+        for subnet_index in 0..128 {
+            subnet_results.push(self.subnets[subnet_index].forward(input));
+        }
+    
+        let mut outputs = Vec::with_capacity(indices.len());
+        for (entry_index, entry) in indices.iter().enumerate() {
+            let mut entry_output = Vec::with_capacity(100);
+            for &(from_index, to_index) in entry {
+                let from_output = subnet_results[from_index].get(entry_index as i64);
+                let to_output = subnet_results[to_index + 64].get(entry_index as i64);
+                let output = from_output.dot(&to_output);
+                entry_output.push(output);
+            }
+            while entry_output.len() < 100 {
+                entry_output.push(Tensor::full(&[], f64::NEG_INFINITY, (Kind::Float, input.device())));
+            }
+            outputs.push(Tensor::stack(&entry_output, 0));
+        }
+    
+        Tensor::stack(&outputs, 0).requires_grad_(true)
+    }
+}
+
+pub struct PolicyTrainer {
     pub var_store: VarStore,
-    net_structure: Sequential,
-    name: &'a str,
+    net_structure: PolicyStructure,
+    name: &'static str,
     start_learning_rate: f64,
     learning_rate_drop: f64,
     drop_delay: u8,
@@ -19,15 +57,14 @@ pub struct SimpleTrainer<'a> {
     batches_per_superbatch: usize,
     epoch_count: u32,
 }
-impl<'a> SimpleTrainer<'a> {
+impl PolicyTrainer {
     const TRAINING_PATH: &'static str = "../../resources/training/";
     const CHECKPOINT_PATH: &'static str = "../../resources/training/checkpoints/";
 
-    pub fn new(name: &'a str) -> Self {
-        let var_store = VarStore::new(tch::Device::Cpu);
+    pub fn new(name: &'static str, var_store: VarStore) -> Self {
         Self {
             var_store,
-            net_structure: seq(),
+            net_structure: PolicyStructure::default(),
             name,
             start_learning_rate: 0.001,
             learning_rate_drop: 0.5,
@@ -38,7 +75,7 @@ impl<'a> SimpleTrainer<'a> {
         }
     }
 
-    pub fn add_structure(&mut self, structure: Sequential) {
+    pub fn add_structure(&mut self, structure: PolicyStructure) {
         self.net_structure = structure;
     }
 
@@ -61,77 +98,18 @@ impl<'a> SimpleTrainer<'a> {
     }
 
     pub fn build(&mut self) {
-        let path = SimpleTrainer::TRAINING_PATH.to_string() + self.name + ".ot";
+        let path = PolicyTrainer::TRAINING_PATH.to_string() + self.name + ".ot";
         if Path::new(&path).exists() {
             self.var_store.load(path).expect("Failed to load net training data!");
         }
     }
 
-    pub fn run<const VALUE: bool>(&self) {
+    pub fn run(&self) {
         let mut train_data = Files::new();
-        let _ = train_data.load();
-
+        let _ = train_data.load_policy();
         let mut optimizer = tch::nn::AdamW::default().build(&self.var_store, self.start_learning_rate).unwrap();
-
-        if VALUE {
-            self.print_search_params(train_data.value_data.len());
-            self.value_run(&mut optimizer, &train_data);
-        } else {
-            self.print_search_params(train_data.policy_data.len());
-            self.policy_run(&mut optimizer, &train_data);
-        }
-    }
-
-    fn value_run(&self, optimizer: &mut Optimizer, train_data: &Files) {
-        let mut current_learning_rate = self.start_learning_rate;
-
-        let data_per_superbatch = self.batches_per_superbatch * self.batch_size;
-        let superbatches_count = &train_data.value_data.len() / data_per_superbatch;
-
-        let timer = Instant::now();
-        for epoch in 1..=self.epoch_count {
-            let mut total_loss = 0.0;
-
-            for superbatch_index in 0..superbatches_count {
-                let start_index = superbatch_index * data_per_superbatch;
-                let end_index = start_index + data_per_superbatch;
-                let batches = ValueDataLoader::get_batches(
-                    &train_data.value_data[start_index..end_index].to_vec(),
-                    self.batch_size,
-                );
-                for (inputs, targets) in &batches {
-                    let outputs = self.net_structure.forward(&inputs);
-                    let loss =
-                        (outputs - targets).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar(self.batch_size as f64);
-
-                    total_loss += loss.double_value(&[]) as f32 / (superbatches_count * batches.len()) as f32;
-                    optimizer.backward_step(&loss);
-                }
-            }
-
-            println!(
-                "epoch {} time {:.2} loss {:.5} lr {:.7}",
-                epoch,
-                timer.elapsed().as_secs_f32(),
-                total_loss,
-                current_learning_rate
-            );
-
-            if epoch != 0 && epoch % self.drop_delay as u32 == 0 {
-                current_learning_rate *= self.learning_rate_drop;
-                optimizer.set_lr(current_learning_rate);
-            }
-
-            self.var_store
-                .save(SimpleTrainer::TRAINING_PATH.to_string() + self.name + ".ot")
-                .expect("Failed to save training progress!");
-            let checkpoint_path =
-                SimpleTrainer::CHECKPOINT_PATH.to_string() + format!("{}-epoch{}.net", self.name, epoch).as_str();
-            export_value(&self.var_store, &checkpoint_path, [768, 32, 1]);
-        }
-    }
-
-    fn policy_run(&self, optimizer: &mut Optimizer, train_data: &Files) {
+        self.print_search_params(train_data.policy_data.len());
+        
         let mut current_learning_rate = self.start_learning_rate;
 
         let data_per_superbatch = self.batches_per_superbatch * self.batch_size;
@@ -144,18 +122,23 @@ impl<'a> SimpleTrainer<'a> {
             for superbatch_index in 0..superbatches_count {
                 let start_index = superbatch_index * data_per_superbatch;
                 let end_index = start_index + data_per_superbatch;
+                println!("Superbatch {superbatch_index} start {start_index}..{end_index}");
                 let batches = PolicyDataLoader::get_batches(
                     &train_data.policy_data[start_index..end_index].to_vec(),
                     self.batch_size,
                 );
-                for (inputs, targets, mask, negative) in &batches {
-                    let outputs =
-                        &self.net_structure.forward(&inputs).multiply(mask).g_add(negative).softmax(-1, Kind::Float);
+                println!("Batches prepared: {}", batches.len());
+
+                for (input, indecies, target) in &batches {
+                    let outputs = 
+                        &self.net_structure.forward(&input, indecies).softmax(-1, Kind::Float);
                     let loss =
-                        (outputs - targets).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar(self.batch_size as f64);
+                        (outputs - target).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar(self.batch_size as f64);
                     total_loss += loss.double_value(&[]) as f32 / (superbatches_count * batches.len()) as f32;
                     optimizer.backward_step(&loss);
+                    println!("Batch completed! Loss: {}", loss.double_value(&[]) as f32);
                 }
+                println!("Superbatch {superbatch_index} completed!");
             }
 
             println!(
@@ -172,11 +155,11 @@ impl<'a> SimpleTrainer<'a> {
             }
 
             self.var_store
-                .save(SimpleTrainer::TRAINING_PATH.to_string() + self.name + ".ot")
+                .save(PolicyTrainer::TRAINING_PATH.to_string() + self.name + ".ot")
                 .expect("Failed to save training progress!");
-            let checkpoint_path =
-                SimpleTrainer::CHECKPOINT_PATH.to_string() + format!("{}-epoch{}.net", self.name, epoch).as_str();
-            export_policy(&self.var_store, &checkpoint_path, [768, 384]);
+            //let checkpoint_path =
+            //    PolicyTrainer::CHECKPOINT_PATH.to_string() + format!("{}-epoch{}.net", self.name, epoch).as_str();
+            //export_policy(&self.var_store, &checkpoint_path, [768, 384]);
         }
     }
 
@@ -209,41 +192,6 @@ fn clear_terminal_screen() {
     };
 }
 
-fn export_value(var_store: &VarStore, path: &str, architecture: [usize; 3]) {
-    let mut value_network = boxed_and_zeroed::<ValueNetwork>();
-    for (name, tensor) in var_store.variables() {
-        let name_split: Vec<&str> = name.split(".").collect();
-        let index = name_split[0].parse::<usize>().expect("Incorrect index!");
-        if name_split[1] == "weight" {
-            let input_length = architecture[0 + index];
-            let output_length = architecture[1 + index];
-            let mut weights = vec![vec![0.0; input_length]; output_length];
-            for weight_index in 0..input_length {
-                for output_index in 0..output_length {
-                    weights[output_index][weight_index] =
-                        tensor.get(output_index as i64).double_value(&[weight_index as i64]) as f32;
-                }
-            }
-            value_network.set_layer_weights(index, weights);
-        } else {
-            let length = architecture[1 + index];
-            let mut biases = vec![0.0; length];
-            for output_index in 0..length {
-                biases[output_index] = tensor.double_value(&[output_index as i64]) as f32;
-            }
-            value_network.set_layer_biases(index, biases);
-        }
-    }
-
-    let file = File::create(path);
-    let size = std::mem::size_of::<ValueNetwork>();
-    unsafe {
-        let slice: *const u8 = std::slice::from_ref(value_network.as_ref()).as_ptr().cast();
-        let struct_bytes: &[u8] = std::slice::from_raw_parts(slice, size);
-        file.unwrap().write_all(struct_bytes).expect("Failed to write data!");
-    }
-}
-
 fn export_policy(var_store: &VarStore, path: &str, architecture: [usize; 2]) {
     let mut policy_network = boxed_and_zeroed::<PolicyNetwork>();
     for (name, tensor) in var_store.variables() {
@@ -259,14 +207,14 @@ fn export_policy(var_store: &VarStore, path: &str, architecture: [usize; 2]) {
                         tensor.get(output_index as i64).double_value(&[weight_index as i64]) as f32;
                 }
             }
-            policy_network.set_layer_weights(index, weights);
+            //policy_network.set_layer_weights(index, weights);
         } else {
             let length = architecture[1 + index];
             let mut biases = vec![0.0; length];
             for output_index in 0..length {
                 biases[output_index] = tensor.double_value(&[output_index as i64]) as f32;
             }
-            policy_network.set_layer_biases(index, biases);
+            //policy_network.set_layer_biases(index, biases);
         }
     }
 

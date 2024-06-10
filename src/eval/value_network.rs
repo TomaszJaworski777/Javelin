@@ -1,6 +1,6 @@
 use crate::{
     core::Board,
-    neural::{DenseLayer, NoActivation, ScReLUActivation, SpareLayer},
+    neural::{DenseLayer, NoActivation, ScReLUActivation, SparseLayer},
 };
 
 #[allow(unused)]
@@ -15,7 +15,7 @@ const SIGMOID_FUNCTION: u8 = 3;
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
 pub struct ValueNetwork {
-    input_layer: SpareLayer<768, 32, NoActivation>,
+    input_layer: SparseLayer<768, 32, NoActivation>,
     output_layer: DenseLayer<32, 1, ScReLUActivation>,
 }
 #[allow(unused)]

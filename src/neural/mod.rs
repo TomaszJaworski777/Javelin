@@ -5,4 +5,4 @@ mod network_layer;
 pub use activation::{NoActivation, ReLUActivation, ScReLUActivation, SigmoidActivation};
 
 #[allow(unused)]
-pub use network_layer::{CustomLayer, DenseLayer, SpareLayer};
+pub use network_layer::{CustomLayer, DenseLayer, SparseLayer};
