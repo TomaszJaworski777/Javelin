@@ -15,6 +15,7 @@ use self::{node::Node, phantom_node::PhantomNode, qsearch::qsearch};
 use crate::{
     core::{Board, Move, MoveList, MoveProvider},
     eval::Evaluation,
+    options::Options,
     search_report::SearchReport,
 };
 use std::{sync::Arc, time::Instant};
@@ -38,7 +39,9 @@ impl<'a, const LOG: bool> Search<LOG> {
     }
 
     pub fn reuse_tree(&mut self, board: &Board, previous_board: &Board) {
-        if board != previous_board {
+        if board != previous_board
+            && SearchTree::mem_to_capacity(Options::get("Hash").get_value::<usize>()) == self.tree.capacity()
+        {
             //If positions are not equal we try to find the new position in the tree
             //and reuse the tree. We also reset the search info.
             if self.tree.reuse_tree(board, previous_board) {

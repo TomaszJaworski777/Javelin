@@ -20,18 +20,14 @@ pub struct SubNet {
 
 impl SubNet {
     pub const fn zeroed() -> Self {
-        Self {
-            input_layer: SparseConnected::zeroed(),
-        }
+        Self { input_layer: SparseConnected::zeroed() }
     }
 
     pub fn from_fn<F: FnMut() -> f32>(mut f: F) -> Self {
         let weights = Matrix::from_fn(|_, _| f());
         let biases = Vector::from_fn(|_| f());
 
-        Self {
-            input_layer: SparseConnected::from_raw(weights, biases),
-        }
+        Self { input_layer: SparseConnected::from_raw(weights, biases) }
     }
 }
 
@@ -51,11 +47,7 @@ impl PolicyNetwork {
     }
 
     pub fn evaluate(&self, board: &Board, mv: &Move, inputs: &SparseVector) -> f32 {
-        let flip = if board.side_to_move == Side::WHITE {
-            0
-        } else {
-            56
-        };
+        let flip = if board.side_to_move == Side::WHITE { 0 } else { 56 };
 
         let from_subnet = &self.subnets[usize::from(mv.get_from_square().get_value() ^ flip)];
         let from_vec = from_subnet.out(inputs);
@@ -65,7 +57,9 @@ impl PolicyNetwork {
 
         //let hce = self.hce.out(&Self::get_hce_feats(board, mv))[0];
 
-        from_vec.dot(&to_vec) //+ hce
+        let out = from_vec.dot(&to_vec); //+ hce
+        println!("{out}");
+        out
     }
 
     pub fn get_hce_feats(_: &Board, mov: &Move) -> Vector<4> {

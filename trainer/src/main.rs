@@ -1,15 +1,16 @@
-mod policy_trainer;
-mod value_trainer;
 mod policy_data_loader;
+mod policy_trainer;
 mod value_data_loader;
+mod value_trainer;
 
 use colored::Colorize;
 use javelin::{Bitboard, Side, Square};
-use policy_trainer::{PolicyStructure, PolicyTrainer};
-use value_trainer::ValueTrainer;
+use policy_trainer::PolicyTrainer;
 use tch::{
-    nn::{linear, seq, VarStore}, Tensor
+    nn::{linear, seq},
+    Tensor,
 };
+use value_trainer::ValueTrainer;
 
 fn main() {
     policy_trainer();
@@ -36,23 +37,12 @@ fn value_trainer() {
 
 #[allow(unused)]
 fn policy_trainer() {
-    let var_store = VarStore::new(tch::Device::Cpu);
-    
-    let mut structure = PolicyStructure::new(&var_store, |i, root| {
-        seq()
-        .add(linear(root / format!("{}", i) / format!("0"), 768, 16, Default::default()))
-        .add_fn(move |xs: &Tensor| xs.relu())
-    });
-    
-    let mut trainer = PolicyTrainer::new("policy_004", var_store);
-
-    trainer.add_structure(structure);
-    trainer.change_learning_rate(0.001, 0.5, 7);
-    trainer.change_batch_size(16_384);
-    trainer.change_batch_per_superbatch_count(1);
-    trainer.change_epoch_count(400);
-    trainer.build();
-    trainer.run();
+    PolicyTrainer::train(
+        "policy_005", 
+        11, 
+        60, 
+        0.001, 
+        25);
 }
 
 #[allow(unused)]

@@ -72,7 +72,7 @@ impl<'a> ValueTrainer<'a> {
         let _ = train_data.load_value();
         let mut optimizer = tch::nn::AdamW::default().build(&self.var_store, self.start_learning_rate).unwrap();
         self.print_search_params(train_data.value_data.len());
-        
+
         let mut current_learning_rate = self.start_learning_rate;
 
         let data_per_superbatch = self.batches_per_superbatch * self.batch_size;

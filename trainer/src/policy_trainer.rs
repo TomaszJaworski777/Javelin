@@ -1,229 +1,205 @@
-use std::{fs::File, io::Write, path::Path, process::Command, time::Instant};
+use std::{io::Write, time::Instant};
+
+use datagen::Files;
+use goober::{FeedForwardNetwork, OutputLayer, SparseVector};
+use javelin::{PolicyNetwork, SubNet};
+use rand::Rng;
+use rand::seq::SliceRandom;
+use rand::thread_rng;
 
 use crate::policy_data_loader::PolicyDataLoader;
-use datagen::Files;
-use javelin::PolicyNetwork;
-use tch::{
-    nn::{Module, OptimizerConfig, Sequential, VarStore},
-    Kind, Tensor,
-};
 
-#[derive(Default)]
-pub struct PolicyStructure {
-    subnets: Vec<Sequential>
-}
+const BATCH_SIZE: usize = 16_384;
+const BATCHES_PER_SUPERBATCH: usize = 1024;
+const EXPORT_PATH: &'static str = "../../resources/training/checkpoints/";
 
-impl PolicyStructure {
-    pub fn new<F: Fn(i32, &tch::nn::Path)->Sequential>(var_store: &VarStore, func: F) -> Self {
-        let root: &tch::nn::Path = &var_store.root();
-        let subnets = (0..128).map(|i| { func(i, root) }).collect();
-        Self { subnets }
-    }
-
-    pub fn forward(&self, input: &Tensor, indices: &Vec<Vec<(usize, usize)>>) -> Tensor {
-        let mut subnet_results = Vec::with_capacity(128);
-    
-        for subnet_index in 0..128 {
-            subnet_results.push(self.subnets[subnet_index].forward(input));
-        }
-    
-        let mut outputs = Vec::with_capacity(indices.len());
-        for (entry_index, entry) in indices.iter().enumerate() {
-            let mut entry_output = Vec::with_capacity(100);
-            for &(from_index, to_index) in entry {
-                let from_output = subnet_results[from_index].get(entry_index as i64);
-                let to_output = subnet_results[to_index + 64].get(entry_index as i64);
-                let output = from_output.dot(&to_output);
-                entry_output.push(output);
-            }
-            while entry_output.len() < 100 {
-                entry_output.push(Tensor::full(&[], f64::NEG_INFINITY, (Kind::Float, input.device())));
-            }
-            outputs.push(Tensor::stack(&entry_output, 0));
-        }
-    
-        Tensor::stack(&outputs, 0).requires_grad_(true)
-    }
-}
-
-pub struct PolicyTrainer {
-    pub var_store: VarStore,
-    net_structure: PolicyStructure,
-    name: &'static str,
-    start_learning_rate: f64,
-    learning_rate_drop: f64,
-    drop_delay: u8,
-    batch_size: usize,
-    batches_per_superbatch: usize,
-    epoch_count: u32,
-}
+pub struct PolicyTrainer;
 impl PolicyTrainer {
-    const TRAINING_PATH: &'static str = "../../resources/training/";
-    const CHECKPOINT_PATH: &'static str = "../../resources/training/checkpoints/";
-
-    pub fn new(name: &'static str, var_store: VarStore) -> Self {
-        Self {
-            var_store,
-            net_structure: PolicyStructure::default(),
-            name,
-            start_learning_rate: 0.001,
-            learning_rate_drop: 0.5,
-            drop_delay: 5,
-            batch_size: 16384,
-            batches_per_superbatch: 100,
-            epoch_count: 400,
-        }
-    }
-
-    pub fn add_structure(&mut self, structure: PolicyStructure) {
-        self.net_structure = structure;
-    }
-
-    pub fn change_learning_rate(&mut self, start_lr: f64, drop_lr: f64, drop_delay: u8) {
-        self.start_learning_rate = start_lr;
-        self.learning_rate_drop = drop_lr;
-        self.drop_delay = drop_delay;
-    }
-
-    pub fn change_batch_size(&mut self, size: usize) {
-        self.batch_size = size;
-    }
-
-    pub fn change_batch_per_superbatch_count(&mut self, count: usize) {
-        self.batches_per_superbatch = count;
-    }
-
-    pub fn change_epoch_count(&mut self, count: u32) {
-        self.epoch_count = count;
-    }
-
-    pub fn build(&mut self) {
-        let path = PolicyTrainer::TRAINING_PATH.to_string() + self.name + ".ot";
-        if Path::new(&path).exists() {
-            self.var_store.load(path).expect("Failed to load net training data!");
-        }
-    }
-
-    pub fn run(&self) {
+    pub fn train(
+        name: &'static str,
+        threads: usize,
+        superbatches: usize,
+        mut learning_rate: f32,
+        lr_drop: usize,
+    )
+    {
         let mut train_data = Files::new();
         let _ = train_data.load_policy();
-        let mut optimizer = tch::nn::AdamW::default().build(&self.var_store, self.start_learning_rate).unwrap();
-        self.print_search_params(train_data.policy_data.len());
-        
-        let mut current_learning_rate = self.start_learning_rate;
+        let mut policy = rand_init();
+        let throughput = superbatches * BATCHES_PER_SUPERBATCH * BATCH_SIZE;
+    
+        println!("Network Name: {name}");
+        println!("Export Path: {}", format!( "{}{}.net", EXPORT_PATH, name ).as_str());
+        println!("Thread Count: {threads}");
+        println!("Loaded Positions: {}", train_data.policy_data.len());
+        println!("Superbatches: {superbatches}");
+        println!("LR Drop: {lr_drop}");
+        println!("Start LR: {learning_rate}");
+        println!("Epochs {:.2}\n", throughput as f64 / train_data.policy_data.len() as f64);
+    
+        let mut momentum = boxed_and_zeroed::<PolicyNetwork>();
+        let mut velocity = boxed_and_zeroed::<PolicyNetwork>();
+    
+        let mut running_error = 0.0;
+        let mut superbatch_index = 0;
+        let mut batch_index = 0;
 
-        let data_per_superbatch = self.batches_per_superbatch * self.batch_size;
-        let superbatches_count = &train_data.policy_data.len() / data_per_superbatch;
+        let policy_data = PolicyDataLoader::prepare_policy_dataset(&train_data.policy_data);
 
-        let timer = Instant::now();
-        for epoch in 1..=self.epoch_count {
-            let mut total_loss = 0.0;
+        'training: loop {
+            let mut data = policy_data.clone();
+            data.shuffle(&mut thread_rng());
+            let timer = Instant::now();
 
-            for superbatch_index in 0..superbatches_count {
-                let start_index = superbatch_index * data_per_superbatch;
-                let end_index = start_index + data_per_superbatch;
-                println!("Superbatch {superbatch_index} start {start_index}..{end_index}");
-                let batches = PolicyDataLoader::get_batches(
-                    &train_data.policy_data[start_index..end_index].to_vec(),
-                    self.batch_size,
+            for (index, batch) in data.chunks(BATCH_SIZE).enumerate() {
+                let mut grad = boxed_and_zeroed();
+                running_error += gradient_batch(threads, &policy, &mut grad, batch);
+                let adj = 1.0 / batch.len() as f32;
+                update(&mut policy, &grad, adj, learning_rate, &mut momentum, &mut velocity);
+                
+                batch_index += 1;
+                let l = data.len();
+                print!(
+                    "> Superbatch {}/{superbatches} Batch {}/{BATCHES_PER_SUPERBATCH} - {index} - {l} Speed {:.0}\r",
+                    superbatch_index + 1,
+                    batch_index % BATCHES_PER_SUPERBATCH,
+                    (index * BATCH_SIZE) as f32 / timer.elapsed().as_secs_f32()
                 );
-                println!("Batches prepared: {}", batches.len());
+                let _ = std::io::stdout().flush();
 
-                for (input, indecies, target) in &batches {
-                    let outputs = 
-                        &self.net_structure.forward(&input, indecies).softmax(-1, Kind::Float);
-                    let loss =
-                        (outputs - target).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar(self.batch_size as f64);
-                    total_loss += loss.double_value(&[]) as f32 / (superbatches_count * batches.len()) as f32;
-                    optimizer.backward_step(&loss);
-                    println!("Batch completed! Loss: {}", loss.double_value(&[]) as f32);
+                if batch_index % BATCHES_PER_SUPERBATCH == 0 {
+                    superbatch_index += 1;
+                    println!(
+                        "> Superbatch {superbatch_index}/{superbatches} Running Loss {}",
+                        running_error / (BATCHES_PER_SUPERBATCH * BATCH_SIZE) as f32
+                    );
+                    running_error = 0.0;
+
+                    if superbatch_index % lr_drop == 0 {
+                        learning_rate *= 0.1;
+                        println!("Dropping LR to {learning_rate}");
+                    }
+
+                    export(&policy, format!( "{}{}-sb{superbatch_index}.net", EXPORT_PATH, name ).as_str());
+
+                    if superbatch_index == superbatches {
+                        break 'training;
+                    }
                 }
-                println!("Superbatch {superbatch_index} completed!");
             }
-
-            println!(
-                "epoch {} time {:.2} a_loss {:.5} lr {:.7}",
-                epoch,
-                timer.elapsed().as_secs_f32(),
-                total_loss,
-                current_learning_rate
-            );
-
-            if epoch != 0 && epoch % self.drop_delay as u32 == 0 {
-                current_learning_rate *= self.learning_rate_drop;
-                optimizer.set_lr(current_learning_rate);
-            }
-
-            self.var_store
-                .save(PolicyTrainer::TRAINING_PATH.to_string() + self.name + ".ot")
-                .expect("Failed to save training progress!");
-            //let checkpoint_path =
-            //    PolicyTrainer::CHECKPOINT_PATH.to_string() + format!("{}-epoch{}.net", self.name, epoch).as_str();
-            //export_policy(&self.var_store, &checkpoint_path, [768, 384]);
         }
-    }
-
-    fn print_search_params(&self, data_size: usize) {
-        println!("Starting learning");
-        println!("  Net name:           {}", self.name);
-        println!("  Data size:          {}", data_size);
-        println!("  Batch size:         {}", self.batch_size);
-        println!("  Batches/superbatch: {}", self.batches_per_superbatch);
-        println!("  Superbatches/epoch: {}", data_size / (self.batches_per_superbatch * self.batch_size));
-        println!("  Epoch count:        {}", self.epoch_count);
-        println!("  Learning rate:      {}", self.start_learning_rate);
-        println!("  Learning drop:      {}", self.learning_rate_drop);
-        println!("  Drop delay:         {}", self.drop_delay);
-        println!("Learning log:");
     }
 }
 
-#[allow(unused)]
-fn clear_terminal_screen() {
-    if cfg!(target_os = "windows") {
-        Command::new("cmd")
-            .args(["/c", "cls"])
-            .spawn()
-            .expect("cls command failed to start")
-            .wait()
-            .expect("failed to wait");
-    } else {
-        Command::new("clear").spawn().expect("clear command failed to start").wait().expect("failed to wait");
-    };
+fn gradient_batch(
+    threads: usize,
+    policy: &PolicyNetwork,
+    grad: &mut PolicyNetwork,
+    batch: &[(SparseVector, Vec<(usize, usize, f32)>)],
+) -> f32
+{
+    let size = (batch.len() / threads).max(1);
+    let mut errors = vec![0.0; threads];
+
+    std::thread::scope(|s| {
+        batch
+            .chunks(size)
+            .zip(errors.iter_mut())
+            .map(|(chunk, error)| {
+                s.spawn(move || {
+                    let mut inner_grad = boxed_and_zeroed();
+                    for entry in chunk {
+                        update_single_grad(entry, policy, &mut inner_grad, error);
+                    }
+                    inner_grad
+                })
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .map(|p| p.join().unwrap())
+            .for_each(|part| add_without_explicit_lifetime(grad, &part));
+    });
+
+    errors.iter().sum::<f32>()
 }
 
-fn export_policy(var_store: &VarStore, path: &str, architecture: [usize; 2]) {
-    let mut policy_network = boxed_and_zeroed::<PolicyNetwork>();
-    for (name, tensor) in var_store.variables() {
-        let name_split: Vec<&str> = name.split(".").collect();
-        let index = name_split[0].parse::<usize>().expect("Incorrect index!");
-        if name_split[1] == "weight" {
-            let input_length = architecture[0 + index];
-            let output_length = architecture[1 + index];
-            let mut weights = vec![vec![0.0; input_length]; output_length];
-            for weight_index in 0..input_length {
-                for output_index in 0..output_length {
-                    weights[output_index][weight_index] =
-                        tensor.get(output_index as i64).double_value(&[weight_index as i64]) as f32;
-                }
-            }
-            //policy_network.set_layer_weights(index, weights);
-        } else {
-            let length = architecture[1 + index];
-            let mut biases = vec![0.0; length];
-            for output_index in 0..length {
-                biases[output_index] = tensor.double_value(&[output_index as i64]) as f32;
-            }
-            //policy_network.set_layer_biases(index, biases);
-        }
+fn update(
+    policy: &mut PolicyNetwork,
+    grad: &PolicyNetwork,
+    adj: f32,
+    learning_rate: f32,
+    momentum: &mut PolicyNetwork,
+    velocity: &mut PolicyNetwork,
+) {
+    for (i, subnet) in policy.subnets.iter_mut().enumerate() {
+        subnet.adam(&grad.subnets[i], &mut momentum.subnets[i], &mut velocity.subnets[i], adj, learning_rate);
+    }
+}
+
+fn update_single_grad(
+    (entry_input, entry_moves): &(SparseVector, Vec<(usize, usize, f32)>),
+    policy: &PolicyNetwork,
+    grad: &mut PolicyNetwork,
+    error: &mut f32,
+) {
+    let mut policies = Vec::with_capacity(entry_moves.len());
+
+    let mut max = f32::NEG_INFINITY;
+    let mut total = 0.0;
+
+    for &(from_index, to_index, expected_policy) in entry_moves {
+        let from_out = policy.subnets[from_index].out_with_layers(&entry_input);
+        let to_out = policy.subnets[to_index].out_with_layers(&entry_input);
+        let policy_value = from_out.output_layer().dot(&to_out.output_layer());
+
+        max = max.max(policy_value);
+        policies.push((from_index, to_index, from_out, to_out, policy_value, expected_policy));
     }
 
-    let file = File::create(path);
-    let size = std::mem::size_of::<PolicyNetwork>();
-    unsafe {
-        let slice: *const u8 = std::slice::from_ref(policy_network.as_ref()).as_ptr().cast();
-        let struct_bytes: &[u8] = std::slice::from_raw_parts(slice, size);
-        file.unwrap().write_all(struct_bytes).expect("Failed to write data!");
+    for (_, _, _, _, policy_value, _) in policies.iter_mut() {
+        *policy_value = (*policy_value - max).exp();
+        total += *policy_value;
+    }
+    for (from_index, to_index, from_out, to_out, policy_value, expected_value) in policies {
+        let policy_value = policy_value / total;
+        let error_factor = policy_value - expected_value;
+
+        *error -= expected_value * policy_value.ln();
+
+        let factor = error_factor;
+
+        policy.subnets[from_index].backprop(
+            &entry_input,
+            &mut grad.subnets[from_index],
+            factor * to_out.output_layer(),
+            &from_out,
+        );
+
+        policy.subnets[to_index].backprop(
+            &entry_input,
+            &mut grad.subnets[to_index],
+            factor * from_out.output_layer(),
+            &to_out,
+        );
+    }
+}
+
+fn rand_init() -> Box<PolicyNetwork> {
+    let mut policy = boxed_and_zeroed::<PolicyNetwork>();
+
+    let mut rng = rand::thread_rng();
+    for subnet in policy.subnets.iter_mut() {
+        let random_int = rng.gen_range(0, u32::MAX);
+        let random_float = random_int as f32 / u32::MAX as f32;
+        *subnet = SubNet::from_fn(|| random_float * 0.2);
+    }
+
+    policy
+}
+
+fn add_without_explicit_lifetime(lhs: &mut PolicyNetwork, rhs: &PolicyNetwork) {
+    for (i, j) in lhs.subnets.iter_mut().zip(rhs.subnets.iter()) {
+        *i += j;
     }
 }
 
@@ -235,5 +211,17 @@ fn boxed_and_zeroed<T>() -> Box<T> {
             std::alloc::handle_alloc_error(layout);
         }
         Box::from_raw(ptr.cast())
+    }
+}
+
+fn export(net: &Box<PolicyNetwork>, path: &str) {
+    let size = std::mem::size_of::<PolicyNetwork>();
+
+    let mut file = std::fs::File::create(path).unwrap();
+
+    unsafe {
+        let slice: *const u8 = std::slice::from_ref(net.as_ref()).as_ptr().cast();
+        let struct_bytes: &[u8] = std::slice::from_raw_parts(slice, size);
+        file.write_all(struct_bytes).expect("Failed to write data!");
     }
 }

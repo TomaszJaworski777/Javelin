@@ -2,11 +2,14 @@ mod pesto;
 mod policy_network;
 mod value_network;
 
-use crate::core::{Board, MoveList, Piece, Side, Move};
+use crate::core::{Board, Move, MoveList, Piece, Side};
 
 use goober::SparseVector;
+
 #[allow(unused)]
 pub use policy_network::PolicyNetwork;
+#[allow(unused)]
+pub use policy_network::SubNet;
 #[allow(unused)]
 pub use value_network::ValueNetwork;
 
@@ -14,7 +17,7 @@ pub const VALUE_NETWORK: ValueNetwork =
     unsafe { std::mem::transmute(*include_bytes!("../resources/nets/value_004.net")) };
 
 //pub const POLICY_NETWORK: PolicyNetwork =
-    //unsafe { std::mem::transmute(*include_bytes!("../resources/nets/policy_004.net")) };
+//unsafe { std::mem::transmute(*include_bytes!("../resources/training/checkpoints/policy_005-sb23.net")) };
 
 pub struct Evaluation;
 impl Evaluation {

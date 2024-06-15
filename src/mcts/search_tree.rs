@@ -20,7 +20,7 @@ pub struct SearchTree {
 }
 impl SearchTree {
     pub fn new() -> Self {
-        let tree_capacity = Options::get("Hash").get_value::<usize>() * 1024 * 1024 / (std::mem::size_of::<Node>() * 8);
+        let tree_capacity = Self::mem_to_capacity(Options::get("Hash").get_value::<usize>());
         let mut tree = Self {
             tree: vec![Node::new(GameResult::None, -1, 0); tree_capacity],
             root_phantom: PhantomNode::new(0, Move::NULL, 0.0),
@@ -40,6 +40,10 @@ impl SearchTree {
         }
 
         tree
+    }
+
+    pub fn mem_to_capacity(mem_size: usize) -> usize {
+        mem_size * 1024 * 1024 / (std::mem::size_of::<Node>() * 8)
     }
 
     pub fn push(&mut self, node: Node) -> i32 {

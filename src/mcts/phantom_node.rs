@@ -104,11 +104,7 @@ impl PhantomNode {
 }
 
 fn heat_color(content: &str, value: f32, min_value: f32, max_value: f32) -> String {
-    let scalar = if min_value == max_value {
-        0.5
-    } else {
-        (value - min_value) / (max_value - min_value)
-    };
+    let scalar = if min_value == max_value { 0.5 } else { (value - min_value) / (max_value - min_value) };
 
     let r = (255.0 * (1.0 - scalar)) as u8;
     let g = (255.0 * scalar) as u8;
