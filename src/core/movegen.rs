@@ -63,7 +63,7 @@ fn generate_king_moves(move_list: &mut MoveList, board: &Board) {
         if !board.is_square_attacked_extended(king_move, board.side_to_move.flipped(), occupnacy_mask) {
             let is_capture = opponent_occupancy.get_bit(king_move);
             let move_mask = if is_capture { Move::CAPTURE_MASK } else { 0 };
-            move_list.push(Move::create_move(king_square, king_move, move_mask));
+            move_list.push(Move::from_squares(king_square, king_move, move_mask));
         }
     }
 }
@@ -76,7 +76,7 @@ fn generate_king_captures(move_list: &mut MoveList, board: &Board) {
 
     for king_move in king_move_mask {
         if !board.is_square_attacked_extended(king_move, board.side_to_move.flipped(), occupnacy_mask) {
-            move_list.push(Move::create_move(king_square, king_move, Move::CAPTURE_MASK));
+            move_list.push(Move::from_squares(king_square, king_move, Move::CAPTURE_MASK));
         }
     }
 }
@@ -101,14 +101,14 @@ fn generate_casting_moves(move_list: &mut MoveList, board: &Board) {
     if board.castle_rights.get_right(CastleRights::WHITE_KING + side_multiplier)
         && is_castle_path_clear(king_destination, king_side_rook_position)
     {
-        move_list.push(Move::create_move(king_position, king_destination, Move::KING_CASTLE_MASK));
+        move_list.push(Move::from_squares(king_position, king_destination, Move::KING_CASTLE_MASK));
     }
 
     let king_destination = Square::C1 + square_offset;
     if board.castle_rights.get_right(CastleRights::WHITE_QUEEN + side_multiplier)
         && is_castle_path_clear(king_destination, queen_side_rook_position)
     {
-        move_list.push(Move::create_move(king_position, king_destination, Move::QUEEN_CASTLE_MASK));
+        move_list.push(Move::from_squares(king_position, king_destination, Move::QUEEN_CASTLE_MASK));
     }
 }
 
@@ -407,16 +407,16 @@ fn generate_rooks_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitb
 
 fn populate_pawn_promotion_moves(move_list: &mut MoveList, piece_position: Square, moves: Bitboard, move_masks: u16) {
     for pawn_move in moves {
-        move_list.push(Move::create_move(piece_position, pawn_move, Move::PROMOTION_KNIGHT_MASK | move_masks));
-        move_list.push(Move::create_move(piece_position, pawn_move, Move::PROMOTION_BISHOP_MASK | move_masks));
-        move_list.push(Move::create_move(piece_position, pawn_move, Move::PROMOTION_ROOK_MASK | move_masks));
-        move_list.push(Move::create_move(piece_position, pawn_move, Move::PROMOTION_QUEEN_MASK | move_masks));
+        move_list.push(Move::from_squares(piece_position, pawn_move, Move::PROMOTION_KNIGHT_MASK | move_masks));
+        move_list.push(Move::from_squares(piece_position, pawn_move, Move::PROMOTION_BISHOP_MASK | move_masks));
+        move_list.push(Move::from_squares(piece_position, pawn_move, Move::PROMOTION_ROOK_MASK | move_masks));
+        move_list.push(Move::from_squares(piece_position, pawn_move, Move::PROMOTION_QUEEN_MASK | move_masks));
     }
 }
 
 fn populate_pawn_moves(move_list: &mut MoveList, piece_position: Square, moves: Bitboard, move_masks: u16) {
     for pawn_move in moves {
-        move_list.push(Move::create_move(piece_position, pawn_move, move_masks));
+        move_list.push(Move::from_squares(piece_position, pawn_move, move_masks));
     }
 }
 
@@ -425,10 +425,10 @@ fn populate_piece_moves(move_list: &mut MoveList, board: &Board, piece_position:
     let captures = moves & board.get_opponent_occupancy();
 
     for piece_move in quiet_moves {
-        move_list.push(Move::create_move(piece_position, piece_move, 0));
+        move_list.push(Move::from_squares(piece_position, piece_move, 0));
     }
 
     for piece_move in captures {
-        move_list.push(Move::create_move(piece_position, piece_move, Move::CAPTURE_MASK));
+        move_list.push(Move::from_squares(piece_position, piece_move, Move::CAPTURE_MASK));
     }
 }

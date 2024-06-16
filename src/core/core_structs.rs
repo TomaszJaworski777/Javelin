@@ -60,7 +60,7 @@ impl Move {
         Move { value: value }
     }
 
-    pub fn create_move(from_square: Square, to_square: Square, mask: u16) -> Self {
+    pub fn from_squares(from_square: Square, to_square: Square, mask: u16) -> Self {
         Move { value: Move::init_move(from_square, to_square) | mask }
     }
 

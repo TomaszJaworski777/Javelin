@@ -9,14 +9,11 @@ pub struct PolicyDataLoader;
 impl PolicyDataLoader {
     pub fn prepare_policy_dataset(data: &Vec<ChessPolicyData>) -> Vec<(SparseVector, Vec<(usize, usize, f32)>)> {
         let mut result: Vec<(SparseVector, Vec<(usize, usize, f32)>)> = Vec::new();
-        let mut entries = 0;
-        let mut entries_as = 0;
+
         for  data_entry in data {
-            entries += 1;
             if data_entry.board.num == 0 {
                 continue;
             }
-            entries_as += 1;
 
             let converted_bitboards = if data_entry.board.side_to_move == 0 {
                 convert_to_12_bitboards(data_entry.board.piece_boards)

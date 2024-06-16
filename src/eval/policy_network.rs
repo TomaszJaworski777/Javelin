@@ -57,9 +57,7 @@ impl PolicyNetwork {
 
         //let hce = self.hce.out(&Self::get_hce_feats(board, mv))[0];
 
-        let out = from_vec.dot(&to_vec); //+ hce
-        println!("{out}");
-        out
+        from_vec.dot(&to_vec) //+ hce
     }
 
     pub fn get_hce_feats(_: &Board, mov: &Move) -> Vector<4> {

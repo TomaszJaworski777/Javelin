@@ -16,8 +16,8 @@ pub use value_network::ValueNetwork;
 pub const VALUE_NETWORK: ValueNetwork =
     unsafe { std::mem::transmute(*include_bytes!("../resources/nets/value_004.net")) };
 
-//pub const POLICY_NETWORK: PolicyNetwork =
-//unsafe { std::mem::transmute(*include_bytes!("../resources/training/checkpoints/policy_005-sb23.net")) };
+pub const POLICY_NETWORK: PolicyNetwork =
+unsafe { std::mem::transmute(*include_bytes!("../resources/training/checkpoints/policy_005-sb25.net")) };
 
 pub struct Evaluation;
 impl Evaluation {
@@ -26,8 +26,7 @@ impl Evaluation {
     }
 
     pub fn get_policy_value(board: &Board, mv: &Move, inputs: &SparseVector) -> f32 {
-        1.0
-        //POLICY_NETWORK.evaluate(&board, &mv, &inputs)
+        POLICY_NETWORK.evaluate(&board, &mv, &inputs)
     }
 
     pub fn get_policy_inputs(board: &Board) -> SparseVector {

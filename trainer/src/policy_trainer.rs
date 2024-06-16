@@ -189,9 +189,7 @@ fn rand_init() -> Box<PolicyNetwork> {
 
     let mut rng = rand::thread_rng();
     for subnet in policy.subnets.iter_mut() {
-        let random_int = rng.gen_range(0, u32::MAX);
-        let random_float = random_int as f32 / u32::MAX as f32;
-        *subnet = SubNet::from_fn(|| random_float * 0.2);
+        *subnet = SubNet::from_fn(|| (rng.gen_range(0, u32::MAX) as f32 / u32::MAX as f32) * 0.2);
     }
 
     policy
