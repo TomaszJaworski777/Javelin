@@ -40,7 +40,7 @@ impl<'a, const LOG: bool> Search<LOG> {
 
     pub fn reuse_tree(&mut self, board: &Board, previous_board: &Board) {
         if board != previous_board
-            && SearchTree::mem_to_capacity(Options::get("Hash").get_value::<usize>()) == self.tree.capacity()
+            && SearchTree::mem_to_capacity(Options::hash() as usize) == self.tree.capacity()
         {
             //If positions are not equal we try to find the new position in the tree
             //and reuse the tree. We also reset the search info.

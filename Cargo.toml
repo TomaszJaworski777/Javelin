@@ -1,6 +1,6 @@
 [package]
 name = "javelin"
-version = "1.4.2"
+version = "1.4.4"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -10,10 +10,6 @@ panic = 'abort'
 strip = true
 lto = true
 codegen-units = 1
-
-[profile.linux-debug]
-inherits = "release"
-debug = true
 
 [dependencies]
 colored = "*"

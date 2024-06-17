@@ -20,7 +20,7 @@ pub struct SearchTree {
 }
 impl SearchTree {
     pub fn new() -> Self {
-        let tree_capacity = Self::mem_to_capacity(Options::get("Hash").get_value::<usize>());
+        let tree_capacity = Self::mem_to_capacity(Options::hash() as usize);
         let mut tree = Self {
             tree: vec![Node::new(GameResult::None, -1, 0); tree_capacity],
             root_phantom: PhantomNode::new(0, Move::NULL, 0.0),
@@ -121,7 +121,8 @@ impl SearchTree {
     }
 
     pub fn reset_tree(&mut self, current_board: &Board) {
-        self.tree = vec![Node::new(GameResult::None, -1, 0); self.capacity()];
+        let tree_capacity = Self::mem_to_capacity(Options::hash() as usize);
+        self.tree = vec![Node::new(GameResult::None, -1, 0); tree_capacity];
         self.root_phantom = PhantomNode::new(0, Move::NULL, 0.0);
         self.root_index = -1;
         self.empty_node_index = 0;
@@ -129,7 +130,7 @@ impl SearchTree {
         self.lru_head = -1;
         self.lru_tail = -1;
 
-        let end_index = self.capacity() as i32 - 1;
+        let end_index = tree_capacity as i32 - 1;
 
         for index in 0..end_index {
             self[index].set_forward_link(index + 1);
