@@ -115,7 +115,7 @@ impl Node {
         for child_phantom in self.children_mut() {
             let policy: f32 = child_phantom.index() as f32 / 1000.0;
 
-            let root_pst = Options::get("RootPST").get_value::<i32>() as f32 / 100.0;   
+            let root_pst = Options::get("RootPST").get_value::<i32>() as f32 / 100.0;
             let policy = if ROOT {
                 ((policy - max_policy_value) / root_pst).exp()
             } else {
@@ -129,7 +129,7 @@ impl Node {
 
         //Iterate again to apply second part of softmax
         for child_phantom in self.children_mut() {
-            let policy_value =  child_phantom.index() as f32 / 1000.0;
+            let policy_value = child_phantom.index() as f32 / 1000.0;
             let policy = policy_value / total_policy;
             child_phantom.update_policy(policy);
             child_phantom.set_index(-1);

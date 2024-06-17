@@ -50,8 +50,8 @@ where
     pub fn forward(&self, inputs: &[f32; INPUTS]) -> [f32; OUTPUTS] {
         let mut result = self.layer.biases;
 
-        for output_index in 0..OUTPUTS {
-            for input_index in 0..INPUTS {
+        for input_index in 0..INPUTS {
+            for output_index in 0..OUTPUTS {
                 let input = Activation::execute(inputs[input_index]);
                 result[output_index] += input * self.layer.weights[output_index][input_index];
             }

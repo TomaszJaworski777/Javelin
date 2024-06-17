@@ -37,12 +37,7 @@ fn value_trainer() {
 
 #[allow(unused)]
 fn policy_trainer() {
-    PolicyTrainer::train(
-        "policy_005", 
-        11, 
-        60, 
-        0.001, 
-        25);
+    PolicyTrainer::train("policy_005", 11, 60, 0.001, 25);
 }
 
 #[allow(unused)]
