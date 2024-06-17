@@ -149,7 +149,7 @@ fn update_single_grad(
 
     for &(from_index, to_index, expected_policy) in entry_moves {
         let from_out = policy.subnets[from_index].out_with_layers(&entry_input);
-        let to_out = policy.subnets[to_index].out_with_layers(&entry_input);
+        let to_out = policy.subnets[64 + to_index].out_with_layers(&entry_input);
         let policy_value = from_out.output_layer().dot(&to_out.output_layer());
 
         max = max.max(policy_value);
@@ -177,7 +177,7 @@ fn update_single_grad(
 
         policy.subnets[to_index].backprop(
             &entry_input,
-            &mut grad.subnets[to_index],
+            &mut grad.subnets[64 + to_index],
             factor * from_out.output_layer(),
             &to_out,
         );
