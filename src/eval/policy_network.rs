@@ -46,6 +46,7 @@ impl PolicyNetwork {
         }
     }
 
+    #[inline]
     pub fn evaluate(&self, board: &Board, mv: &Move, inputs: &SparseVector) -> f32 {
         let flip = if board.side_to_move == Side::WHITE { 0 } else { 56 };
 

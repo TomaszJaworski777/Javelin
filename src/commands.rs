@@ -102,7 +102,7 @@ impl Commands {
             }
         }
 
-        Options::set(name, value);
+        Options::set(&name, value.as_str());
     }
 
     fn is_ready_command(context: &mut ContextVariables, args: &[String]) {

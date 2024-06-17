@@ -158,11 +158,11 @@ fn export_value(var_store: &VarStore, path: &str, architecture: [usize; 3]) {
         if name_split[1] == "weight" {
             let input_length = architecture[0 + index];
             let output_length = architecture[1 + index];
-            let mut weights = vec![vec![0.0; input_length]; output_length];
-            for weight_index in 0..input_length {
+            let mut weights = vec![vec![0.0; output_length]; input_length];
+            for input_index in 0..input_length {
                 for output_index in 0..output_length {
-                    weights[output_index][weight_index] =
-                        tensor.get(output_index as i64).double_value(&[weight_index as i64]) as f32;
+                    weights[input_index][output_index] =
+                        tensor.get(output_index as i64).double_value(&[input_index as i64]) as f32;
                 }
             }
             value_network.set_layer_weights(index, weights);

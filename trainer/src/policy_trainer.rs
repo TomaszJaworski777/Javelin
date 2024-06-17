@@ -3,9 +3,9 @@ use std::{io::Write, time::Instant};
 use datagen::Files;
 use goober::{FeedForwardNetwork, OutputLayer, SparseVector};
 use javelin::{PolicyNetwork, SubNet};
-use rand::Rng;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use rand::Rng;
 
 use crate::policy_data_loader::PolicyDataLoader;
 
@@ -15,31 +15,24 @@ const EXPORT_PATH: &'static str = "../../resources/training/checkpoints/";
 
 pub struct PolicyTrainer;
 impl PolicyTrainer {
-    pub fn train(
-        name: &'static str,
-        threads: usize,
-        superbatches: usize,
-        mut learning_rate: f32,
-        lr_drop: usize,
-    )
-    {
+    pub fn train(name: &'static str, threads: usize, superbatches: usize, mut learning_rate: f32, lr_drop: usize) {
         let mut train_data = Files::new();
         let _ = train_data.load_policy();
         let mut policy = rand_init();
         let throughput = superbatches * BATCHES_PER_SUPERBATCH * BATCH_SIZE;
-    
+
         println!("Network Name: {name}");
-        println!("Export Path: {}", format!( "{}{}.net", EXPORT_PATH, name ).as_str());
+        println!("Export Path: {}", format!("{}{}.net", EXPORT_PATH, name).as_str());
         println!("Thread Count: {threads}");
         println!("Loaded Positions: {}", train_data.policy_data.len());
         println!("Superbatches: {superbatches}");
         println!("LR Drop: {lr_drop}");
         println!("Start LR: {learning_rate}");
         println!("Epochs {:.2}\n", throughput as f64 / train_data.policy_data.len() as f64);
-    
+
         let mut momentum = boxed_and_zeroed::<PolicyNetwork>();
         let mut velocity = boxed_and_zeroed::<PolicyNetwork>();
-    
+
         let mut running_error = 0.0;
         let mut superbatch_index = 0;
         let mut batch_index = 0;
@@ -56,7 +49,7 @@ impl PolicyTrainer {
                 running_error += gradient_batch(threads, &policy, &mut grad, batch);
                 let adj = 1.0 / batch.len() as f32;
                 update(&mut policy, &grad, adj, learning_rate, &mut momentum, &mut velocity);
-                
+
                 batch_index += 1;
                 let l = data.len();
                 print!(
@@ -80,7 +73,7 @@ impl PolicyTrainer {
                         println!("Dropping LR to {learning_rate}");
                     }
 
-                    export(&policy, format!( "{}{}-sb{superbatch_index}.net", EXPORT_PATH, name ).as_str());
+                    export(&policy, format!("{}{}-sb{superbatch_index}.net", EXPORT_PATH, name).as_str());
 
                     if superbatch_index == superbatches {
                         break 'training;
@@ -96,8 +89,7 @@ fn gradient_batch(
     policy: &PolicyNetwork,
     grad: &mut PolicyNetwork,
     batch: &[(SparseVector, Vec<(usize, usize, f32)>)],
-) -> f32
-{
+) -> f32 {
     let size = (batch.len() / threads).max(1);
     let mut errors = vec![0.0; threads];
 

@@ -39,8 +39,8 @@ impl<'a, const LOG: bool> Search<LOG> {
     }
 
     pub fn reuse_tree(&mut self, board: &Board, previous_board: &Board) {
-        if board != previous_board
-            && SearchTree::mem_to_capacity(Options::get("Hash").get_value::<usize>()) == self.tree.capacity()
+        let is_tree_same_size = SearchTree::mem_to_capacity(Options::hash() as usize) == self.tree.capacity();
+        if board != previous_board && is_tree_same_size
         {
             //If positions are not equal we try to find the new position in the tree
             //and reuse the tree. We also reset the search info.
@@ -51,7 +51,7 @@ impl<'a, const LOG: bool> Search<LOG> {
                 let root_index = self.tree.root_index();
                 self.tree[root_index].recalculate_policies::<true>(board);
             }
-        } else if self.tree.node_count() == 0 {
+        } else if self.tree.node_count() == 0 || !is_tree_same_size {
             //If we are using the same tree we want to make sure it has a root
             //(if its a first search there is no previous tree, so root doesn't exist)
             //If that's the case we reset the tree
@@ -282,6 +282,7 @@ impl<'a, const LOG: bool> Search<LOG> {
         best
     }
 
+    #[inline]
     fn get_node_score(&self, node_index: i32, board: &Board) -> f32 {
         match self.tree[node_index].result() {
             GameResult::None => sigmoid(qsearch(board, -30_000, 30_000, 0)),
@@ -291,6 +292,7 @@ impl<'a, const LOG: bool> Search<LOG> {
         }
     }
 
+    #[inline]
     fn get_node_result(&self, board: &Board) -> GameResult {
         if board.is_insufficient_material() || board.three_fold() || board.half_moves >= 100 {
             return GameResult::Draw;
@@ -327,6 +329,7 @@ impl<'a, const LOG: bool> Search<LOG> {
 }
 
 //PUCT formula V + C * P * (N.max(1).sqrt()/n + 1) where N = number of visits to parent node, n = number of visits to a child
+#[inline]
 fn puct(parent: &PhantomNode, child: &PhantomNode, c: f32) -> f32 {
     let n = parent.visits();
     let ni = child.visits();

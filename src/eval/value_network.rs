@@ -15,8 +15,8 @@ const SIGMOID_FUNCTION: u8 = 3;
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
 pub struct ValueNetwork {
-    input_layer: SparseLayer<768, 32, NoActivation>,
-    output_layer: DenseLayer<32, 1, ScReLUActivation>,
+    pub input_layer: SparseLayer<768, 32, NoActivation>,
+    pub output_layer: DenseLayer<32, 1, ScReLUActivation>,
 }
 #[allow(unused)]
 impl ValueNetwork {
@@ -41,6 +41,7 @@ impl ValueNetwork {
         self.output_layer.layer().print();
     }
 
+    #[inline]
     pub fn evaluate(&self, board: &Board) -> f32 {
         let input_layer_result = self.input_layer.forward(&board);
         let output_layer_result = self.output_layer.forward(&input_layer_result);
