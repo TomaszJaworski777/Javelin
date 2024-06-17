@@ -41,6 +41,7 @@ impl ValueNetwork {
         self.output_layer.layer().print();
     }
 
+    #[inline]
     pub fn evaluate(&self, board: &Board) -> f32 {
         let input_layer_result = self.input_layer.forward(&board);
         let output_layer_result = self.output_layer.forward(&input_layer_result);

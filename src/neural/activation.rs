@@ -5,6 +5,7 @@ pub trait ActivationFunction {
 #[derive(Clone, Copy, Default)]
 pub struct NoActivation;
 impl ActivationFunction for NoActivation {
+    #[inline]
     fn execute(value: f32) -> f32 {
         value
     }
@@ -13,6 +14,7 @@ impl ActivationFunction for NoActivation {
 #[derive(Clone, Copy, Default)]
 pub struct ScReLUActivation;
 impl ActivationFunction for ScReLUActivation {
+    #[inline]
     fn execute(value: f32) -> f32 {
         value.clamp(0.0, 1.0).powi(2)
     }
@@ -21,6 +23,7 @@ impl ActivationFunction for ScReLUActivation {
 #[derive(Clone, Copy, Default)]
 pub struct ReLUActivation;
 impl ActivationFunction for ReLUActivation {
+    #[inline]
     fn execute(value: f32) -> f32 {
         value.max(0.0)
     }
@@ -29,6 +32,7 @@ impl ActivationFunction for ReLUActivation {
 #[derive(Clone, Copy, Default)]
 pub struct SigmoidActivation;
 impl ActivationFunction for SigmoidActivation {
+    #[inline]
     fn execute(value: f32) -> f32 {
         1.0 / (1.0 + (-value).exp())
     }

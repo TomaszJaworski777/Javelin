@@ -54,10 +54,12 @@ pub const POLICY_NETWORK: PolicyNetwork =
 
 pub struct Evaluation;
 impl Evaluation {
+    #[inline]
     pub fn evaluate(board: &Board) -> i32 {
         (VALUE_NETWORK.evaluate(&board) * 400.0) as i32
     }
 
+    #[inline]
     pub fn get_policy_value(board: &Board, mv: &Move, inputs: &SparseVector) -> f32 {
         POLICY_NETWORK.evaluate(&board, &mv, &inputs)
     }

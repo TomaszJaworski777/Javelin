@@ -282,6 +282,7 @@ impl<'a, const LOG: bool> Search<LOG> {
         best
     }
 
+    #[inline]
     fn get_node_score(&self, node_index: i32, board: &Board) -> f32 {
         match self.tree[node_index].result() {
             GameResult::None => sigmoid(qsearch(board, -30_000, 30_000, 0)),
@@ -291,6 +292,7 @@ impl<'a, const LOG: bool> Search<LOG> {
         }
     }
 
+    #[inline]
     fn get_node_result(&self, board: &Board) -> GameResult {
         if board.is_insufficient_material() || board.three_fold() || board.half_moves >= 100 {
             return GameResult::Draw;
@@ -327,6 +329,7 @@ impl<'a, const LOG: bool> Search<LOG> {
 }
 
 //PUCT formula V + C * P * (N.max(1).sqrt()/n + 1) where N = number of visits to parent node, n = number of visits to a child
+#[inline]
 fn puct(parent: &PhantomNode, child: &PhantomNode, c: f32) -> f32 {
     let n = parent.visits();
     let ni = child.visits();

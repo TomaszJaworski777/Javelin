@@ -98,6 +98,7 @@ impl Node {
 
         //Generate inputs for the policy network
         let policy_inputs = Evaluation::get_policy_inputs(board);
+        self.children = Vec::with_capacity(move_list.len());
 
         //Prebake new children with raw policy
         for mv in move_list {

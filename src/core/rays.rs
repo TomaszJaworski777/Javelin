@@ -2,6 +2,7 @@ use crate::core::{bitboard::Bitboard, core_structs::Square};
 
 pub struct Ray;
 impl Ray {
+    #[inline]
     pub fn get_ray(from: Square, to: Square) -> Bitboard {
         RAYS[from.get_value()][to.get_value()]
     }
