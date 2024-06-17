@@ -39,6 +39,7 @@ Javelin is developed by Tomasz Jaworski. Special thanks to:
 * [@jw1912](https://github.com/jw1912) for mentoring me through the process
 * [@jw1912](https://github.com/jw1912) for creating [Monty](https://github.com/jw1912/monty/tree/main) chess engine that provided immense help with understanding optimized algorithms
 * [@AndyGrant](https://github.com/AndyGrant) for letting me borrow his SEE implementation
+* [@princesslana](https://github.com/princesslana) for helping with subnet policy trainer
 
 ## Command List
 Javelin supports all necessary commands to initialize UCI protocol, full description of the protocol can be found [here](https://gist.github.com/DOBRO/2592c6dad754ba67e6dcaec8c90165bf).
@@ -65,4 +66,4 @@ Javelin supports all necessary commands to initialize UCI protocol, full descrip
    * MVV-LVA
    * Static Exchange Evaluation
 * Value Network: 768->16->1
-* Policy Network: 768->384
+* Policy Network: 128 subnets: 768->16

@@ -14,3 +14,4 @@ stacker = "0.1.14"
 arrayvec = "0.7.4"
 javelin = { path = "../" }
 datagen = { path = "../datagen/" }
+goober = { git = 'https://github.com/jw1912/goober.git' }

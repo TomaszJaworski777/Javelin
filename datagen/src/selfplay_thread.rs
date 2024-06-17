@@ -38,12 +38,16 @@ impl SelfPlayThread {
                 let root_index = search.tree().root_index();
                 piece_board.num = search.tree()[root_index].children().len() as u8;
 
+                if piece_board.num == 0 {
+                    gen_data_clone.lock().unwrap().value_filtered += 1;
+                }
+
                 //save board to temp
                 if !temp.push_value(&piece_board, false) {
                     gen_data_clone.lock().unwrap().value_filtered += 1;
                 }
 
-                if piece_board.num < 104 {
+                if piece_board.num <= 100 {
                     let mut policy_data =
                         ChessPolicyData { board: piece_board, moves: [ChessMoveInfo::default(); 104] };
 

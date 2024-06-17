@@ -1,92 +1,48 @@
 use colored::Colorize;
 use datagen::ChessPolicyData;
+use goober::SparseVector;
 use javelin::{Bitboard, Move, Side, Square};
-use rand::seq::SliceRandom;
-use rand::thread_rng;
-use tch::{Kind, Tensor};
 
 #[allow(unused)]
 pub struct PolicyDataLoader;
 #[allow(unused)]
 impl PolicyDataLoader {
-    pub fn get_batches(data_set: &Vec<ChessPolicyData>, batch_size: usize) -> Vec<(Tensor, Tensor, Tensor, Tensor)> {
-        let mut data = prepare_policy_dataset(&data_set);
-        data.shuffle(&mut thread_rng());
+    pub fn prepare_policy_dataset(data: &Vec<ChessPolicyData>) -> Vec<(SparseVector, Vec<(usize, usize, f32)>)> {
+        let mut result: Vec<(SparseVector, Vec<(usize, usize, f32)>)> = Vec::new();
 
-        let mut result: Vec<(Tensor, Tensor, Tensor, Tensor)> = Vec::new();
-        let mut batch_inputs: Vec<[f32; 768]> = Vec::new();
-        let mut batch_outputs: Vec<[f32; 384]> = Vec::new();
-        let mut batch_mask: Vec<[f32; 384]> = Vec::new();
-        let mut batch_negative: Vec<[f32; 384]> = Vec::new();
-        for (index, data_entry) in data.iter().enumerate() {
-            if index != 0 && index % batch_size == 0 {
-                let inputs_tensor = Tensor::from_slice2(&batch_inputs).to_kind(Kind::Float);
-                let outputs_tensor = Tensor::from_slice2(&batch_outputs).to_kind(Kind::Float);
-                let mask_tensor = Tensor::from_slice2(&batch_mask).to_kind(Kind::Float);
-                let negative_tensor = Tensor::from_slice2(&batch_negative).to_kind(Kind::Float);
-                result.push((inputs_tensor, outputs_tensor, mask_tensor, negative_tensor));
-                batch_inputs.clear();
-                batch_outputs.clear();
-                batch_mask.clear();
-                batch_negative.clear();
+        for  data_entry in data {
+            if data_entry.board.num == 0 {
+                continue;
             }
 
-            batch_inputs.push(data_entry.0);
-            batch_outputs.push(data_entry.1);
+            let converted_bitboards = if data_entry.board.side_to_move == 0 {
+                convert_to_12_bitboards(data_entry.board.piece_boards)
+            } else {
+                flip_board(&convert_to_12_bitboards(data_entry.board.piece_boards))
+            };
 
-            let mut mask = [0.0; 384];
-            let mut neg = [0.0; 384];
-            for output_index in 0..data_entry.1.len() {
-                if data_entry.1[output_index] != 0.0 {
-                    mask[output_index] = 1.0;
+            let mut total_visits = 0.0;
+            let mut index_results: Vec<(usize, usize, f32)> = Vec::new();
+            for child_index in 0..data_entry.board.num as usize {
+                let child = data_entry.moves[child_index];
+                let mv = Move::from_raw(child.mv);
+                let (from_index, to_index) = if data_entry.board.side_to_move == 0 {
+                    (mv.get_from_square().get_value(), mv.get_to_square().get_value())
                 } else {
-                    neg[output_index] = f32::NEG_INFINITY;
-                }
+                    (mv.get_from_square().get_value() ^ 56, mv.get_to_square().get_value() ^ 56)
+                };
+                index_results.push((from_index, to_index, child.visits as f32));
+                total_visits += child.visits as f32;
             }
 
-            batch_mask.push(mask);
-            batch_negative.push(neg);
+            for (_, _, visits) in &mut index_results {
+                *visits /= total_visits;
+            }
+
+            result.push((extract_inputs(converted_bitboards), index_results));
         }
         result
     }
-}
-
-fn prepare_policy_dataset(data: &Vec<ChessPolicyData>) -> Vec<([f32; 768], [f32; 384])> {
-    let mut result: Vec<([f32; 768], [f32; 384])> = Vec::new();
-    for data_entry in data {
-        if data_entry.board.num == 0 {
-            continue;
-        }
-
-        let converted_bitboards = convert_to_12_bitboards(data_entry.board.piece_boards);
-        let mut result_score = [0.0; 384];
-
-        let mut total_visits = 0.0;
-        for child_index in 0..data_entry.board.num {
-            let child = data_entry.moves[child_index as usize];
-            let mv = Move::from_raw(child.mv);
-            let base_index = (get_piece_tuple(&converted_bitboards, mv.get_from_square()).0 - 1) * 64;
-            let index = base_index
-                + if data_entry.board.side_to_move == 0 {
-                    mv.get_to_square().get_value()
-                } else {
-                    mv.get_to_square().get_value() ^ 56
-                }; //add actual moving piece 64 * moving_piece + destination
-            result_score[index] += child.visits as f32;
-            total_visits += child.visits as f32;
-        }
-
-        for score_index in 0..result_score.len() {
-            result_score[score_index] /= total_visits;
-        }
-
-        if data_entry.board.side_to_move == 0 {
-            result.push((extract_inputs(converted_bitboards), result_score));
-        } else {
-            result.push((extract_inputs(flip_board(&converted_bitboards)), result_score));
-        }
-    }
-    result
 }
 
 fn convert_to_12_bitboards(board: [Bitboard; 4]) -> [Bitboard; 12] {
@@ -105,11 +61,11 @@ fn convert_to_12_bitboards(board: [Bitboard; 4]) -> [Bitboard; 12] {
     result
 }
 
-fn extract_inputs(board: [Bitboard; 12]) -> [f32; 768] {
-    let mut result = [0.0; 768];
+fn extract_inputs(board: [Bitboard; 12]) -> SparseVector {
+    let mut result = SparseVector::with_capacity(32);
     for piece_index in 0..12 {
         for square in board[piece_index] {
-            result[piece_index * 64 + square.get_value()] = 1.0;
+            result.push(piece_index * 64 + square.get_value())
         }
     }
     result

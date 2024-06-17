@@ -1,8 +1,6 @@
-use crate::{
-    core::Board,
-    neural::{NoActivation, SpareLayer},
-    options::Options,
-};
+use goober::{activation, layer::SparseConnected, FeedForwardNetwork, Matrix, SparseVector, Vector};
+
+use crate::core::{Board, Move, Side};
 
 #[allow(unused)]
 const NO_FUNCTION: u8 = 0;
@@ -14,59 +12,61 @@ const RELU_FUNCTION: u8 = 2;
 const SIGMOID_FUNCTION: u8 = 3;
 
 #[repr(C)]
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, FeedForwardNetwork)]
+pub struct SubNet {
+    input_layer: SparseConnected<activation::ReLU, 768, 16>,
+}
+#[allow(unused)]
+
+impl SubNet {
+    pub const fn zeroed() -> Self {
+        Self { input_layer: SparseConnected::zeroed() }
+    }
+
+    pub fn from_fn<F: FnMut() -> f32>(mut f: F) -> Self {
+        let weights = Matrix::from_fn(|_, _| f());
+        let biases = Vector::from_fn(|_| f());
+
+        Self { input_layer: SparseConnected::from_raw(weights, biases) }
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
 pub struct PolicyNetwork {
-    input_layer: SpareLayer<768, 384, NoActivation>,
+    pub subnets: [SubNet; 128],
+    //pub hce: DenseConnected<activation::Identity, 4, 1>,
 }
 #[allow(unused)]
 impl PolicyNetwork {
-    pub fn set_layer_weights(&mut self, index: usize, weights: Vec<Vec<f32>>) {
-        match index {
-            0 => self.input_layer.layer_mut().set_weights(weights),
-            _ => return,
+    pub const fn zeroed() -> Self {
+        Self {
+            subnets: [SubNet::zeroed(); 128],
+            //hce: DenseConnected::zeroed(),
         }
     }
 
-    pub fn set_layer_biases(&mut self, index: usize, biases: Vec<f32>) {
-        match index {
-            0 => self.input_layer.layer_mut().set_biases(biases),
-            _ => return,
+    pub fn evaluate(&self, board: &Board, mv: &Move, inputs: &SparseVector) -> f32 {
+        let flip = if board.side_to_move == Side::WHITE { 0 } else { 56 };
+
+        let from_subnet = &self.subnets[usize::from(mv.get_from_square().get_value() ^ flip)];
+        let from_vec = from_subnet.out(inputs);
+
+        let to_subnet = &self.subnets[64 + usize::from(mv.get_to_square().get_value() ^ flip)];
+        let to_vec = to_subnet.out(inputs);
+
+        //let hce = self.hce.out(&Self::get_hce_feats(board, mv))[0];
+
+        from_vec.dot(&to_vec) //+ hce
+    }
+
+    pub fn get_hce_feats(_: &Board, mov: &Move) -> Vector<4> {
+        let mut feats = Vector::zeroed();
+
+        if mov.is_promotion() {
+            feats[mov.get_promotion_piece() - 2] = 1.0;
         }
-    }
 
-    pub fn print(&self) {
-        self.input_layer.layer().print();
+        feats
     }
-
-    pub fn evaluate<const ROOT: bool>(&self, board: &Board, mask: &[bool; 384]) -> Vec<f32> {
-        let input_layer_result = self.input_layer.forward(&board);
-        let masked_output: Vec<f32> =
-            input_layer_result.iter().zip(mask.iter()).map(|(&x, &y)| if y { x } else { f32::NEG_INFINITY }).collect();
-        softmax::<ROOT>(&masked_output)
-    }
-}
-
-fn softmax<const ROOT: bool>(x: &Vec<f32>) -> Vec<f32> {
-    if x.is_empty() {
-        return Vec::new();
-    }
-    let max_val = x.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
-    let exps: Vec<f32> = x
-        .iter()
-        .map(|&num| {
-            if num == f32::NEG_INFINITY {
-                0.0
-            } else {
-                if ROOT {
-                    let root_pst = Options::get("RootPST").get_value::<i32>() as f32 / 100.0;
-                    ((num - max_val) / root_pst).exp()
-                } else {
-                    (num - max_val).exp()
-                }
-            }
-        })
-        .collect();
-
-    let sum_exps: f32 = exps.iter().sum();
-    exps.iter().map(|&exp| exp / sum_exps).collect()
 }

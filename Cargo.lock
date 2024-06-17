@@ -268,6 +268,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "goober"
+version = "0.1.0"
+source = "git+https://github.com/jw1912/goober.git#32b9b52e68ef03d9d706548fb21bb3c4535c4dd2"
+dependencies = [
+ "goober-core",
+ "goober-derive",
+ "goober-layer",
+]
+
+[[package]]
+name = "goober-core"
+version = "0.1.0"
+source = "git+https://github.com/jw1912/goober.git#32b9b52e68ef03d9d706548fb21bb3c4535c4dd2"
+
+[[package]]
+name = "goober-derive"
+version = "0.1.0"
+source = "git+https://github.com/jw1912/goober.git#32b9b52e68ef03d9d706548fb21bb3c4535c4dd2"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "goober-layer"
+version = "0.1.0"
+source = "git+https://github.com/jw1912/goober.git#32b9b52e68ef03d9d706548fb21bb3c4535c4dd2"
+dependencies = [
+ "goober-core",
+]
+
+[[package]]
 name = "half"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -309,11 +342,12 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 
 [[package]]
 name = "javelin"
-version = "1.2.6"
+version = "1.3.1"
 dependencies = [
  "arrayvec",
  "colored",
  "dashmap",
+ "goober",
  "once_cell",
  "rand 0.8.5",
  "unicase",
@@ -815,6 +849,7 @@ dependencies = [
  "bytemuck",
  "colored",
  "datagen",
+ "goober",
  "javelin",
  "rand 0.6.5",
  "stacker",
