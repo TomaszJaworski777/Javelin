@@ -13,12 +13,12 @@ use tch::{
 use value_trainer::ValueTrainer;
 
 fn main() {
-    policy_trainer();
+    value_trainer();
 }
 
 #[allow(unused)]
 fn value_trainer() {
-    let mut trainer = ValueTrainer::new("value_004");
+    let mut trainer = ValueTrainer::new("value_005");
     let mut structure = seq()
         .add(linear(trainer.var_store.root() / format!("0"), 768, 32, Default::default()))
         .add_fn(move |xs: &Tensor| xs.clamp(0.0, 1.0).pow_tensor_scalar(2))
@@ -26,10 +26,10 @@ fn value_trainer() {
         .add_fn(move |xs: &Tensor| xs.sigmoid());
 
     trainer.add_structure(structure);
-    trainer.change_learning_rate(0.001, 0.9, 2);
+    trainer.change_learning_rate(0.001, 0.1, 25);
     trainer.change_batch_size(16_384);
-    trainer.change_batch_per_superbatch_count(100);
-    trainer.change_epoch_count(400);
+    trainer.change_batch_per_superbatch_count(1256);
+    trainer.change_superbatch_count(80);
     trainer.build();
 
     trainer.run();

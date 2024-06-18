@@ -14,10 +14,10 @@ pub struct ValueTrainer<'a> {
     name: &'a str,
     start_learning_rate: f64,
     learning_rate_drop: f64,
-    drop_delay: u8,
+    drop_delay: u32,
     batch_size: usize,
     batches_per_superbatch: usize,
-    epoch_count: u32,
+    superbach_count: u32,
 }
 impl<'a> ValueTrainer<'a> {
     const TRAINING_PATH: &'static str = "../../resources/training/";
@@ -30,11 +30,11 @@ impl<'a> ValueTrainer<'a> {
             net_structure: seq(),
             name,
             start_learning_rate: 0.001,
-            learning_rate_drop: 0.5,
-            drop_delay: 5,
-            batch_size: 16384,
-            batches_per_superbatch: 100,
-            epoch_count: 400,
+            learning_rate_drop: 0.1,
+            drop_delay: 0,
+            batch_size: 0,
+            batches_per_superbatch: 0,
+            superbach_count: 0,
         }
     }
 
@@ -42,7 +42,7 @@ impl<'a> ValueTrainer<'a> {
         self.net_structure = structure;
     }
 
-    pub fn change_learning_rate(&mut self, start_lr: f64, drop_lr: f64, drop_delay: u8) {
+    pub fn change_learning_rate(&mut self, start_lr: f64, drop_lr: f64, drop_delay: u32) {
         self.start_learning_rate = start_lr;
         self.learning_rate_drop = drop_lr;
         self.drop_delay = drop_delay;
@@ -56,8 +56,8 @@ impl<'a> ValueTrainer<'a> {
         self.batches_per_superbatch = count;
     }
 
-    pub fn change_epoch_count(&mut self, count: u32) {
-        self.epoch_count = count;
+    pub fn change_superbatch_count(&mut self, count: u32) {
+        self.superbach_count = count;
     }
 
     pub fn build(&mut self) {
@@ -75,60 +75,82 @@ impl<'a> ValueTrainer<'a> {
 
         let mut current_learning_rate = self.start_learning_rate;
 
-        let data_per_superbatch = self.batches_per_superbatch * self.batch_size;
-        let superbatches_count = &train_data.value_data.len() / data_per_superbatch;
+        let mut superbatch_index = 0u32;
+        let mut batch_index = 0;
+        let mut total_loss: f32 = 0.0;
+        let mut data_chunk_start_index = 0;
 
-        let timer = Instant::now();
-        for epoch in 1..=self.epoch_count {
-            let mut total_loss = 0.0;
+        'training: loop {
+            let data_chunk_end_index =
+                (data_chunk_start_index + 512 * self.batch_size).min(train_data.value_data.len());
+            let value_data = ValueDataLoader::get_batches(
+                &train_data.value_data[data_chunk_start_index..data_chunk_end_index].to_vec(),
+                self.batch_size,
+            );
+            data_chunk_start_index = data_chunk_end_index % train_data.value_data.len();
+            let timer = Instant::now();
 
-            for superbatch_index in 0..superbatches_count {
-                let start_index = superbatch_index * data_per_superbatch;
-                let end_index = start_index + data_per_superbatch;
-                let batches = ValueDataLoader::get_batches(
-                    &train_data.value_data[start_index..end_index].to_vec(),
-                    self.batch_size,
+            for (index, (inputs, targets)) in value_data.into_iter().enumerate() {
+                let outputs = self.net_structure.forward(&inputs);
+                let loss =
+                    (outputs - targets).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar(self.batch_size as f64);
+
+                total_loss += loss.double_value(&[]) as f32;
+                optimizer.backward_step(&loss);
+
+                batch_index += 1;
+
+                print!(
+                    "> Superbatch {}/{} Batch {}/{} - {index} Speed {:.0}\r",
+                    superbatch_index + 1,
+                    self.superbach_count,
+                    batch_index % self.batches_per_superbatch,
+                    self.batches_per_superbatch,
+                    (index * self.batch_size) as f32 / timer.elapsed().as_secs_f32()
                 );
-                for (inputs, targets) in &batches {
-                    let outputs = self.net_structure.forward(&inputs);
-                    let loss =
-                        (outputs - targets).pow_tensor_scalar(2).sum(Kind::Float).divide_scalar(self.batch_size as f64);
+                let _ = std::io::stdout().flush();
 
-                    total_loss += loss.double_value(&[]) as f32 / (superbatches_count * batches.len()) as f32;
-                    optimizer.backward_step(&loss);
+                if batch_index % self.batches_per_superbatch == 0 {
+                    superbatch_index += 1;
+                    println!(
+                        "> Superbatch {superbatch_index}/{} Running Loss {}",
+                        self.superbach_count,
+                        total_loss / self.batches_per_superbatch as f32
+                    );
+                    total_loss = 0.0;
+
+                    if superbatch_index % self.drop_delay == 0 {
+                        current_learning_rate *= self.learning_rate_drop;
+                        optimizer.set_lr(current_learning_rate);
+                        println!("Dropping LR to {current_learning_rate}");
+                    }
+
+                    self.var_store
+                        .save(ValueTrainer::TRAINING_PATH.to_string() + self.name + ".ot")
+                        .expect("Failed to save training progress!");
+                    let checkpoint_path = ValueTrainer::CHECKPOINT_PATH.to_string()
+                        + format!("{}-sb{}.net", self.name, superbatch_index).as_str();
+                    export_value(&self.var_store, &checkpoint_path, [768, 32, 1]);
+
+                    if superbatch_index == self.superbach_count {
+                        break 'training;
+                    }
                 }
             }
-
-            println!(
-                "epoch {} time {:.2} loss {:.5} lr {:.7}",
-                epoch,
-                timer.elapsed().as_secs_f32(),
-                total_loss,
-                current_learning_rate
-            );
-
-            if epoch != 0 && epoch % self.drop_delay as u32 == 0 {
-                current_learning_rate *= self.learning_rate_drop;
-                optimizer.set_lr(current_learning_rate);
-            }
-
-            self.var_store
-                .save(ValueTrainer::TRAINING_PATH.to_string() + self.name + ".ot")
-                .expect("Failed to save training progress!");
-            let checkpoint_path =
-                ValueTrainer::CHECKPOINT_PATH.to_string() + format!("{}-epoch{}.net", self.name, epoch).as_str();
-            export_value(&self.var_store, &checkpoint_path, [768, 32, 1]);
         }
+
+        loop {}
     }
 
     fn print_search_params(&self, data_size: usize) {
+        let throughput = self.superbach_count as usize * self.batches_per_superbatch * self.batch_size;
+
         println!("Starting learning");
         println!("  Net name:           {}", self.name);
         println!("  Data size:          {}", data_size);
         println!("  Batch size:         {}", self.batch_size);
         println!("  Batches/superbatch: {}", self.batches_per_superbatch);
-        println!("  Superbatches/epoch: {}", data_size / (self.batches_per_superbatch * self.batch_size));
-        println!("  Epoch count:        {}", self.epoch_count);
+        println!("  Epoch count:        {:.2}", throughput as f64 / data_size as f64);
         println!("  Learning rate:      {}", self.start_learning_rate);
         println!("  Learning drop:      {}", self.learning_rate_drop);
         println!("  Drop delay:         {}", self.drop_delay);
