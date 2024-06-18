@@ -40,6 +40,7 @@ Javelin is developed by Tomasz Jaworski. Special thanks to:
 * [@jw1912](https://github.com/jw1912) for creating [Monty](https://github.com/jw1912/monty/tree/main) chess engine that provided immense help with understanding optimized algorithms
 * [@AndyGrant](https://github.com/AndyGrant) for letting me borrow his SEE implementation
 * [@princesslana](https://github.com/princesslana) for helping with subnet policy trainer
+* [@jw1912](https://github.com/jw1912) for creating [goober](https://github.com/jw1912/goober), that I used for policy training and inference
 
 ## Command List
 Javelin supports all necessary commands to initialize UCI protocol, full description of the protocol can be found [here](https://gist.github.com/DOBRO/2592c6dad754ba67e6dcaec8c90165bf).
@@ -54,16 +55,16 @@ Javelin supports all necessary commands to initialize UCI protocol, full descrip
 
 ## Engine Options
 * `RootPST` `default 450 min 100 max 1000` - Adjust the temperature of flattening policy on root node.
-* `Hash` ` default 64 min 1 max 65536` - ADjust the max size of the search tree in megabytes.
-* `MoveOverhead` `default 10 min 0 max 500` - Adjust offset in miliseconds, which engine should apply, when calculating time to move.
+* `Hash` ` default 64 min 1 max 65536` - Adjust the max size of the search tree in megabytes.
+* `MoveOverhead` `default 10 min 0 max 500` - Adjust offset in milliseconds, which engine should apply, when calculating time to move.
 
 ## Feature List
 * MCTS Search
    * Tree Reuse
    * Flatten Policy At Root
    * Reuse Of Least Recently Used Node
-* Quiesence Seach
+* Quiescence Search
    * MVV-LVA
    * Static Exchange Evaluation
-* Value Network: 768->16->1
+* Value Network: 768->32->1
 * Policy Network: 128 subnets: 768->16
