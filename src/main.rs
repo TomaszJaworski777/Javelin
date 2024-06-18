@@ -9,13 +9,21 @@ mod perft;
 mod search_report;
 mod see;
 
+use benchmark::Benchmark;
 use commands::Commands;
-use std::{io::stdin, process::Command};
+use std::{env, io::stdin, process::Command};
 
 fn main() {
     println!("Javelin v{} by Tomasz Jaworski\n", env!("CARGO_PKG_VERSION"));
 
     let mut uci = Commands::new();
+
+    let args: Vec<_> = env::args().collect();
+    for (index, arg) in args.clone().into_iter().enumerate() {
+        if arg == "bench" {
+            Benchmark::run::<false>(if index < args.len() - 1 { args[index + 1].parse().unwrap_or_default() } else { 5 })
+        }
+    }
 
     loop {
         let mut input_command = String::new();

@@ -61,8 +61,11 @@ impl Benchmark {
         "2r2b2/5p2/5k2/p1r1pP2/P2pB3/1P3P2/K1P3R1/7R w - - 23 93",
     ];
 
-    pub fn run(depth: u32) {
-        println!("Starting benchmark for {} positions at depth {depth}...", Benchmark::FENS.len());
+    pub fn run<const PRETTY_PRINT: bool>(depth: u32) {
+        if PRETTY_PRINT {
+            println!("Starting benchmark for {} positions at depth {depth}...", Benchmark::FENS.len());
+        }
+        
         let mut rules = SearchRules::new();
         rules.max_depth = depth;
 
@@ -90,8 +93,11 @@ impl Benchmark {
         )
         .truecolor(163, 75, 163)
         .to_string();
-        println!("{result}");
-        println!("{total_nodes} nodes {total_nps} nps");
+        if PRETTY_PRINT {
+            println!("{result}");
+        } else {
+            println!("{total_nodes} nodes {total_nps} nps");
+        }
     }
 }
 

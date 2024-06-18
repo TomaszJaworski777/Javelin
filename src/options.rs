@@ -151,13 +151,19 @@ impl OptionTrait for SpinOptionFloat {
     }
 
     fn print(&self, name: &str) {
-        println!("option name {} type spin default {:?} min {:?} max {:?}", name, (self.default * 100.0) as i32, (self.min * 100.0) as i32, (self.max * 100.0) as i32);
+        println!(
+            "option name {} type spin default {:?} min {:?} max {:?}",
+            name,
+            (self.default * 100.0) as i32,
+            (self.min * 100.0) as i32,
+            (self.max * 100.0) as i32
+        );
     }
 }
 
 pub struct CheckOption {
     value: Arc<RwLock<bool>>,
-    default: bool
+    default: bool,
 }
 
 #[allow(dead_code)]
@@ -199,7 +205,7 @@ impl OptionTrait for CheckOption {
 
 pub struct StringOption {
     value: Arc<RwLock<String>>,
-    default: String
+    default: String,
 }
 
 #[allow(dead_code)]
