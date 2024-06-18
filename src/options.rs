@@ -29,6 +29,7 @@ macro_rules! create_option_structs {
                 )*
             }
 
+            #[inline]
             $(
                 pub fn $name() -> <$type as OptionTrait>::ValueType {
                     OPTIONS.$name.get()
@@ -79,6 +80,7 @@ impl SpinOptionInt {
         }
     }
 
+    #[inline]
     fn get(&self) -> i32 {
         *self.value.read().unwrap()
     }
@@ -95,6 +97,7 @@ impl OptionTrait for SpinOptionInt {
         }
     }
 
+    #[inline]
     fn get(&self) -> i32 {
         self.get()
     }
@@ -125,6 +128,7 @@ impl SpinOptionFloat {
         }
     }
 
+    #[inline]
     fn get(&self) -> f32 {
         *self.value.read().unwrap()
     }
@@ -141,6 +145,7 @@ impl OptionTrait for SpinOptionFloat {
         }
     }
 
+    #[inline]
     fn get(&self) -> f32 {
         self.get()
     }
@@ -165,6 +170,7 @@ impl CheckOption {
         *self.value.write().unwrap() = new_value;
     }
 
+    #[inline]
     fn get(&self) -> bool {
         *self.value.read().unwrap()
     }
@@ -181,6 +187,7 @@ impl OptionTrait for CheckOption {
         }
     }
 
+    #[inline]
     fn get(&self) -> bool {
         self.get()
     }
@@ -205,6 +212,7 @@ impl StringOption {
         *self.value.write().unwrap() = new_value;
     }
 
+    #[inline]
     fn get(&self) -> String {
         self.value.read().unwrap().clone()
     }
@@ -217,6 +225,7 @@ impl OptionTrait for StringOption {
         self.set_value(new_value.to_string());
     }
 
+    #[inline]
     fn get(&self) -> String {
         self.get()
     }

@@ -30,10 +30,12 @@ impl<'a, const LOG: bool> Search<LOG> {
         Self { tree, interrupt_token, search_info: SearchInfo::new() }
     }
 
+    #[inline]
     pub fn tree(&self) -> &SearchTree {
         &self.tree
     }
 
+    #[inline]
     pub fn search_info(&self) -> &SearchInfo {
         &self.search_info
     }
@@ -340,6 +342,7 @@ fn puct<const FPU: bool>(parent: &PhantomNode, child: &PhantomNode, c: f32) -> f
     value + c * policy * numerator / denominator
 }
 
+#[inline]
 fn sigmoid(input: i32) -> f32 {
     1.0 / (1.0 + (-input as f32 / 400.0).exp())
 }

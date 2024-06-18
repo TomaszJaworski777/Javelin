@@ -11,6 +11,7 @@ impl SearchInfo {
         Self { current_iterations: -1, total_depth: 0, max_depth: 0, time_passed: 0, nodes: 0 }
     }
 
+    #[inline]
     pub fn get_avg_depth(&self) -> u32 {
         self.total_depth / self.current_iterations.max(1) as u32
     }

@@ -13,16 +13,19 @@ impl MoveHistory {
         Self { values: [0; 256], length: 0 }
     }
 
+    #[inline]
     pub fn push(&mut self, key: &ZobristKey) {
         let last_index = self.length;
         self[last_index] = key.key;
         self.length += 1;
     }
 
+    #[inline]
     pub fn clear(&mut self) {
         self.length = 0;
     }
 
+    #[inline]
     pub fn range(&self) -> Range<u8> {
         0..self.length
     }

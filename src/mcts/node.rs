@@ -24,58 +24,72 @@ pub struct Node {
     backward_link: i32,
 }
 impl Node {
+    #[inline]
     pub fn new(result: GameResult, parent: i32, child: usize) -> Self {
         Self { children: Vec::new(), result, parent, child: child as u16, forward_link: -1, backward_link: -1 }
     }
 
+    #[inline]
     pub fn is_terminal(&self) -> bool {
         self.result != GameResult::None
     }
 
+    #[inline]
     pub fn is_extended(&self) -> bool {
         self.is_terminal() || self.children.len() > 0
     }
 
+    #[inline]
     pub fn children(&self) -> &[PhantomNode] {
         &self.children
     }
 
+    #[inline]
     pub fn children_mut(&mut self) -> &mut [PhantomNode] {
         &mut self.children
     }
 
+    #[inline]
     pub fn result(&self) -> GameResult {
         self.result
     }
 
+    #[inline]
     pub fn set_result(&mut self, result: GameResult) {
         self.result = result
     }
 
+    #[inline]
     pub fn parent(&self) -> i32 {
         self.parent
     }
 
+    #[inline]
     pub fn child(&self) -> usize {
         self.child as usize
     }
 
+    #[inline]
     pub fn forward_link(&self) -> i32 {
         self.forward_link
     }
 
+    #[inline]
     pub fn set_forward_link(&mut self, new_value: i32) {
         self.forward_link = new_value
     }
 
+    #[inline]
     pub fn backward_link(&self) -> i32 {
         self.backward_link
     }
 
+    #[inline]
     pub fn set_backward_link(&mut self, new_value: i32) {
         self.backward_link = new_value
     }
 
+    #[inline]
     pub fn clear(&mut self) {
         self.children.clear();
         self.result = GameResult::None;
@@ -83,6 +97,7 @@ impl Node {
         self.backward_link = -1;
     }
 
+    #[inline]
     pub fn clear_parent(&mut self) {
         self.parent = -1;
         self.child = 0;
