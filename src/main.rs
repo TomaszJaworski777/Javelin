@@ -14,16 +14,17 @@ use commands::Commands;
 use std::{env, io::stdin, process::Command};
 
 fn main() {
-    println!("Javelin v{} by Tomasz Jaworski\n", env!("CARGO_PKG_VERSION"));
-
     let mut uci = Commands::new();
 
     let args: Vec<_> = env::args().collect();
     for (index, arg) in args.clone().into_iter().enumerate() {
         if arg == "bench" {
-            Benchmark::run::<false>(if index < args.len() - 1 { args[index + 1].parse().unwrap_or_default() } else { 5 })
+            Benchmark::run::<false>(if index < args.len() - 1 { args[index + 1].parse().unwrap_or_default() } else { 5 });
+            return;
         }
     }
+
+    println!("Javelin v{} by Tomasz Jaworski\n", env!("CARGO_PKG_VERSION"));
 
     loop {
         let mut input_command = String::new();
