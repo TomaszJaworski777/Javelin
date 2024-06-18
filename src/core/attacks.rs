@@ -11,18 +11,22 @@ use rand::Rng;
 
 pub struct Attacks;
 impl Attacks {
+    #[inline]
     pub fn get_pawn_attacks_for_square(square: Square, color: Side) -> Bitboard {
         ATTACK_TABLES.pawn_attacks[color.current()][square.get_value()]
     }
 
+    #[inline]
     pub fn get_knight_attacks_for_square(square: Square) -> Bitboard {
         ATTACK_TABLES.knight_attacks[square.get_value()]
     }
 
+    #[inline]
     pub fn get_king_attacks_for_square(square: Square) -> Bitboard {
         ATTACK_TABLES.king_attacks[square.get_value()]
     }
 
+    #[inline]
     pub fn get_bishop_attacks_for_square(square: Square, occupancy: Bitboard) -> Bitboard {
         let mut occ = occupancy;
         occ &= ATTACK_TABLES.bishop_masks[square.get_value()];
@@ -31,6 +35,7 @@ impl Attacks {
         ATTACK_TABLES.bishop_attacks[square.get_value()][occ.get_value() as usize]
     }
 
+    #[inline]
     pub fn get_rook_attacks_for_square(square: Square, occupancy: Bitboard) -> Bitboard {
         let mut occ = occupancy;
         occ &= ATTACK_TABLES.rook_masks[square.get_value()];

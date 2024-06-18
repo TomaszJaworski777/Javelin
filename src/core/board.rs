@@ -43,30 +43,37 @@ impl Board {
         }
     }
 
+    #[inline]
     pub fn get_piece_mask_for_both(&self, piece: usize) -> Bitboard {
         self.pieces[piece - 1]
     }
 
+    #[inline]
     pub fn get_piece_mask(&self, piece: usize, side: Side) -> Bitboard {
         self.pieces[piece - 1] & self.piece_maps[side.current()]
     }
 
+    #[inline]
     pub fn get_occupancy(&self) -> Bitboard {
         self.piece_maps[0] | self.piece_maps[1]
     }
 
+    #[inline]
     pub fn get_allied_occupancy(&self) -> Bitboard {
         self.piece_maps[self.side_to_move.current()]
     }
 
+    #[inline]
     pub fn get_opponent_occupancy(&self) -> Bitboard {
         self.piece_maps[self.side_to_move.opposite()]
     }
 
+    #[inline]
     pub fn get_occupancy_for_side(&self, side: Side) -> Bitboard {
         self.piece_maps[side.current()]
     }
 
+    #[inline]
     pub fn get_king_square(&self, color: Side) -> Square {
         self.get_piece_mask(Piece::KING, color).ls1b_square()
     }
@@ -81,6 +88,7 @@ impl Board {
         return (0, Side::WHITE);
     }
 
+    #[inline]
     fn get_piece_color_on_square(&self, square: Square) -> Side {
         if self.piece_maps[Side::WHITE.current()].get_bit(square) {
             Side::WHITE
@@ -89,18 +97,21 @@ impl Board {
         }
     }
 
+    #[inline]
     pub fn set_piece_on_square(&mut self, square: Square, side: Side, piece: usize) {
         self.pieces[piece - 1].set_bit(square);
         self.piece_maps[side.current()].set_bit(square);
         self.zobrist.update_piece_hash(piece - 1, side.current(), square)
     }
 
+    #[inline]
     pub fn remove_piece_on_square(&mut self, square: Square, side: Side, piece: usize) {
         self.pieces[piece - 1].pop_bit(square);
         self.piece_maps[side.current()].pop_bit(square);
         self.zobrist.update_piece_hash(piece - 1, side.current(), square)
     }
 
+    #[inline]
     pub fn is_in_check(&self) -> bool {
         self.checkers.is_not_empty()
     }
@@ -126,6 +137,7 @@ impl Board {
         false
     }
 
+    #[inline]
     pub fn is_square_attacked(&self, square: Square, attacker_color: Side) -> bool {
         self.is_square_attacked_extended(square, attacker_color, self.get_occupancy())
     }
@@ -139,6 +151,7 @@ impl Board {
         return false;
     }
 
+    #[inline]
     pub fn all_attackers_to_square(&self, occupancy: Bitboard, square: Square) -> Bitboard {
         // When performing a static exchange evaluation we need to find all
         // attacks to a given square, but we also are given an updated occupied
@@ -166,6 +179,7 @@ impl Board {
         pawns && major_pieces && white_minor_pieces && black_minor_pieces
     }
 
+    #[inline]
     pub fn three_fold(&self) -> bool {
         let mut appearance_count = 0;
         for mv_key in self.move_history.range().rev() {

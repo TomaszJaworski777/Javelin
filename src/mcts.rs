@@ -30,10 +30,12 @@ impl<'a, const LOG: bool> Search<LOG> {
         Self { tree, interrupt_token, search_info: SearchInfo::new() }
     }
 
+    #[inline]
     pub fn tree(&self) -> &SearchTree {
         &self.tree
     }
 
+    #[inline]
     pub fn search_info(&self) -> &SearchInfo {
         &self.search_info
     }
@@ -141,11 +143,6 @@ impl<'a, const LOG: bool> Search<LOG> {
     ) -> f32 {
         *current_depth += 1;
 
-        if current_node_index == -1 {
-            println!("WTF");
-            println!("DEPTH {current_depth}");
-            println!("ROOT {}", self.tree.root_index());
-        }
         self.tree.make_recently_used(current_node_index);
 
         //Data to trace phantom parent of currently processed node
@@ -169,7 +166,11 @@ impl<'a, const LOG: bool> Search<LOG> {
 
             //Select best phantom child (selection returns index of the move from it's parent)
             //based on PUCT formula
-            let new_child_index = self.select_node(current_node_index);
+            let new_child_index = if *current_depth == 1 {
+                self.select_node::<true>(current_node_index)
+            } else {
+                self.select_node::<false>(current_node_index)
+            };
 
             //Index being equal to MAX means that selected child is terminal node and
             //when that happens we want to return it's terminal value, otherwise we
@@ -223,7 +224,7 @@ impl<'a, const LOG: bool> Search<LOG> {
         score
     }
 
-    fn select_node(&mut self, current_node_index: i32) -> usize {
+    fn select_node<const ROOT: bool>(&mut self, current_node_index: i32) -> usize {
         if self.tree[current_node_index].children().len() == 0 {
             panic!("trying to pick from no children!");
         }
@@ -238,7 +239,7 @@ impl<'a, const LOG: bool> Search<LOG> {
         let mut win_len = 0;
         let mut best = 0;
         let mut max = f32::NEG_INFINITY;
-        let c = 1.41;
+        let c = if ROOT { Options::root_c() } else { Options::non_root_c() };
 
         //Iterate though all children of the node and calculate puct value of each of them in
         //order to find the child with the highest PUCT score
@@ -341,6 +342,7 @@ fn puct<const FPU: bool>(parent: &PhantomNode, child: &PhantomNode, c: f32) -> f
     value + c * policy * numerator / denominator
 }
 
+#[inline]
 fn sigmoid(input: i32) -> f32 {
     1.0 / (1.0 + (-input as f32 / 400.0).exp())
 }

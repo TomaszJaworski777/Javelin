@@ -42,6 +42,7 @@ impl SearchTree {
         tree
     }
 
+    #[inline]
     pub fn mem_to_capacity(mem_size: usize) -> usize {
         mem_size * 1024 * 1024 / (std::mem::size_of::<Node>() * 8)
     }
@@ -191,22 +192,27 @@ impl SearchTree {
         self[node_index].set_forward_link(-1);
     }
 
+    #[inline]
     pub fn node_count(&self) -> usize {
         self.used_nodes_count
     }
 
+    #[inline]
     pub fn capacity(&self) -> usize {
         self.tree.len()
     }
 
+    #[inline]
     pub fn usage(&self) -> f32 {
         self.node_count() as f32 / self.capacity() as f32
     }
 
+    #[inline]
     pub fn root_index(&self) -> i32 {
         self.root_index
     }
 
+    #[inline]
     pub fn set_root_index(&mut self, new_value: i32) {
         self.root_index = new_value;
         self.root_phantom = *self.get_phantom(self[new_value].parent(), self[new_value].child());
@@ -214,6 +220,7 @@ impl SearchTree {
         self[new_value].set_result(GameResult::None);
     }
 
+    #[inline]
     pub fn get_phantom(&self, node_index: i32, child_index: usize) -> &PhantomNode {
         if node_index == -1 {
             &self.root_phantom
@@ -222,6 +229,7 @@ impl SearchTree {
         }
     }
 
+    #[inline]
     pub fn get_phantom_mut(&mut self, node_index: i32, child_index: usize) -> &mut PhantomNode {
         if node_index == -1 {
             &mut self.root_phantom
@@ -230,6 +238,7 @@ impl SearchTree {
         }
     }
 
+    #[inline]
     pub fn get_best_phantom(&self) -> &PhantomNode {
         self.get_best_child_for_node(self.root_index())
     }

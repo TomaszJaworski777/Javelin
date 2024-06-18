@@ -84,6 +84,7 @@ impl<'a> MoveOrderer<'a> {
     }
 }
 
+#[inline]
 fn get_move_value(board: &Board, mv: &Move) -> i32 {
     let mut result = 0;
 

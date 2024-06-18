@@ -29,6 +29,7 @@ macro_rules! create_option_structs {
                 )*
             }
 
+            #[inline]
             $(
                 pub fn $name() -> <$type as OptionTrait>::ValueType {
                     OPTIONS.$name.get()
@@ -45,7 +46,10 @@ macro_rules! create_option_structs {
 create_option_structs!(
     hash: SpinOptionInt => SpinOptionInt::new(64, 1, 65536), "Hash",
     move_overhead: SpinOptionInt => SpinOptionInt::new(10, 0, 500), "MoveOverhead",
-    root_pst: SpinOptionFloat => SpinOptionFloat::new(4.5, 0.1, 10.0), "RootPST"
+    root_pst: SpinOptionFloat => SpinOptionFloat::new(4.5, 0.1, 10.0), "RootPST",
+    non_root_pst: SpinOptionFloat => SpinOptionFloat::new(1.0, 0.1, 10.0), "NonRootPST",
+    root_c: SpinOptionFloat => SpinOptionFloat::new(1.41, 0.1, 10.0), "RootC",
+    non_root_c: SpinOptionFloat => SpinOptionFloat::new(1.41, 0.1, 10.0), "NonRootC",
 );
 
 #[allow(dead_code)]
@@ -76,6 +80,7 @@ impl SpinOptionInt {
         }
     }
 
+    #[inline]
     fn get(&self) -> i32 {
         *self.value.read().unwrap()
     }
@@ -92,6 +97,7 @@ impl OptionTrait for SpinOptionInt {
         }
     }
 
+    #[inline]
     fn get(&self) -> i32 {
         self.get()
     }
@@ -122,6 +128,7 @@ impl SpinOptionFloat {
         }
     }
 
+    #[inline]
     fn get(&self) -> f32 {
         *self.value.read().unwrap()
     }
@@ -138,6 +145,7 @@ impl OptionTrait for SpinOptionFloat {
         }
     }
 
+    #[inline]
     fn get(&self) -> f32 {
         self.get()
     }
@@ -162,6 +170,7 @@ impl CheckOption {
         *self.value.write().unwrap() = new_value;
     }
 
+    #[inline]
     fn get(&self) -> bool {
         *self.value.read().unwrap()
     }
@@ -178,6 +187,7 @@ impl OptionTrait for CheckOption {
         }
     }
 
+    #[inline]
     fn get(&self) -> bool {
         self.get()
     }
@@ -202,6 +212,7 @@ impl StringOption {
         *self.value.write().unwrap() = new_value;
     }
 
+    #[inline]
     fn get(&self) -> String {
         self.value.read().unwrap().clone()
     }
@@ -214,6 +225,7 @@ impl OptionTrait for StringOption {
         self.set_value(new_value.to_string());
     }
 
+    #[inline]
     fn get(&self) -> String {
         self.get()
     }

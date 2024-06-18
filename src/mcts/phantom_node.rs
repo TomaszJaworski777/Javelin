@@ -11,34 +11,42 @@ pub struct PhantomNode {
 }
 #[allow(unused)]
 impl PhantomNode {
+    #[inline]
     pub fn new(node_index: i32, mv: Move, policy: f32) -> Self {
         Self { node_index, mv, policy: (policy * f32::from(i16::MAX)) as i16, total_score: 0.0, visits: 0 }
     }
 
+    #[inline]
     pub fn index(&self) -> i32 {
         self.node_index
     }
 
+    #[inline]
     pub fn set_index(&mut self, index: i32) {
         self.node_index = index
     }
 
+    #[inline]
     pub fn mv(&self) -> Move {
         self.mv
     }
 
+    #[inline]
     pub fn policy(&self) -> f32 {
         f32::from(self.policy) / f32::from(i16::MAX)
     }
 
+    #[inline]
     pub fn visits(&self) -> u32 {
         self.visits
     }
 
+    #[inline]
     pub fn total_score(&self) -> f32 {
         self.total_score
     }
 
+    #[inline]
     pub fn avg_score(&self) -> f32 {
         if self.visits == 0 {
             0.5
@@ -47,11 +55,13 @@ impl PhantomNode {
         }
     }
 
+    #[inline]
     pub fn apply_score(&mut self, score: f32) {
         self.visits += 1;
         self.total_score += score;
     }
 
+    #[inline]
     pub fn update_policy(&mut self, new_policy: f32) {
         self.policy = (new_policy * f32::from(i16::MAX)) as i16
     }

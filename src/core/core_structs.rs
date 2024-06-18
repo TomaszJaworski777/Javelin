@@ -51,15 +51,18 @@ impl Move {
     };
 
     #[allow(unused)]
+    #[inline]
     pub fn get_value(&self) -> u16 {
         self.value
     }
 
     #[allow(unused)]
+    #[inline]
     pub fn from_raw(value: u16) -> Self {
         Move { value: value }
     }
 
+    #[inline]
     pub fn from_squares(from_square: Square, to_square: Square, mask: u16) -> Self {
         Move { value: Move::init_move(from_square, to_square) | mask }
     }
@@ -71,38 +74,47 @@ impl Move {
         result
     }
 
+    #[inline]
     pub fn get_from_square(&self) -> Square {
         Square::from_raw(get_bit_chunk(self.value, 0, 0b0000_000000_111111) as usize)
     }
 
+    #[inline]
     pub fn get_to_square(&self) -> Square {
         Square::from_raw(get_bit_chunk(self.value, 6, 0b0000_000000_111111) as usize)
     }
 
+    #[inline]
     pub fn is_promotion(&self) -> bool {
         self.value & Move::PROMOTION > 0
     }
 
+    #[inline]
     pub fn get_promotion_piece(&self) -> usize {
         get_bit_chunk(self.value.into(), 12, 0b0000_000000_000011) + 2
     }
 
+    #[inline]
     pub fn is_capture(&self) -> bool {
         self.value & Move::CAPTURE_MASK > 0
     }
 
+    #[inline]
     pub fn is_en_passant(&self) -> bool {
         self.is_capture() && self.value & 0xF000 == Move::EN_PASSANT_MASK | Move::CAPTURE_MASK
     }
 
+    #[inline]
     pub fn is_double_push(&self) -> bool {
         self.value & 0xF000 == Move::DOUBLE_PUSH_MASK
     }
 
+    #[inline]
     pub fn is_king_castle(&self) -> bool {
         self.value & 0xF000 == Move::KING_CASTLE_MASK
     }
 
+    #[inline]
     pub fn is_queen_castle(&self) -> bool {
         self.value & 0xF000 == Move::QUEEN_CASTLE_MASK
     }
@@ -192,34 +204,42 @@ impl Square {
     pub const H8: Self = Self { value: 63 };
     pub const NULL: Self = Self { value: 64 };
 
+    #[inline]
     pub const fn from_raw(value: usize) -> Self {
         Self { value }
     }
 
+    #[inline]
     pub const fn from_coords(rank: usize, file: usize) -> Self {
         Self { value: rank * 8 + file }
     }
 
+    #[inline]
     pub const fn get_value(&self) -> usize {
         self.value
     }
 
+    #[inline]
     pub const fn get_rank(&self) -> usize {
         self.value / 8
     }
 
+    #[inline]
     pub const fn get_file(&self) -> usize {
         self.value % 8
     }
 
+    #[inline]
     pub const fn get_bit(&self) -> Bitboard {
         Bitboard::from_raw(1u64 << self.value)
     }
 
+    #[inline]
     pub const fn equals(&self, rhs: Square) -> bool {
         self.value == rhs.value
     }
 
+    #[inline]
     pub const fn flip(&self) -> Self {
         Self::from_raw(self.value ^ 56)
     }
@@ -269,22 +289,27 @@ impl Side {
     pub const WHITE: Side = Side::from_raw(0);
     pub const BLACK: Side = Side::from_raw(1);
 
+    #[inline]
     pub const fn from_raw(value: usize) -> Self {
         Self { 0: value }
     }
 
+    #[inline]
     pub const fn current(&self) -> usize {
         self.0
     }
 
+    #[inline]
     pub const fn opposite(&self) -> usize {
         1 - self.0
     }
 
+    #[inline]
     pub const fn flipped(&self) -> Self {
         Self { 0: 1 - self.0 }
     }
 
+    #[inline]
     pub fn mut_flip(&mut self) {
         self.0 = 1 - self.0;
     }
@@ -301,14 +326,17 @@ impl CastleRights {
     pub const BLACK_QUEEN: u8 = 3;
     pub const NULL: Self = Self { value: 0 };
 
+    #[inline]
     pub fn set_right(&mut self, right: u8) {
         set_bit_to_one(&mut self.value, right);
     }
 
+    #[inline]
     pub fn remove_right(&mut self, right: u8) {
         set_bit_to_zero(&mut self.value, right);
     }
 
+    #[inline]
     pub fn get_right(&self, right: u8) -> bool {
         get_bit(self.value, right) > 0
     }

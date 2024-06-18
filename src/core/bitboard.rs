@@ -28,104 +28,129 @@ impl Bitboard {
     pub const FULL: Self = Self::from_raw(0xFFFFFFFFFFFFFFFF);
     pub const EMPTY: Self = Self::from_raw(0);
 
+    #[inline]
     pub const fn from_raw(value: u64) -> Self {
         Self { value }
     }
 
+    #[inline]
     pub const fn get_value(&self) -> u64 {
         self.value
     }
 
+    #[inline]
     pub const fn pop_count(&self) -> u32 {
         self.value.count_ones()
     }
 
+    #[inline]
     pub const fn ls1b_square(&self) -> Square {
         Square::from_raw(self.value.trailing_zeros() as usize)
     }
 
+    #[inline]
     pub fn set_bit(&mut self, square: Square) {
         self.mut_or(square.get_bit())
     }
 
+    #[inline]
     pub fn pop_bit(&mut self, square: Square) {
         self.mut_and(square.get_bit().inverse())
     }
 
+    #[inline]
     pub fn pop_ls1b_square(&mut self) -> Square {
         let square = self.ls1b_square();
         self.value &= self.value - 1;
         square
     }
 
+    #[inline]
     pub const fn get_bit(&self, square: Square) -> bool {
         !self.and(square.get_bit()).is_empty()
     }
 
+    #[inline]
     pub const fn is_empty(&self) -> bool {
         self.value == 0
     }
 
+    #[inline]
     pub const fn is_not_empty(&self) -> bool {
         self.value != 0
     }
 
+    #[inline]
     pub const fn equals(&self, rhs: Bitboard) -> bool {
         self.value == rhs.value
     }
 
+    #[inline]
     pub const fn only_one_bit(&self) -> bool {
         !self.is_empty() && (self.value & self.value.wrapping_sub(1)) == 0
     }
 
+    #[inline]
     pub const fn multiple_one_bits(&self) -> bool {
         !self.is_empty() && (self.value & self.value.wrapping_sub(1)) != 0
     }
 
+    #[inline]
     pub fn mut_or(&mut self, rhs: Bitboard) {
         self.value |= rhs.get_value();
     }
 
+    #[inline]
     pub fn mut_and(&mut self, rhs: Bitboard) {
         self.value &= rhs.get_value();
     }
 
+    #[inline]
     pub const fn and(&self, rhs: Bitboard) -> Self {
         Self { value: self.value & rhs.value }
     }
 
+    #[inline]
     pub const fn or(&self, rhs: Bitboard) -> Self {
         Self { value: self.value | rhs.value }
     }
 
+    #[inline]
     pub const fn xor(&self, rhs: Bitboard) -> Self {
         Self { value: self.value ^ rhs.value }
     }
 
+    #[inline]
     pub const fn inverse(&self) -> Self {
         Self { value: !self.value }
     }
 
+    #[inline]
     pub const fn flip(&self) -> Self {
         Self { value: self.value.swap_bytes() }
     }
 
+    #[inline]
     pub const fn include(&self, square: Square) -> Self {
         self.or(square.get_bit())
     }
 
+    #[inline]
     pub const fn exclude(&self, square: Square) -> Self {
         self.and(square.get_bit().inverse())
     }
 
+    #[inline]
     pub const fn shift_left(self, rhs: u32) -> Self {
         Self { value: self.value << rhs }
     }
 
+    #[inline]
     pub const fn shift_right(self, rhs: u32) -> Self {
         Self { value: self.value >> rhs }
     }
 
+    #[inline]
     pub const fn wrapping_mul(self, rhs: Bitboard) -> Self {
         Self { value: self.value.wrapping_mul(rhs.get_value()) }
     }

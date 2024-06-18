@@ -405,6 +405,7 @@ fn generate_rooks_moves(move_list: &mut MoveList, board: &Board, move_mask: Bitb
     }
 }
 
+#[inline]
 fn populate_pawn_promotion_moves(move_list: &mut MoveList, piece_position: Square, moves: Bitboard, move_masks: u16) {
     for pawn_move in moves {
         move_list.push(Move::from_squares(piece_position, pawn_move, Move::PROMOTION_KNIGHT_MASK | move_masks));
@@ -414,12 +415,14 @@ fn populate_pawn_promotion_moves(move_list: &mut MoveList, piece_position: Squar
     }
 }
 
+#[inline]
 fn populate_pawn_moves(move_list: &mut MoveList, piece_position: Square, moves: Bitboard, move_masks: u16) {
     for pawn_move in moves {
         move_list.push(Move::from_squares(piece_position, pawn_move, move_masks));
     }
 }
 
+#[inline]
 fn populate_piece_moves(move_list: &mut MoveList, board: &Board, piece_position: Square, moves: Bitboard) {
     let quiet_moves = moves & !board.get_occupancy();
     let captures = moves & board.get_opponent_occupancy();
