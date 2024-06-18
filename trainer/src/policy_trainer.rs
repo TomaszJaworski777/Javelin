@@ -37,21 +37,20 @@ impl PolicyTrainer {
         let mut superbatch_index = 0;
         let mut batch_index = 0;
 
-        let policy_data = PolicyDataLoader::prepare_policy_dataset(&train_data.policy_data);
+        let mut policy_data = PolicyDataLoader::prepare_policy_dataset(&train_data.policy_data);
 
         'training: loop {
-            let mut data = policy_data.clone();
-            data.shuffle(&mut thread_rng());
+            policy_data.shuffle(&mut thread_rng());
             let timer = Instant::now();
 
-            for (index, batch) in data.chunks(BATCH_SIZE).enumerate() {
+            for (index, batch) in policy_data.chunks(BATCH_SIZE).enumerate() {
                 let mut grad = boxed_and_zeroed();
                 running_error += gradient_batch(threads, &policy, &mut grad, batch);
                 let adj = 1.0 / batch.len() as f32;
                 update(&mut policy, &grad, adj, learning_rate, &mut momentum, &mut velocity);
 
                 batch_index += 1;
-                let l = data.len();
+                let l: usize = policy_data.len();
                 print!(
                     "> Superbatch {}/{superbatches} Batch {}/{BATCHES_PER_SUPERBATCH} - {index} - {l} Speed {:.0}\r",
                     superbatch_index + 1,
