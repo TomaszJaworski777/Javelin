@@ -63,6 +63,7 @@ Javelin supports all necessary commands to initialize UCI protocol, full descrip
    * Tree Reuse
    * Flatten Policy At Root
    * Reuse Of Least Recently Used Node
+   * First play urgency
 * Quiescence Search
    * MVV-LVA
    * Static Exchange Evaluation
