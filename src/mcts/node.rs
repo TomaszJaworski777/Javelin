@@ -111,20 +111,14 @@ impl Node {
         }
 
         let mut total_policy = 0.0;
-        let root_pst = Options::root_pst();
+        let pst = if ROOT { Options::root_pst() } else { Options::non_root_pst() };
 
         //Iterate through created children to apply first part of softmax and pst dampening
         for child_phantom in self.children_mut() {
             let policy: f32 = child_phantom.index() as f32 / 1000.0;
 
-            let policy = if ROOT {
-                ((policy - max_policy_value) / root_pst).exp()
-            } else {
-                (policy - max_policy_value).exp()
-            };
-
+            let policy = ((policy - max_policy_value) / pst).exp();
             child_phantom.set_index((policy * 1000.0) as i32);
-
             total_policy += policy;
         }
 
