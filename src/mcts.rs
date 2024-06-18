@@ -246,7 +246,7 @@ impl<'a, const LOG: bool> Search<LOG> {
             //If node has not been visited yet then we don't yet know if it is terminal node or not
             let puct = if child_phantom.visits() == 0 {
                 proven_loss = false;
-                puct(parent_phantom, child_phantom, c)
+                puct::<true>(parent_phantom, child_phantom, c)
             } else {
                 //If node has been spawned, then we can extract it from the tree and check
                 //if result of this node is winning. If node hasn't been spawned yet, then we
@@ -263,7 +263,7 @@ impl<'a, const LOG: bool> Search<LOG> {
                     proven_loss = false;
                 }
 
-                puct(parent_phantom, child_phantom, c)
+                puct::<false>(parent_phantom, child_phantom, c)
             };
 
             if puct > max {
@@ -330,15 +330,15 @@ impl<'a, const LOG: bool> Search<LOG> {
 
 //PUCT formula V + C * P * (N.max(1).sqrt()/n + 1) where N = number of visits to parent node, n = number of visits to a child
 #[inline]
-fn puct(parent: &PhantomNode, child: &PhantomNode, c: f32) -> f32 {
-    let n = parent.visits();
-    let ni = child.visits();
-    let v = child.avg_score();
-    let p = child.policy();
+fn puct<const FPU: bool>(parent: &PhantomNode, child: &PhantomNode, c: f32) -> f32 {
+    let visit_count = parent.visits();
+    let parent_visit_count = child.visits();
+    let value = if FPU { 1.0 - parent.avg_score() } else { child.avg_score() };
+    let policy = child.policy();
 
-    let numerator = (n.max(1) as f32).sqrt();
-    let denominator = ni as f32 + 1.0;
-    v + c * p * (numerator / denominator)
+    let numerator = (visit_count.max(1) as f32).sqrt();
+    let denominator = parent_visit_count as f32 + 1.0;
+    value + c * policy * numerator / denominator
 }
 
 fn sigmoid(input: i32) -> f32 {
