@@ -46,10 +46,10 @@ macro_rules! create_option_structs {
 create_option_structs!(
     hash: SpinOptionInt => SpinOptionInt::new(64, 1, 65536), "Hash",
     move_overhead: SpinOptionInt => SpinOptionInt::new(10, 0, 500), "MoveOverhead",
-    root_pst: SpinOptionFloat => SpinOptionFloat::new(4.5, 0.1, 10.0), "RootPST",
+    root_pst: SpinOptionFloat => SpinOptionFloat::new(4.55, 0.1, 10.0), "RootPST",
     non_root_pst: SpinOptionFloat => SpinOptionFloat::new(1.0, 0.1, 10.0), "NonRootPST",
-    root_c: SpinOptionFloat => SpinOptionFloat::new(1.41, 0.1, 10.0), "RootC",
-    non_root_c: SpinOptionFloat => SpinOptionFloat::new(1.41, 0.1, 10.0), "NonRootC",
+    root_c: SpinOptionFloat => SpinOptionFloat::new(4.05, 0.1, 10.0), "RootC",
+    non_root_c: SpinOptionFloat => SpinOptionFloat::new(0.82, 0.1, 10.0), "NonRootC",
 );
 
 #[allow(dead_code)]
@@ -151,13 +151,19 @@ impl OptionTrait for SpinOptionFloat {
     }
 
     fn print(&self, name: &str) {
-        println!("option name {} type spin default {:?} min {:?} max {:?}", name, (self.default * 100.0) as i32, (self.min * 100.0) as i32, (self.max * 100.0) as i32);
+        println!(
+            "option name {} type spin default {:?} min {:?} max {:?}",
+            name,
+            (self.default * 100.0) as i32,
+            (self.min * 100.0) as i32,
+            (self.max * 100.0) as i32
+        );
     }
 }
 
 pub struct CheckOption {
     value: Arc<RwLock<bool>>,
-    default: bool
+    default: bool,
 }
 
 #[allow(dead_code)]
@@ -199,7 +205,7 @@ impl OptionTrait for CheckOption {
 
 pub struct StringOption {
     value: Arc<RwLock<String>>,
-    default: String
+    default: String,
 }
 
 #[allow(dead_code)]

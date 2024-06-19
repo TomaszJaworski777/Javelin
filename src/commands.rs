@@ -248,6 +248,6 @@ impl Commands {
             return;
         }
 
-        Benchmark::run(args[0].parse().unwrap_or_default());
+        Benchmark::run::<true>(args[0].parse().unwrap_or_default());
     }
 }

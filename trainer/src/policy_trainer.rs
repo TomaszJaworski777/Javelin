@@ -80,10 +80,8 @@ impl PolicyTrainer {
                 }
             }
         }
-        
-        loop {
-            
-        }
+
+        loop {}
     }
 }
 

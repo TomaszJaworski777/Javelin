@@ -13,7 +13,7 @@ pub use policy_network::SubNet;
 #[allow(unused)]
 pub use value_network::ValueNetwork;
 
-pub const VALUE_NETWORK: ValueNetwork = 
+pub const VALUE_NETWORK: ValueNetwork =
     unsafe { std::mem::transmute(*include_bytes!("../resources/nets/value_005.net")) };
 
 pub const POLICY_NETWORK: PolicyNetwork =
