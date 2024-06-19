@@ -13,16 +13,16 @@ use tch::{
 use value_trainer::ValueTrainer;
 
 fn main() {
-    policy_trainer();
+    value_trainer();
 }
 
 #[allow(unused)]
 fn value_trainer() {
-    let mut trainer = ValueTrainer::new("value_005");
+    let mut trainer = ValueTrainer::new("value_006");
     let mut structure = seq()
-        .add(linear(trainer.var_store.root() / format!("0"), 768, 32, Default::default()))
+        .add(linear(trainer.var_store.root() / format!("0"), 768, 64, Default::default()))
         .add_fn(move |xs: &Tensor| xs.clamp(0.0, 1.0).pow_tensor_scalar(2))
-        .add(linear(trainer.var_store.root() / format!("1"), 32, 1, Default::default()))
+        .add(linear(trainer.var_store.root() / format!("1"), 64, 1, Default::default()))
         .add_fn(move |xs: &Tensor| xs.sigmoid());
 
     trainer.add_structure(structure);
