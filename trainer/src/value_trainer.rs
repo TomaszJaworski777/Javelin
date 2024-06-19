@@ -130,7 +130,7 @@ impl<'a> ValueTrainer<'a> {
                         .expect("Failed to save training progress!");
                     let checkpoint_path = ValueTrainer::CHECKPOINT_PATH.to_string()
                         + format!("{}-sb{}.net", self.name, superbatch_index).as_str();
-                    export_value(&self.var_store, &checkpoint_path, [768, 32, 1]);
+                    export_value(&self.var_store, &checkpoint_path, [768, 64, 1]);
 
                     if superbatch_index == self.superbach_count {
                         break 'training;
