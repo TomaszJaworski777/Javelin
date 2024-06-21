@@ -8,12 +8,13 @@ pub struct PhantomNode {
     policy: i16,
     visits: u32,
     total_score: f32,
+    total_score_squared: f32,
 }
 #[allow(unused)]
 impl PhantomNode {
     #[inline]
     pub fn new(node_index: i32, mv: Move, policy: f32) -> Self {
-        Self { node_index, mv, policy: (policy * f32::from(i16::MAX)) as i16, total_score: 0.0, visits: 0 }
+        Self { node_index, mv, policy: (policy * f32::from(i16::MAX)) as i16, total_score: 0.0, visits: 0, total_score_squared: 0.0 }
     }
 
     #[inline]
@@ -59,11 +60,18 @@ impl PhantomNode {
     pub fn apply_score(&mut self, score: f32) {
         self.visits += 1;
         self.total_score += score;
+        self.total_score_squared += score.powi(2);
     }
 
     #[inline]
     pub fn update_policy(&mut self, new_policy: f32) {
         self.policy = (new_policy * f32::from(i16::MAX)) as i16
+    }
+
+    pub fn variance(&self) -> f32 {
+        let visits_f = self.visits as f32;
+        let var = self.total_score_squared / visits_f - (self.total_score / visits_f).powi(2);
+        var.max(0.0)
     }
 
     pub fn print_node(
