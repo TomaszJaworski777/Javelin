@@ -50,7 +50,8 @@ impl Commands {
         commands.add_command("go", Commands::go_command);
         commands.add_command("stop", Commands::stop_search_command);
         commands.add_command("tree", Commands::tree_command);
-        commands.add_command("perft", Commands::perft_command);
+        commands.add_command("perft_bulk", Commands::perft_command);
+        commands.add_command("perft", Commands::perft_no_bulk_command);
         commands.add_command("bench", Commands::bench_command);
 
         commands
@@ -241,6 +242,14 @@ impl Commands {
         }
 
         Perft::execute::<true>(&context.board, args[0].parse().unwrap_or_default(), true);
+    }
+
+    fn perft_no_bulk_command(context: &mut ContextVariables, args: &[String]) {
+        if args.len() != 1 {
+            return;
+        }
+
+        Perft::execute::<false>(&context.board, args[0].parse().unwrap_or_default(), true);
     }
 
     fn bench_command(context: &mut ContextVariables, args: &[String]) {

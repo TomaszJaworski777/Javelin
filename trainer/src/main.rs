@@ -13,7 +13,7 @@ use tch::{
 use value_trainer::ValueTrainer;
 
 fn main() {
-    value_trainer();
+    policy_trainer();
 }
 
 #[allow(unused)]
