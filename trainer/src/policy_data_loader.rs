@@ -10,7 +10,7 @@ impl PolicyDataLoader {
     pub fn prepare_policy_dataset(data: &Vec<ChessPolicyData>) -> Vec<(SparseVector, Vec<(usize, usize, f32)>)> {
         let mut result: Vec<(SparseVector, Vec<(usize, usize, f32)>)> = Vec::new();
 
-        for data_entry in data {
+        for (index, data_entry) in data.into_iter().enumerate() {
             if data_entry.board.num == 0 {
                 continue;
             }
@@ -41,6 +41,7 @@ impl PolicyDataLoader {
 
             result.push((extract_inputs(converted_bitboards), index_results));
         }
+
         result
     }
 }

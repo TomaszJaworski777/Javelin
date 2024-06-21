@@ -47,7 +47,7 @@ impl SelfPlayThread {
                     gen_data_clone.lock().unwrap().value_filtered += 1;
                 }
 
-                if piece_board.num <= 100 && false {
+                if piece_board.num <= 104 {
                     let mut policy_data =
                         ChessPolicyData { board: piece_board, moves: [ChessMoveInfo::default(); 104] };
 

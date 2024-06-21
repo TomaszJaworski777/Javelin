@@ -105,7 +105,7 @@ impl<'a, const LOG: bool> Search<LOG> {
             }
 
             //when we found forcing line to end the gmae, we end the search
-            if self.tree[0].is_terminal() {
+            if self.tree[self.tree.root_index()].is_terminal() {
                 break;
             }
 
