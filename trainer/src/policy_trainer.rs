@@ -36,10 +36,13 @@ impl PolicyTrainer {
         let mut running_error = 0.0;
         let mut superbatch_index = 0;
         let mut batch_index = 0;
-
-        let mut policy_data = PolicyDataLoader::prepare_policy_dataset(&train_data.policy_data);
+        let mut data_chunk_start_index = 0;
 
         'training: loop {
+            let data_chunk_end_index =
+            (data_chunk_start_index + 512 * BATCH_SIZE).min(train_data.policy_data.len());
+            let mut policy_data = PolicyDataLoader::prepare_policy_dataset(&&train_data.policy_data[data_chunk_start_index..data_chunk_end_index].to_vec());
+            data_chunk_start_index = data_chunk_end_index % train_data.policy_data.len();
             policy_data.shuffle(&mut thread_rng());
             let timer = Instant::now();
 
