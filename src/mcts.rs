@@ -10,8 +10,9 @@ pub use search_info::SearchInfo;
 pub use search_rules::SearchRules;
 pub use search_tree::SearchTree;
 use std::sync::RwLock;
+pub use qsearch::qsearch;
 
-use self::{node::Node, phantom_node::PhantomNode, qsearch::qsearch};
+use self::{node::Node, phantom_node::PhantomNode};
 use crate::{
     core::{Board, Move, MoveList, MoveProvider},
     eval::Evaluation,
