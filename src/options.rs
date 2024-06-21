@@ -46,10 +46,14 @@ macro_rules! create_option_structs {
 create_option_structs!(
     hash: SpinOptionInt => SpinOptionInt::new(64, 1, 65536), "Hash",
     move_overhead: SpinOptionInt => SpinOptionInt::new(10, 0, 500), "MoveOverhead",
-    root_pst: SpinOptionFloat => SpinOptionFloat::new(4.55, 0.1, 10.0), "RootPST",
+    root_pst: SpinOptionFloat => SpinOptionFloat::new(4.0, 0.1, 10.0), "RootPST",
     non_root_pst: SpinOptionFloat => SpinOptionFloat::new(1.0, 0.1, 10.0), "NonRootPST",
-    root_c: SpinOptionFloat => SpinOptionFloat::new(4.05, 0.1, 10.0), "RootC",
-    non_root_c: SpinOptionFloat => SpinOptionFloat::new(0.82, 0.1, 10.0), "NonRootC",
+    c_value: SpinOptionFloat => SpinOptionFloat::new(0.65, 0.1, 10.0), "CValue",
+    root_c_value: SpinOptionFloat => SpinOptionFloat::new(0.65, 0.1, 10.0), "RootCValue",
+    c_variance_weight: SpinOptionFloat => SpinOptionFloat::new(0.85, 0.0, 2.0), "CVarianceWeight",
+    c_variance_scale: SpinOptionFloat => SpinOptionFloat::new(0.2, 0.0, 2.0), "CVarianceScale",
+    c_visits_scale: SpinOptionInt => SpinOptionInt::new(64, 1, 512), "CVisitsScale",
+    expl_tau: SpinOptionFloat => SpinOptionFloat::new(0.5, 0.1, 1.0), "ExpansionTau",
 );
 
 #[allow(dead_code)]
