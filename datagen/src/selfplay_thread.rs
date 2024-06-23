@@ -32,6 +32,13 @@ impl SelfPlayThread {
                 search.reuse_tree(&current_board, &previous_board);
                 let mv = search.run::<false>(rules, &current_board);
 
+                gen_data_clone.lock().unwrap().captures += u32::from(mv.is_capture());
+                gen_data_clone.lock().unwrap().promotion += u32::from(mv.is_promotion());
+                gen_data_clone.lock().unwrap().under_promotions += u32::from(mv.is_promotion() && mv.get_promotion_piece() != 5);
+                gen_data_clone.lock().unwrap().queen_castle += u32::from(mv.is_queen_castle());
+                gen_data_clone.lock().unwrap().king_castle += u32::from(mv.is_king_castle());
+                gen_data_clone.lock().unwrap().en_passants += u32::from(mv.is_en_passant());
+
                 previous_board = current_board;
                 let mut piece_board = PieceBoard::from_board(&current_board);
                 piece_board.score = search.tree().get_best_phantom().avg_score();
