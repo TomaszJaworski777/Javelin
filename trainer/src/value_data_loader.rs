@@ -38,12 +38,12 @@ fn prepare_value_dataset(data: &Vec<PieceBoard>) -> Vec<([f32; 768], f32)> {
             continue;
         }
 
-        let converted_bitboards = convert_to_12_bitboards(data_entry.piece_boards);
+        let converted_bitboards = &convert_to_12_bitboards(data_entry.piece_boards);
         let result_score = (data_entry.result as f32 + 1.0) / 2.0;
         if data_entry.side_to_move == 0 {
             result.push((extract_inputs(converted_bitboards), result_score));
         } else {
-            result.push((extract_inputs(flip_board(&converted_bitboards)), 1.0 - result_score));
+            result.push((extract_inputs(&flip_board(converted_bitboards)), 1.0 - result_score));
         }
     }
     result
@@ -65,11 +65,13 @@ fn convert_to_12_bitboards(board: [Bitboard; 4]) -> [Bitboard; 12] {
     result
 }
 
-fn extract_inputs(board: [Bitboard; 12]) -> [f32; 768] {
+fn extract_inputs(board: &[Bitboard; 12]) -> [f32; 768] {
     let mut result = [0.0; 768];
+    let horizontal_mirror = if get_king_position(board).get_value() % 8 > 3 { 7 } else { 0 };
+
     for piece_index in 0..12 {
         for square in board[piece_index] {
-            result[piece_index * 64 + square.get_value()] = 1.0;
+            result[piece_index * 64 + (square.get_value() ^ horizontal_mirror)] = 1.0;
         }
     }
     result
@@ -82,4 +84,8 @@ fn flip_board(board: &[Bitboard; 12]) -> [Bitboard; 12] {
         result[piece_index + 6] = board[piece_index].flip();
     }
     result
+}
+
+fn get_king_position(board: &[Bitboard; 12]) -> Square {
+    board[5].ls1b_square()
 }

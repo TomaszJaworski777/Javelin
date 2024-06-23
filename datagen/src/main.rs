@@ -19,6 +19,12 @@ struct GenData {
     wins: u32,
     loses: u32,
     draws: u32,
+    captures: u32,
+    promotion: u32,
+    under_promotions: u32,
+    queen_castle: u32,
+    king_castle: u32,
+    en_passants: u32
 }
 
 fn main() {
@@ -30,6 +36,12 @@ fn main() {
         wins: 0,
         loses: 0,
         draws: 0,
+        captures: 0,
+        promotion: 0,
+        under_promotions: 0,
+        queen_castle: 0,
+        king_castle: 0,
+        en_passants: 0
     }));
 
     let _ = gen_data.lock().unwrap().files.load();
@@ -62,10 +74,15 @@ fn main() {
             println!("Games played: {}", data.games_played);
             println!("W/D/L: {}/{}/{}", data.wins, data.draws, data.loses);
             println!("Nodes per move: {}", nodes_per_move);
-            println!("Concurrency: {}", concurrency);
+            println!("Concurrency: {}\n", concurrency);
+            println!("Captures: {}", data.captures);
+            println!("Promotions: {}", data.promotion);
+            println!("Under Promotions: {}", data.under_promotions);
+            println!("Castles (Q/K): {}/{}", data.queen_castle, data.king_castle);
+            println!("En Passants: {}", data.en_passants);
             index += 1;
 
-            if index % 5 == 0 {
+            if index % 7200 == 0 {
                 let _ = data.files.save();
             }
         }

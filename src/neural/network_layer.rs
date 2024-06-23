@@ -88,6 +88,7 @@ where
 
     fn map_value_inputs<F: FnMut(usize)>(board: &Board, mut method: F) {
         let flip = board.side_to_move == Side::BLACK;
+        let horizontal_mirror = if board.get_king_square(board.side_to_move).get_value() % 8 > 3 { 7 } else { 0 };
 
         for piece in Piece::PAWN..=Piece::KING {
             let piece_index = 64 * (piece - Piece::PAWN);
@@ -101,11 +102,11 @@ where
             }
 
             for square in stm_bitboard {
-                method(piece_index + square.get_value())
+                method(piece_index + (square.get_value() ^ horizontal_mirror))
             }
 
             for square in nstm_bitboard {
-                method(384 + piece_index + square.get_value())
+                method(384 + piece_index + (square.get_value() ^ horizontal_mirror))
             }
         }
     }
