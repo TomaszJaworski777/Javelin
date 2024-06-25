@@ -10,7 +10,7 @@ use rand::Rng;
 use crate::policy_data_loader::PolicyDataLoader;
 
 const BATCH_SIZE: usize = 16_384;
-const BATCHES_PER_SUPERBATCH: usize = 1024;
+const BATCHES_PER_SUPERBATCH: usize = 1536;
 const EXPORT_PATH: &'static str = "../../resources/training/checkpoints/";
 
 pub struct PolicyTrainer;
@@ -40,7 +40,7 @@ impl PolicyTrainer {
 
         'training: loop {
             let data_chunk_end_index =
-            (data_chunk_start_index + 512 * BATCH_SIZE).min(train_data.policy_data.len());
+            (data_chunk_start_index + 1536 * BATCH_SIZE).min(train_data.policy_data.len());
             let mut policy_data = PolicyDataLoader::prepare_policy_dataset(&&train_data.policy_data[data_chunk_start_index..data_chunk_end_index].to_vec());
             data_chunk_start_index = data_chunk_end_index % train_data.policy_data.len();
             policy_data.shuffle(&mut thread_rng());
@@ -92,7 +92,7 @@ fn gradient_batch(
     threads: usize,
     policy: &PolicyNetwork,
     grad: &mut PolicyNetwork,
-    batch: &[(SparseVector, Vec<(usize, usize, f32)>)],
+    batch: &[(SparseVector, Vec<(usize, usize, f32, usize)>)],
 ) -> f32 {
     let size = (batch.len() / threads).max(1);
     let mut errors = vec![0.0; threads];
@@ -127,13 +127,15 @@ fn update(
     momentum: &mut PolicyNetwork,
     velocity: &mut PolicyNetwork,
 ) {
-    for (i, subnet) in policy.subnets.iter_mut().enumerate() {
-        subnet.adam(&grad.subnets[i], &mut momentum.subnets[i], &mut velocity.subnets[i], adj, learning_rate);
+    for (i, subnet_pair) in policy.subnets.iter_mut().enumerate() {
+        for (j, subnet) in subnet_pair.iter_mut().enumerate(){
+            subnet.adam(&grad.subnets[i][j], &mut momentum.subnets[i][j], &mut velocity.subnets[i][j], adj, learning_rate);
+        }
     }
 }
 
 fn update_single_grad(
-    (entry_input, entry_moves): &(SparseVector, Vec<(usize, usize, f32)>),
+    (entry_input, entry_moves): &(SparseVector, Vec<(usize, usize, f32, usize)>),
     policy: &PolicyNetwork,
     grad: &mut PolicyNetwork,
     error: &mut f32,
@@ -143,20 +145,20 @@ fn update_single_grad(
     let mut max = f32::NEG_INFINITY;
     let mut total = 0.0;
 
-    for &(from_index, to_index, expected_policy) in entry_moves {
-        let from_out = policy.subnets[from_index].out_with_layers(&entry_input);
-        let to_out = policy.subnets[64 + to_index].out_with_layers(&entry_input);
+    for &(from_index, to_index, expected_policy, see) in entry_moves {
+        let from_out = policy.subnets[from_index][0].out_with_layers(&entry_input);
+        let to_out = policy.subnets[64 + to_index][see].out_with_layers(&entry_input);
         let policy_value = from_out.output_layer().dot(&to_out.output_layer());
 
         max = max.max(policy_value);
-        policies.push((from_index, to_index, from_out, to_out, policy_value, expected_policy));
+        policies.push((from_index, to_index, from_out, to_out, policy_value, expected_policy, see));
     }
 
-    for (_, _, _, _, policy_value, _) in policies.iter_mut() {
+    for (_, _, _, _, policy_value, _, _) in policies.iter_mut() {
         *policy_value = (*policy_value - max).exp();
         total += *policy_value;
     }
-    for (from_index, to_index, from_out, to_out, policy_value, expected_value) in policies {
+    for (from_index, to_index, from_out, to_out, policy_value, expected_value, see) in policies {
         let policy_value = policy_value / total;
         let error_factor = policy_value - expected_value;
 
@@ -164,16 +166,16 @@ fn update_single_grad(
 
         let factor = error_factor;
 
-        policy.subnets[from_index].backprop(
+        policy.subnets[from_index][0].backprop(
             &entry_input,
-            &mut grad.subnets[from_index],
+            &mut grad.subnets[from_index][0],
             factor * to_out.output_layer(),
             &from_out,
         );
 
-        policy.subnets[to_index].backprop(
+        policy.subnets[64 + to_index][see].backprop(
             &entry_input,
-            &mut grad.subnets[64 + to_index],
+            &mut grad.subnets[64 + to_index][see],
             factor * from_out.output_layer(),
             &to_out,
         );
@@ -184,16 +186,20 @@ fn rand_init() -> Box<PolicyNetwork> {
     let mut policy = boxed_and_zeroed::<PolicyNetwork>();
 
     let mut rng = rand::thread_rng();
-    for subnet in policy.subnets.iter_mut() {
-        *subnet = SubNet::from_fn(|| (rng.gen_range(0, u32::MAX) as f32 / u32::MAX as f32) * 0.2);
+    for subnet_pair in policy.subnets.iter_mut() {
+        for subnet in subnet_pair.iter_mut() {
+            *subnet = SubNet::from_fn(|| (rng.gen_range(0, u32::MAX) as f32 / u32::MAX as f32) * 0.2);
+        }
     }
 
     policy
 }
 
 fn add_without_explicit_lifetime(lhs: &mut PolicyNetwork, rhs: &PolicyNetwork) {
-    for (i, j) in lhs.subnets.iter_mut().zip(rhs.subnets.iter()) {
-        *i += j;
+    for (i_pair, j_pair) in lhs.subnets.iter_mut().zip(rhs.subnets.iter()) {
+        for (i, j) in i_pair.iter_mut().zip(j_pair.iter()) {
+            *i += j;
+        }
     }
 }
 
