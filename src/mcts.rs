@@ -236,6 +236,7 @@ impl<'a, const LOG: bool> Search<LOG> {
         let parent_phantom = self.tree.get_phantom(parent, action);
 
         let mut proven_loss = true;
+        let mut proven_draw = true;
         let mut win_len = 0;
         let mut best = 0;
         let mut max = f32::NEG_INFINITY;
@@ -259,6 +260,7 @@ impl<'a, const LOG: bool> Search<LOG> {
             //If node has not been visited yet then we don't yet know if it is terminal node or not
             let puct = if child_phantom.visits() == 0 {
                 proven_loss = false;
+                proven_draw = false;
                 puct::<true>(parent_phantom, child_phantom, numerator)
             } else {
                 //If node has been spawned, then we can extract it from the tree and check
@@ -272,8 +274,14 @@ impl<'a, const LOG: bool> Search<LOG> {
                     } else {
                         proven_loss = false;
                     }
+
+                    //We also check if all children are drawing, if so then this positions is a forced draw
+                    if !matches!(child_node.result(), GameResult::Draw) {
+                        proven_draw = false;
+                    }
                 } else {
                     proven_loss = false;
+                    proven_draw = false;
                 }
 
                 puct::<false>(parent_phantom, child_phantom, numerator)
@@ -289,6 +297,12 @@ impl<'a, const LOG: bool> Search<LOG> {
         //backpropagate lose one step up the tree
         if proven_loss {
             self.tree[current_node_index].set_result(GameResult::Lose(win_len + 1));
+            return usize::MAX;
+        }
+
+        //If position is a forced draw, backpropagate draw up the tree
+        if proven_draw {
+            self.tree[current_node_index].set_result(GameResult::Draw);
             return usize::MAX;
         }
 

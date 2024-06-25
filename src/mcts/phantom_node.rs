@@ -110,13 +110,22 @@ impl PhantomNode {
                 heat_max_value
             )
         );
+        let t_text = format!(
+            "{}",
+            match game_result {
+                GameResult::None => "",
+                GameResult::Draw => "T(D)",
+                GameResult::Lose(_) => "T(W)",
+                GameResult::Win(_) => "T(L)",
+            }
+        );
 
         if is_root {
-            println!("{}{:<30}{:<33}{:<35}", prefix, move_str, q_text, n_text);
+            println!("{}{:<30}{:<35}{:<35}", prefix, move_str, q_text, n_text);
         } else if has_promotion {
-            println!("{}{:<36}{:<33}{:<35}{}", prefix, move_str, q_text, n_text, p_text);
+            println!("{}{:<36}{:<35}{:<35}{:<30}{}", prefix, move_str, q_text, n_text, p_text, t_text);
         } else {
-            println!("{}{:<35}{:<33}{:<35}{}", prefix, move_str, q_text, n_text, p_text);
+            println!("{}{:<35}{:<35}{:<35}{:<30}{}", prefix, move_str, q_text, n_text, p_text, t_text);
         }
     }
 }
