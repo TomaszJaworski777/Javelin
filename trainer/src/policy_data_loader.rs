@@ -1,14 +1,14 @@
 use colored::Colorize;
 use datagen::ChessPolicyData;
 use goober::SparseVector;
-use javelin::{Bitboard, Move, Side, Square};
+use javelin::{Bitboard, Board, Move, Side, Square, SEE};
 
 #[allow(unused)]
 pub struct PolicyDataLoader;
 #[allow(unused)]
 impl PolicyDataLoader {
-    pub fn prepare_policy_dataset(data: &Vec<ChessPolicyData>) -> Vec<(SparseVector, Vec<(usize, usize, f32)>)> {
-        let mut result: Vec<(SparseVector, Vec<(usize, usize, f32)>)> = Vec::new();
+    pub fn prepare_policy_dataset(data: &Vec<ChessPolicyData>) -> Vec<(SparseVector, Vec<(usize, usize, f32, usize)>)> {
+        let mut result: Vec<(SparseVector, Vec<(usize, usize, f32, usize)>)> = Vec::new();
 
         for (index, data_entry) in data.into_iter().enumerate() {
             if data_entry.board.num == 0 {
@@ -21,8 +21,10 @@ impl PolicyDataLoader {
                 flip_board(&convert_to_12_bitboards(data_entry.board.piece_boards))
             };
 
+            let board = Board::from_datapack(&converted_bitboards);
+
             let mut total_visits = 0.0;
-            let mut index_results: Vec<(usize, usize, f32)> = Vec::new();
+            let mut index_results: Vec<(usize, usize, f32, usize)> = Vec::new();
             for child_index in 0..data_entry.board.num as usize {
                 let child = data_entry.moves[child_index];
                 let mv = Move::from_raw(child.mv);
@@ -31,11 +33,20 @@ impl PolicyDataLoader {
                 } else {
                     (mv.get_from_square().get_value() ^ 56, mv.get_to_square().get_value() ^ 56)
                 };
-                index_results.push((from_index, to_index, child.visits as f32));
+
+                let see = usize::from(
+                    SEE::static_exchange_evaluation( 
+                        &board, 
+                        Move::from_squares(Square::from_raw(from_index), Square::from_raw(to_index), 0), 
+                        -108
+                    )
+                );
+
+                index_results.push((from_index, to_index, child.visits as f32, see));
                 total_visits += child.visits as f32;
             }
 
-            for (_, _, visits) in &mut index_results {
+            for (_, _, visits, _) in &mut index_results {
                 *visits /= total_visits;
             }
 
