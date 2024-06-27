@@ -19,6 +19,7 @@
 | Version | CCRL 40/15 | CCRL Blitz | Estimated | Release Date |
 | :-: | :-: | :-: | :-: | :-: |
 | [1.0.0](https://github.com/TomaszJaworski777/Javelin/releases/tag/1.0.0) | - | 1830 | 1798 | 31th May 2024 |
+| [2.0.0](https://github.com/TomaszJaworski777/Javelin/releases/tag/2.0.0) | - | - | 2539 | 27th June 2024 |
 
 </div>
 
@@ -52,24 +53,22 @@ Javelin supports all necessary commands to initialize UCI protocol, full descrip
 * `tree <depth>` - Draws tree of most recent search.
 * `tree <depth> <node>` - Draws tree of most recent search from provided node index.
 * `perft <depth>` - Runs perft test on current position.
+* `bulk <depth>` - Runs perft test on current position in bulk mode.
 * `bench <depth>` - Runs benchmark to test engine speed.
-
-## Engine Options
-* `RootPST` `default 455 min 100 max 1000` - Adjust the temperature of flattening policy on root node.
-* `NonRootPST` `default 100 min 100 max 1000` - Adjust the temperature of flattening policy on non-root nodes.
-* `RootC` `default 405 min 100 max 1000` - Adjust the C value of PUCT formula on root node.
-* `NonRootC` `default 82 min 100 max 1000` - Adjust the C value of PUCT formula on non-root nodes.
-* `Hash` ` default 64 min 1 max 65536` - Adjust the max size of the search tree in megabytes.
-* `MoveOverhead` `default 10 min 0 max 500` - Adjust offset in milliseconds, which engine should apply, when calculating time to move.
 
 ## Feature List
 * MCTS Search
    * Tree Reuse
-   * Flatten Policy At Root
-   * Reuse Of Least Recently Used Node
+   * Flatten policy at root
+   * Replacement of least recently used node
    * First play urgency
+   * Scaling C with search duration
 * Quiescence Search
    * MVV-LVA
    * Static Exchange Evaluation
-* Value Network: 768->64->1
-* Policy Network: 128 subnets: 768->16
+* Value Network
+   * Architecture: 768->128->1
+   * Horizontal mirroring based on kings file
+* Policy Network
+   * Architecture: 128 subnets pairs (768->16)
+   * Selecting subnet pair for move destination based on SEE result

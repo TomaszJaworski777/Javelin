@@ -3,12 +3,12 @@ VER = X.X.X
 
 ifeq ($(OS),Windows_NT)
 	DEV_NAME := target/builds/$(EXE)-dev.exe
-	RELEASE_NAME := target/builds/$(EXE)-$(VER).exe
-	AVX2_NAME := target/builds/$(EXE)-$(VER)-avx2.exe
+	RELEASE_NAME := target/builds/releases/$(EXE)-$(VER).exe
+	AVX2_NAME := target/builds/releases/$(EXE)-$(VER)-avx2.exe
 else
 	DEV_NAME := target/builds/$(EXE)-dev
-	RELEASE_NAME := target/builds/$(EXE)-$(VER)
-	AVX2_NAME := target/builds/$(EXE)-$(VER)-avx2
+	RELEASE_NAME := target/builds/releases/$(EXE)-$(VER)
+	AVX2_NAME := target/builds/releases/$(EXE)-$(VER)-avx2
 endif
 
 rule:
