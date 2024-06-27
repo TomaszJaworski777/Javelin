@@ -82,7 +82,7 @@ fn main() {
             println!("En Passants: {}", data.en_passants);
             index += 1;
 
-            if index % 7200 == 0 {
+            if index % 1800 == 0 {
                 let _ = data.files.save();
             }
         }
