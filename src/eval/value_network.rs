@@ -15,8 +15,8 @@ const SIGMOID_FUNCTION: u8 = 3;
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
 pub struct ValueNetwork {
-    pub input_layer: SparseLayer<768, 128, NoActivation>,
-    pub output_layer: DenseLayer<128, 1, ScReLUActivation>,
+    pub input_layer: SparseLayer<768, 256, NoActivation>,
+    pub output_layer: DenseLayer<256, 1, ScReLUActivation>,
 }
 #[allow(unused)]
 impl ValueNetwork {

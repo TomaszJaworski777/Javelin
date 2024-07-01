@@ -66,11 +66,14 @@ fn main() {
         selfplay_thread.run(nodes_per_move as u32);
     }
 
-    let mut index = 0u128;
+    let mut seconds = 0u128;
     loop {
         {
             let data = gen_data.lock().unwrap();
             print_raport(&data);
+            println!("Positions per second: {:.1}", data.files.value_data.len() as f32 / seconds as f32);
+            println!("Games per second: {:.1}\n", data.games_played as f32 / seconds as f32);
+            println!("Games played: {}", data.games_played);
             println!("Games played: {}", data.games_played);
             println!("W/D/L: {}/{}/{}", data.wins, data.draws, data.loses);
             println!("Nodes per move: {}", nodes_per_move);
@@ -79,10 +82,11 @@ fn main() {
             println!("Promotions: {}", data.promotion);
             println!("Under Promotions: {}", data.under_promotions);
             println!("Castles (Q/K): {}/{}", data.queen_castle, data.king_castle);
-            println!("En Passants: {}", data.en_passants);
-            index += 1;
+            println!("En Passants: {}\n", data.en_passants);
+            println!("Time until save: {}s", 1800 - (seconds % 1800));
+            seconds += 1;
 
-            if index % 1800 == 0 {
+            if seconds % 1800 == 0 {
                 let _ = data.files.save();
             }
         }
