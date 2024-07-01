@@ -18,17 +18,17 @@ fn main() {
 
 #[allow(unused)]
 fn value_trainer() {
-    let mut trainer = ValueTrainer::new("value_009");
+    let mut trainer = ValueTrainer::new("value_010a");
     let mut structure = seq()
-        .add(linear(trainer.var_store.root() / format!("0"), 768, 128, Default::default()))
+        .add(linear(trainer.var_store.root() / format!("0"), 768, 256, Default::default()))
         .add_fn(move |xs: &Tensor| xs.clamp(0.0, 1.0).pow_tensor_scalar(2))
-        .add(linear(trainer.var_store.root() / format!("1"), 128, 1, Default::default()))
+        .add(linear(trainer.var_store.root() / format!("1"), 256, 1, Default::default()))
         .add_fn(move |xs: &Tensor| xs.sigmoid());
 
     trainer.add_structure(structure);
     trainer.change_learning_rate(0.001, 0.1, 25);
     trainer.change_batch_size(16_384);
-    trainer.change_batch_per_superbatch_count(2048);
+    trainer.change_batch_per_superbatch_count(4096);
     trainer.change_superbatch_count(80);
     trainer.build();
 
