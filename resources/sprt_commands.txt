@@ -1,1 +1,3 @@
 .\fast-chess -engine cmd=F:\Personal\Javelin\target\builds\javelin-dev.exe name=Javelin_dev -engine cmd=F:\Personal\Javelin\target\builds\javelin-base.exe name=Javelin_base -each tc=8+0.08 -rounds 15000 -repeat -concurrency 15 -recover -randomseed -openings file=F:\Personal\Javelin\resources\books\Pohl.pgn format=pgn -sprt elo0=0 elo1=5 alpha=0.05 beta=0.05
+
+cutechess-cli -repeat -recover -srand 1692606159 -variant standard -concurrency 11 -games 2 -rounds 15000 -engine conf=Javelin-dev -engine conf=Javelin-base -each tc=8+0.08 -openings file=F:\Personal\Javelin\resources\books\Pohl.pgn order=random -sprt elo0=0 elo1=5 alpha=0.05 beta=0.05 -ratinginterval 10
