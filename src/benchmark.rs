@@ -65,7 +65,7 @@ impl Benchmark {
         if PRETTY_PRINT {
             println!("Starting benchmark for {} positions at depth {depth}...", Benchmark::FENS.len());
         }
-        
+
         let mut rules = SearchRules::new();
         rules.max_depth = depth;
 

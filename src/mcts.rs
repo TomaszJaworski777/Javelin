@@ -6,11 +6,11 @@ mod search_rules;
 mod search_tree;
 
 pub use node::GameResult;
+pub use qsearch::qsearch;
 pub use search_info::SearchInfo;
 pub use search_rules::SearchRules;
 pub use search_tree::SearchTree;
 use std::sync::RwLock;
-pub use qsearch::qsearch;
 
 use self::{node::Node, phantom_node::PhantomNode};
 use crate::{
@@ -70,7 +70,7 @@ impl<'a, const LOG: bool> Search<LOG> {
 
         let timer = Instant::now();
         let mut current_avg_depth = 0;
-        let mut current_max_depth = 0;
+        let mut last_time_stamp = 0u128;
         let mut last_report: String = String::new();
 
         //If tree is complitly empty we want to reset it in order to spawn
@@ -113,15 +113,14 @@ impl<'a, const LOG: bool> Search<LOG> {
             //Draws the search report, when average selection depth or max selection depth improved,
             //we provide last raport to make sure we don't print duplicates
             if self.search_info.get_avg_depth() > current_avg_depth
-                || (self.search_info.get_avg_depth() != current_avg_depth
-                    && self.search_info.max_depth > current_max_depth)
+                || self.search_info.time_passed - last_time_stamp >= 1000
             {
                 self.search_info.time_passed = timer.elapsed().as_millis();
                 if LOG {
                     self.print_report::<PRETTY_PRINT>(self.search_info, &mut last_report);
                 }
                 current_avg_depth = current_avg_depth.max(self.search_info.get_avg_depth());
-                current_max_depth = current_max_depth.max(self.search_info.max_depth);
+                last_time_stamp = self.search_info.time_passed;
             }
         }
 
@@ -242,7 +241,7 @@ impl<'a, const LOG: bool> Search<LOG> {
         let mut max = f32::NEG_INFINITY;
         let mut c = if ROOT { Options::root_c_value() } else { Options::c_value() };
 
-        //Increase C value as node is visited more 
+        //Increase C value as node is visited more
         let scale = (Options::c_visits_scale() * 128) as u32;
         c *= 1.0 + (((parent_phantom.visits() + scale) / scale) as f32).ln();
 
@@ -363,7 +362,7 @@ fn puct<const FPU: bool>(parent: &PhantomNode, child: &PhantomNode, numerator: f
     let policy = child.policy();
 
     let denominator = visit_count as f32 + 1.0;
-    value + ( policy * numerator / denominator)
+    value + (policy * numerator / denominator)
 }
 
 #[inline]

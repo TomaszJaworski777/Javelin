@@ -14,7 +14,14 @@ pub struct PhantomNode {
 impl PhantomNode {
     #[inline]
     pub fn new(node_index: i32, mv: Move, policy: f32) -> Self {
-        Self { node_index, mv, policy: (policy * f32::from(i16::MAX)) as i16, total_score: 0.0, visits: 0, total_score_squared: 0.0 }
+        Self {
+            node_index,
+            mv,
+            policy: (policy * f32::from(i16::MAX)) as i16,
+            total_score: 0.0,
+            visits: 0,
+            total_score_squared: 0.0,
+        }
     }
 
     #[inline]

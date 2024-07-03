@@ -340,11 +340,11 @@ impl Board {
         print!("{}\n", result);
     }
 
-   #[allow(dead_code)] 
-    pub fn from_datapack( data: &[Bitboard; 12] ) -> Board {
+    #[allow(dead_code)]
+    pub fn from_datapack(data: &[Bitboard; 12]) -> Board {
         let mut result = Board::new();
 
-        for piece_color in 0..2{
+        for piece_color in 0..2 {
             for piece_index in 0..6 {
                 let piece_board = data[piece_color * 6 + piece_index];
                 result.piece_maps[piece_color] |= piece_board;

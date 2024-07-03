@@ -19,7 +19,11 @@ fn main() {
     let args: Vec<_> = env::args().collect();
     for (index, arg) in args.clone().into_iter().enumerate() {
         if arg == "bench" {
-            Benchmark::run::<false>(if index < args.len() - 1 { args[index + 1].parse().unwrap_or_default() } else { 5 });
+            Benchmark::run::<false>(if index < args.len() - 1 {
+                args[index + 1].parse().unwrap_or_default()
+            } else {
+                5
+            });
             return;
         }
     }

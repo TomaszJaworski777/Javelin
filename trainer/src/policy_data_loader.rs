@@ -34,13 +34,11 @@ impl PolicyDataLoader {
                     (mv.get_from_square().get_value() ^ 56, mv.get_to_square().get_value() ^ 56)
                 };
 
-                let see = usize::from(
-                    SEE::static_exchange_evaluation( 
-                        &board, 
-                        Move::from_squares(Square::from_raw(from_index), Square::from_raw(to_index), 0), 
-                        -108
-                    )
-                );
+                let see = usize::from(SEE::static_exchange_evaluation(
+                    &board,
+                    Move::from_squares(Square::from_raw(from_index), Square::from_raw(to_index), 0),
+                    -108,
+                ));
 
                 index_results.push((from_index, to_index, child.visits as f32, see));
                 total_visits += child.visits as f32;

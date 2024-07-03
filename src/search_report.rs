@@ -39,7 +39,7 @@ impl SearchReport {
             score_text = format!("-M{}", (n - 1).max(1)).as_str().red().to_string();
         } else if let GameResult::Lose(n) = result {
             score_text = format!("+M{}", (n - 1).max(1)).as_str().green().to_string();
-        } else if let GameResult::Draw = result{
+        } else if let GameResult::Draw = result {
             score_text = "+0.00".white().to_string();
         } else {
             let score = -400.0 * (1.0 / best_score.clamp(0.0, 1.0) - 1.0).ln();

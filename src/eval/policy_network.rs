@@ -1,6 +1,9 @@
 use goober::{activation, layer::SparseConnected, FeedForwardNetwork, Matrix, SparseVector, Vector};
 
-use crate::{core::{Board, Move, Side}, see::SEE};
+use crate::{
+    core::{Board, Move, Side},
+    see::SEE,
+};
 
 #[allow(unused)]
 const NO_FUNCTION: u8 = 0;
@@ -34,7 +37,7 @@ impl SubNet {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct PolicyNetwork {
-    pub subnets: [[SubNet;2]; 128],
+    pub subnets: [[SubNet; 2]; 128],
     //pub hce: DenseConnected<activation::Identity, 4, 1>,
 }
 #[allow(unused)]

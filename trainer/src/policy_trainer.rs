@@ -39,9 +39,10 @@ impl PolicyTrainer {
         let mut data_chunk_start_index = 0;
 
         'training: loop {
-            let data_chunk_end_index =
-            (data_chunk_start_index + 1536 * BATCH_SIZE).min(train_data.policy_data.len());
-            let mut policy_data = PolicyDataLoader::prepare_policy_dataset(&&train_data.policy_data[data_chunk_start_index..data_chunk_end_index].to_vec());
+            let data_chunk_end_index = (data_chunk_start_index + 1536 * BATCH_SIZE).min(train_data.policy_data.len());
+            let mut policy_data = PolicyDataLoader::prepare_policy_dataset(
+                &&train_data.policy_data[data_chunk_start_index..data_chunk_end_index].to_vec(),
+            );
             data_chunk_start_index = data_chunk_end_index % train_data.policy_data.len();
             policy_data.shuffle(&mut thread_rng());
             let timer = Instant::now();
@@ -128,8 +129,14 @@ fn update(
     velocity: &mut PolicyNetwork,
 ) {
     for (i, subnet_pair) in policy.subnets.iter_mut().enumerate() {
-        for (j, subnet) in subnet_pair.iter_mut().enumerate(){
-            subnet.adam(&grad.subnets[i][j], &mut momentum.subnets[i][j], &mut velocity.subnets[i][j], adj, learning_rate);
+        for (j, subnet) in subnet_pair.iter_mut().enumerate() {
+            subnet.adam(
+                &grad.subnets[i][j],
+                &mut momentum.subnets[i][j],
+                &mut velocity.subnets[i][j],
+                adj,
+                learning_rate,
+            );
         }
     }
 }

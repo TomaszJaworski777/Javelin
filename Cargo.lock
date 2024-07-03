@@ -342,7 +342,7 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 
 [[package]]
 name = "javelin"
-version = "2.1.1"
+version = "2.2.1"
 dependencies = [
  "arrayvec",
  "colored",
@@ -775,9 +775,9 @@ dependencies = [
 
 [[package]]
 name = "tch"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c7cb00bc2770454b515388d45be7097a3ded2eca172f3dcdb7ca4cc06c40bf1"
+checksum = "61fd89a98303b22acd6d4969b4c8940f7a30ba79af32b744a2028375d156e95a"
 dependencies = [
  "half",
  "lazy_static",
@@ -831,9 +831,9 @@ checksum = "ef927ca75afb808a4d64dd374f00a2adf8d0fcff8e7b184af886c3c87ec4a3f3"
 
 [[package]]
 name = "torch-sys"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29e0244e5b148a31dd7fe961165037d1927754d024095c1013937532d7e73a22"
+checksum = "c5997681f7f3700fa475f541fcda44c8959ea42a724194316fe7297cb96ebb08"
 dependencies = [
  "anyhow",
  "cc",

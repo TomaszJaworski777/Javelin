@@ -34,7 +34,8 @@ impl SelfPlayThread {
 
                 gen_data_clone.lock().unwrap().captures += u32::from(mv.is_capture());
                 gen_data_clone.lock().unwrap().promotion += u32::from(mv.is_promotion());
-                gen_data_clone.lock().unwrap().under_promotions += u32::from(mv.is_promotion() && mv.get_promotion_piece() != 5);
+                gen_data_clone.lock().unwrap().under_promotions +=
+                    u32::from(mv.is_promotion() && mv.get_promotion_piece() != 5);
                 gen_data_clone.lock().unwrap().queen_castle += u32::from(mv.is_queen_castle());
                 gen_data_clone.lock().unwrap().king_castle += u32::from(mv.is_king_castle());
                 gen_data_clone.lock().unwrap().en_passants += u32::from(mv.is_en_passant());
