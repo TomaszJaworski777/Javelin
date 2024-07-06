@@ -1,6 +1,9 @@
 use goober::{activation, layer::SparseConnected, FeedForwardNetwork, Matrix, SparseVector, Vector};
 
-use crate::{core::{Board, Move, Side}, see::SEE};
+use crate::{
+    core::{Board, Move, Side, Bitboard},
+    see::SEE
+};
 
 #[allow(unused)]
 const NO_FUNCTION: u8 = 0;
@@ -34,7 +37,7 @@ impl SubNet {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct PolicyNetwork {
-    pub subnets: [[SubNet;2]; 128],
+    pub subnets: [[SubNet; 2]; 128],
     //pub hce: DenseConnected<activation::Identity, 4, 1>,
 }
 #[allow(unused)]
@@ -47,10 +50,11 @@ impl PolicyNetwork {
     }
 
     #[inline]
-    pub fn evaluate(&self, board: &Board, mv: &Move, inputs: &SparseVector) -> f32 {
+    pub fn evaluate(&self, board: &Board, mv: &Move, inputs: &SparseVector, threats: Bitboard) -> f32 {
         let flip = if board.side_to_move == Side::WHITE { 0 } else { 56 };
 
-        let from_subnet = &self.subnets[usize::from(mv.get_from_square().get_value() ^ flip)][0];
+        let threat = usize::from((threats & (1 << mv.get_from_square().get_value())).is_not_empty());
+        let from_subnet = &self.subnets[usize::from(mv.get_from_square().get_value() ^ flip)][threat];
         let from_vec = from_subnet.out(inputs);
 
         let see = usize::from(SEE::static_exchange_evaluation(board, *mv, -108));

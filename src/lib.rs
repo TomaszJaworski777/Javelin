@@ -22,3 +22,4 @@ pub use mcts::SearchRules;
 pub use mcts::SearchTree;
 pub use neural::DenseLayer;
 pub use see::SEE;
+pub use core::Attacks;

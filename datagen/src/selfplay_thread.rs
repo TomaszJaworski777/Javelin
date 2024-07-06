@@ -34,7 +34,8 @@ impl SelfPlayThread {
 
                 gen_data_clone.lock().unwrap().captures += u32::from(mv.is_capture());
                 gen_data_clone.lock().unwrap().promotion += u32::from(mv.is_promotion());
-                gen_data_clone.lock().unwrap().under_promotions += u32::from(mv.is_promotion() && mv.get_promotion_piece() != 5);
+                gen_data_clone.lock().unwrap().under_promotions +=
+                    u32::from(mv.is_promotion() && mv.get_promotion_piece() != 5);
                 gen_data_clone.lock().unwrap().queen_castle += u32::from(mv.is_queen_castle());
                 gen_data_clone.lock().unwrap().king_castle += u32::from(mv.is_king_castle());
                 gen_data_clone.lock().unwrap().en_passants += u32::from(mv.is_en_passant());
@@ -54,7 +55,7 @@ impl SelfPlayThread {
                     gen_data_clone.lock().unwrap().value_filtered += 1;
                 }
 
-                if piece_board.num <= 104 && false {
+                if piece_board.num <= 104 {
                     let mut policy_data =
                         ChessPolicyData { board: piece_board, moves: [ChessMoveInfo::default(); 104] };
 

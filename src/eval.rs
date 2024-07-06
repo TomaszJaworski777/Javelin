@@ -2,7 +2,7 @@ mod pesto;
 mod policy_network;
 mod value_network;
 
-use crate::core::{Board, Move, Piece, Side};
+use crate::core::{Board, Move, Piece, Side, Bitboard};
 
 use goober::SparseVector;
 
@@ -17,7 +17,7 @@ pub const VALUE_NETWORK: ValueNetwork =
     unsafe { std::mem::transmute(*include_bytes!("../resources/nets/value_010.net")) };
 
 pub const POLICY_NETWORK: PolicyNetwork =
-    unsafe { std::mem::transmute(*include_bytes!("../resources/nets/policy_007.net")) };
+    unsafe { std::mem::transmute(*include_bytes!("../resources/nets/policy_008.net")) };
 
 pub struct Evaluation;
 impl Evaluation {
@@ -27,8 +27,8 @@ impl Evaluation {
     }
 
     #[inline]
-    pub fn get_policy_value(board: &Board, mv: &Move, inputs: &SparseVector) -> f32 {
-        POLICY_NETWORK.evaluate(&board, &mv, &inputs)
+    pub fn get_policy_value(board: &Board, mv: &Move, inputs: &SparseVector, threats: Bitboard) -> f32 {
+        POLICY_NETWORK.evaluate(&board, &mv, &inputs, threats)
     }
 
     pub fn get_policy_inputs(board: &Board) -> SparseVector {

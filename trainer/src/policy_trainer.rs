@@ -39,9 +39,10 @@ impl PolicyTrainer {
         let mut data_chunk_start_index = 0;
 
         'training: loop {
-            let data_chunk_end_index =
-            (data_chunk_start_index + 1536 * BATCH_SIZE).min(train_data.policy_data.len());
-            let mut policy_data = PolicyDataLoader::prepare_policy_dataset(&&train_data.policy_data[data_chunk_start_index..data_chunk_end_index].to_vec());
+            let data_chunk_end_index = (data_chunk_start_index + 512 * BATCH_SIZE).min(train_data.policy_data.len());
+            let mut policy_data = PolicyDataLoader::prepare_policy_dataset(
+                &&train_data.policy_data[data_chunk_start_index..data_chunk_end_index].to_vec(),
+            );
             data_chunk_start_index = data_chunk_end_index % train_data.policy_data.len();
             policy_data.shuffle(&mut thread_rng());
             let timer = Instant::now();
@@ -92,7 +93,7 @@ fn gradient_batch(
     threads: usize,
     policy: &PolicyNetwork,
     grad: &mut PolicyNetwork,
-    batch: &[(SparseVector, Vec<(usize, usize, f32, usize)>)],
+    batch: &[(SparseVector, Vec<(usize, usize, f32, usize, usize)>)],
 ) -> f32 {
     let size = (batch.len() / threads).max(1);
     let mut errors = vec![0.0; threads];
@@ -128,14 +129,20 @@ fn update(
     velocity: &mut PolicyNetwork,
 ) {
     for (i, subnet_pair) in policy.subnets.iter_mut().enumerate() {
-        for (j, subnet) in subnet_pair.iter_mut().enumerate(){
-            subnet.adam(&grad.subnets[i][j], &mut momentum.subnets[i][j], &mut velocity.subnets[i][j], adj, learning_rate);
+        for (j, subnet) in subnet_pair.iter_mut().enumerate() {
+            subnet.adam(
+                &grad.subnets[i][j],
+                &mut momentum.subnets[i][j],
+                &mut velocity.subnets[i][j],
+                adj,
+                learning_rate,
+            );
         }
     }
 }
 
 fn update_single_grad(
-    (entry_input, entry_moves): &(SparseVector, Vec<(usize, usize, f32, usize)>),
+    (entry_input, entry_moves): &(SparseVector, Vec<(usize, usize, f32, usize, usize)>),
     policy: &PolicyNetwork,
     grad: &mut PolicyNetwork,
     error: &mut f32,
@@ -145,20 +152,20 @@ fn update_single_grad(
     let mut max = f32::NEG_INFINITY;
     let mut total = 0.0;
 
-    for &(from_index, to_index, expected_policy, see) in entry_moves {
-        let from_out = policy.subnets[from_index][0].out_with_layers(&entry_input);
+    for &(from_index, to_index, expected_policy, see, threat) in entry_moves {
+        let from_out = policy.subnets[from_index][threat].out_with_layers(&entry_input);
         let to_out = policy.subnets[64 + to_index][see].out_with_layers(&entry_input);
         let policy_value = from_out.output_layer().dot(&to_out.output_layer());
 
         max = max.max(policy_value);
-        policies.push((from_index, to_index, from_out, to_out, policy_value, expected_policy, see));
+        policies.push((from_index, to_index, from_out, to_out, policy_value, expected_policy, see, threat));
     }
 
-    for (_, _, _, _, policy_value, _, _) in policies.iter_mut() {
+    for (_, _, _, _, policy_value, _, _, _) in policies.iter_mut() {
         *policy_value = (*policy_value - max).exp();
         total += *policy_value;
     }
-    for (from_index, to_index, from_out, to_out, policy_value, expected_value, see) in policies {
+    for (from_index, to_index, from_out, to_out, policy_value, expected_value, see, threat) in policies {
         let policy_value = policy_value / total;
         let error_factor = policy_value - expected_value;
 
@@ -166,9 +173,9 @@ fn update_single_grad(
 
         let factor = error_factor;
 
-        policy.subnets[from_index][0].backprop(
+        policy.subnets[from_index][threat].backprop(
             &entry_input,
-            &mut grad.subnets[from_index][0],
+            &mut grad.subnets[from_index][threat],
             factor * to_out.output_layer(),
             &from_out,
         );

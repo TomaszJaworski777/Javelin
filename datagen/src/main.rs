@@ -24,7 +24,7 @@ struct GenData {
     under_promotions: u32,
     queen_castle: u32,
     king_castle: u32,
-    en_passants: u32
+    en_passants: u32,
 }
 
 fn main() {
@@ -41,7 +41,7 @@ fn main() {
         under_promotions: 0,
         queen_castle: 0,
         king_castle: 0,
-        en_passants: 0
+        en_passants: 0,
     }));
 
     let _ = gen_data.lock().unwrap().files.load();

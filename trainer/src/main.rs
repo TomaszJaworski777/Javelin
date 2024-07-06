@@ -13,7 +13,7 @@ use tch::{
 use value_trainer::ValueTrainer;
 
 fn main() {
-    value_trainer();
+    policy_trainer();
 }
 
 #[allow(unused)]
@@ -37,7 +37,7 @@ fn value_trainer() {
 
 #[allow(unused)]
 fn policy_trainer() {
-    PolicyTrainer::train("policy_007b", 11, 60, 0.001, 25);
+    PolicyTrainer::train("policy_008b", 7, 60, 0.001, 25);
 }
 
 #[allow(unused)]

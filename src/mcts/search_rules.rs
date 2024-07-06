@@ -39,9 +39,10 @@ impl SearchRules {
     }
 
     pub fn calculate_time(time_remaining: u64, time_increment: u64, moves_to_go: u64) -> u64 {
-        let divider = if moves_to_go > 0 { moves_to_go } else { 20 };
-        (time_remaining / divider.max(1) + time_increment / 2 - Options::move_overhead() as u64)
+        let divider = if moves_to_go > 0 { moves_to_go } else { Options::tc() as u64 };
+        let inc = (time_increment as f32 * Options::tc_inc()) as u64;
+        (time_remaining / divider.max(1) + inc - Options::move_overhead() as u64)
             .max(1)
-            .min(time_remaining)
+            .min((time_remaining as f32 / 2.0) as u64)
     }
 }

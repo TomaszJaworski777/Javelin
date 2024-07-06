@@ -54,6 +54,8 @@ create_option_structs!(
     c_variance_scale: SpinOptionFloat => SpinOptionFloat::new(0.2, 0.0, 2.0), "CVarianceScale",
     c_visits_scale: SpinOptionInt => SpinOptionInt::new(64, 1, 512), "CVisitsScale",
     expl_tau: SpinOptionFloat => SpinOptionFloat::new(0.5, 0.1, 1.0), "ExpansionTau",
+    tc: SpinOptionInt => SpinOptionInt::new(20, 1, 50), "TcDivider",
+    tc_inc: SpinOptionFloat => SpinOptionFloat::new(0.5, 0.0, 1.0), "TcIncPercentage",
 );
 
 #[allow(dead_code)]
