@@ -1,58 +1,88 @@
 use colored::Colorize;
 use datagen::ChessPolicyData;
 use goober::SparseVector;
-use javelin::{Bitboard, Board, Move, Side, Square, SEE};
+use javelin::{Attacks, Bitboard, Board, Move, Side, Square, SEE};
+use rayon::prelude::*; 
 
 #[allow(unused)]
 pub struct PolicyDataLoader;
 #[allow(unused)]
 impl PolicyDataLoader {
-    pub fn prepare_policy_dataset(data: &Vec<ChessPolicyData>) -> Vec<(SparseVector, Vec<(usize, usize, f32, usize)>)> {
-        let mut result: Vec<(SparseVector, Vec<(usize, usize, f32, usize)>)> = Vec::new();
-
-        for (index, data_entry) in data.into_iter().enumerate() {
-            if data_entry.board.num == 0 {
-                continue;
-            }
-
-            let converted_bitboards = if data_entry.board.side_to_move == 0 {
-                convert_to_12_bitboards(data_entry.board.piece_boards)
-            } else {
-                flip_board(&convert_to_12_bitboards(data_entry.board.piece_boards))
-            };
-
-            let board = Board::from_datapack(&converted_bitboards);
-
-            let mut total_visits = 0.0;
-            let mut index_results: Vec<(usize, usize, f32, usize)> = Vec::new();
-            for child_index in 0..data_entry.board.num as usize {
-                let child = data_entry.moves[child_index];
-                let mv = Move::from_raw(child.mv);
-                let (from_index, to_index) = if data_entry.board.side_to_move == 0 {
-                    (mv.get_from_square().get_value(), mv.get_to_square().get_value())
+    pub fn prepare_policy_dataset(data: &Vec<ChessPolicyData>) -> Vec<(SparseVector, Vec<(usize, usize, f32, usize, usize)>)> {
+        data.par_iter()
+            .filter(|data_entry| data_entry.board.num != 0) // Filter out invalid boards first
+            .map(|data_entry| {
+                let converted_bitboards = if data_entry.board.side_to_move == 0 {
+                    convert_to_12_bitboards(data_entry.board.piece_boards)
                 } else {
-                    (mv.get_from_square().get_value() ^ 56, mv.get_to_square().get_value() ^ 56)
+                    flip_board(&convert_to_12_bitboards(data_entry.board.piece_boards))
                 };
+    
+                let board = Board::from_datapack(&converted_bitboards);
+                let threat_map = calculate_threats(converted_bitboards);
 
-                let see = usize::from(SEE::static_exchange_evaluation(
-                    &board,
-                    Move::from_squares(Square::from_raw(from_index), Square::from_raw(to_index), 0),
-                    -108,
-                ));
-
-                index_results.push((from_index, to_index, child.visits as f32, see));
-                total_visits += child.visits as f32;
-            }
-
-            for (_, _, visits, _) in &mut index_results {
-                *visits /= total_visits;
-            }
-
-            result.push((extract_inputs(converted_bitboards), index_results));
-        }
-
-        result
+                let mut total_visits = 0.0;
+                let mut index_results: Vec<(usize, usize, f32, usize, usize)> = Vec::new();
+                for child_index in 0..data_entry.board.num as usize {
+                    let child = data_entry.moves[child_index];
+                    let mv = Move::from_raw(child.mv);
+                    let (from_index, to_index) = if data_entry.board.side_to_move == 0 {
+                        (mv.get_from_square().get_value(), mv.get_to_square().get_value())
+                    } else {
+                        (mv.get_from_square().get_value() ^ 56, mv.get_to_square().get_value() ^ 56)
+                    };
+    
+                    let see = usize::from(SEE::static_exchange_evaluation(
+                        &board,
+                        Move::from_squares(Square::from_raw(from_index), Square::from_raw(to_index), 0),
+                        -108,
+                    ));
+    
+                    index_results.push((from_index, to_index, child.visits as f32, see, usize::from((threat_map & (1 << from_index)).is_not_empty())));
+                    total_visits += child.visits as f32;
+                }
+    
+                for (_, _, visits, _, _) in &mut index_results {
+                    *visits /= total_visits;
+                }
+    
+                (extract_inputs(converted_bitboards), index_results)
+            })
+            .collect::<Vec<_>>() // Collect results into a Vec
     }
+}
+
+fn calculate_threats( board: [Bitboard; 12] ) -> Bitboard {
+    let mut threats = Bitboard::EMPTY;
+
+    let king_square = board[5].ls1b_square();
+    let mut occupancy = Bitboard::EMPTY;
+    board.map( |bb| {
+        occupancy |= bb; 
+    });
+    occupancy ^= king_square.get_bit();
+
+    for rook_square in (board[9] | board[10]).into_iter() {
+        threats |= Attacks::get_rook_attacks_for_square(rook_square, occupancy)
+    }
+
+    for bishop_square in (board[8] | board[10]).into_iter() {
+        threats |= Attacks::get_bishop_attacks_for_square(bishop_square, occupancy)
+    }
+
+    for king_square in board[11].into_iter() {
+        threats |= Attacks::get_king_attacks_for_square(king_square)
+    }
+
+    for knight_square in board[7].into_iter() {
+        threats |= Attacks::get_knight_attacks_for_square(knight_square)
+    }
+
+    for pawn_square in board[6].into_iter() {
+        threats |= Attacks::get_pawn_attacks_for_square(pawn_square, Side::BLACK)
+    }
+
+    threats
 }
 
 fn convert_to_12_bitboards(board: [Bitboard; 4]) -> [Bitboard; 12] {

@@ -113,12 +113,13 @@ impl Node {
 
         //Generate inputs for the policy network
         let policy_inputs = Evaluation::get_policy_inputs(board);
+        let threats = board.get_attack_map(board.side_to_move.flipped());
         self.children = Vec::with_capacity(move_list.len());
 
         //Prebake new children with raw policy
         for mv in move_list {
             //If there is only one move, policy is not needed
-            let policy = if is_single_move { 1.0 } else { Evaluation::get_policy_value(board, &mv, &policy_inputs) };
+            let policy = if is_single_move { 1.0 } else { Evaluation::get_policy_value(board, &mv, &policy_inputs, threats) };
             self.children.push(PhantomNode::new((policy * 1000.0) as i32, mv, 0.0));
 
             //Save highest policy for later softmax
@@ -152,6 +153,7 @@ impl Node {
 
         //Generate inputs for the policy network
         let policy_inputs = Evaluation::get_policy_inputs(board);
+        let threats = board.get_attack_map(board.side_to_move.flipped());
 
         //Update children
         for child_phantom in self.children_mut() {
@@ -159,7 +161,7 @@ impl Node {
             let policy = if is_single_move {
                 1.0
             } else {
-                Evaluation::get_policy_value(board, &child_phantom.mv(), &policy_inputs)
+                Evaluation::get_policy_value(board, &child_phantom.mv(), &policy_inputs, threats)
             };
             child_phantom.update_policy(policy);
 

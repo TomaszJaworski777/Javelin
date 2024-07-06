@@ -151,6 +151,38 @@ impl Board {
         return false;
     }
 
+    pub fn get_attack_map(&self, attacker_side: Side) -> Bitboard {
+        let mut threats = Bitboard::EMPTY;
+
+        let king_square = self.get_king_square(attacker_side.flipped());
+        let occupancy = self.get_occupancy() ^ king_square.get_bit();
+    
+        let attacker_pieces = self.get_occupancy_for_side(attacker_side);
+        let queens = self.get_piece_mask_for_both(Piece::QUEEN);
+
+        for rook_square in (attacker_pieces & ( self.get_piece_mask_for_both(Piece::ROOK) | queens )).into_iter() {
+            threats |= Attacks::get_rook_attacks_for_square(rook_square, occupancy)
+        }
+    
+        for bishop_square in (attacker_pieces & ( self.get_piece_mask_for_both(Piece::BISHOP) | queens )).into_iter() {
+            threats |= Attacks::get_bishop_attacks_for_square(bishop_square, occupancy)
+        }
+    
+        for king_square in (attacker_pieces & self.get_piece_mask_for_both(Piece::KING)).into_iter() {
+            threats |= Attacks::get_king_attacks_for_square(king_square)
+        }
+    
+        for knight_square in (attacker_pieces & self.get_piece_mask_for_both(Piece::KNIGHT)).into_iter() {
+            threats |= Attacks::get_knight_attacks_for_square(knight_square)
+        }
+    
+        for pawn_square in (attacker_pieces & self.get_piece_mask_for_both(Piece::PAWN)).into_iter() {
+            threats |= Attacks::get_pawn_attacks_for_square(pawn_square, attacker_side)
+        }
+    
+        threats
+    }
+
     #[inline]
     pub fn all_attackers_to_square(&self, occupancy: Bitboard, square: Square) -> Bitboard {
         // When performing a static exchange evaluation we need to find all

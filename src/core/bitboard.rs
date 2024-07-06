@@ -1,6 +1,6 @@
 use crate::core::Square;
 use colored::*;
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, Not, Shl, ShlAssign, Shr, ShrAssign};
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr, ShrAssign};
 
 #[derive(Copy, Clone, PartialEq, PartialOrd)]
 pub struct Bitboard {
@@ -288,6 +288,24 @@ impl BitXor<Bitboard> for u64 {
 
     fn bitxor(self, rhs: Bitboard) -> Self::Output {
         Bitboard::from_raw(self ^ rhs.value)
+    }
+}
+
+impl BitXorAssign<u64> for Bitboard {
+    fn bitxor_assign(&mut self, rhs: u64) {
+        self.value ^= rhs;
+    }
+}
+
+impl BitXorAssign<Bitboard> for Bitboard {
+    fn bitxor_assign(&mut self, rhs: Bitboard) {
+        self.value ^= rhs.get_value();
+    }
+}
+
+impl BitXorAssign<Bitboard> for u64 {
+    fn bitxor_assign(&mut self, rhs: Bitboard) {
+        *self ^= rhs.get_value();
     }
 }
 
