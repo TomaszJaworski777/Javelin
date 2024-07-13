@@ -80,6 +80,9 @@ impl<'a> ValueTrainer<'a> {
         let mut total_loss: f32 = 0.0;
         let mut data_chunk_start_index = 0;
 
+        tch::set_num_threads(7);
+        tch::set_num_interop_threads(7);
+
         'training: loop {
             let data_chunk_end_index =
                 (data_chunk_start_index + 512 * self.batch_size).min(train_data.value_data.len());

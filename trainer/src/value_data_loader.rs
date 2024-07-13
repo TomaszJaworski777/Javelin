@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use datagen::PieceBoard;
 use javelin::{Bitboard, Square};
 use rand::seq::SliceRandom;
@@ -32,7 +30,6 @@ impl ValueDataLoader {
 }
 
 fn prepare_value_dataset(data: &Vec<PieceBoard>) -> Vec<([f32; 768], f32)> {
-    let t = Instant::now();
     let mut result: Vec<([f32; 768], f32)> = Vec::new();
     for data_entry in data {
         if data_entry.score <= 0.0 || data_entry.score >= 1.0 {
