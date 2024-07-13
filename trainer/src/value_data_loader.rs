@@ -1,7 +1,10 @@
+use std::time::Instant;
+
 use datagen::PieceBoard;
 use javelin::{Bitboard, Square};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use rayon::prelude::*;
 use tch::{Kind, Tensor};
 
 #[allow(unused)]
@@ -12,26 +15,24 @@ impl ValueDataLoader {
         let mut data = prepare_value_dataset(&data_set);
         data.shuffle(&mut thread_rng());
 
-        let mut result: Vec<(Tensor, Tensor)> = Vec::new();
-        let mut batch_inputs: Vec<[f32; 768]> = Vec::new();
-        let mut batch_outputs: Vec<[f32; 1]> = Vec::new();
-        for (index, data_entry) in data.iter().enumerate() {
-            if (index + 1) % batch_size == 0 {
-                let inputs_tensor = Tensor::from_slice2(&batch_inputs).to_kind(Kind::Float);
-                let outputs_tensor = Tensor::from_slice2(&batch_outputs).to_kind(Kind::Float);
-                result.push((inputs_tensor, outputs_tensor));
-                batch_inputs.clear();
-                batch_outputs.clear();
-            }
+        let batches_count = data.len() / batch_size;
+        let mut result: Vec<(Tensor, Tensor)> = Vec::with_capacity(batches_count);
+        let batches = data.par_chunks(batch_size).map(|chunk| {
+            split_entry_tuple(chunk)
+        }).collect::<Vec<_>>(); 
 
-            batch_inputs.push(data_entry.0);
-            batch_outputs.push([data_entry.1]);
+        for &(batch_inputs, batch_outputs) in &batches {
+            let inputs_tensor = Tensor::from_slice2(batch_inputs).to_kind(Kind::Float);
+            let outputs_tensor = Tensor::from_slice2(batch_outputs).to_kind(Kind::Float);
+            result.push((inputs_tensor, outputs_tensor));
         }
+
         result
     }
 }
 
 fn prepare_value_dataset(data: &Vec<PieceBoard>) -> Vec<([f32; 768], f32)> {
+    let t = Instant::now();
     let mut result: Vec<([f32; 768], f32)> = Vec::new();
     for data_entry in data {
         if data_entry.score <= 0.0 || data_entry.score >= 1.0 {
@@ -46,6 +47,7 @@ fn prepare_value_dataset(data: &Vec<PieceBoard>) -> Vec<([f32; 768], f32)> {
             result.push((extract_inputs(&flip_board(converted_bitboards)), 1.0 - result_score));
         }
     }
+
     result
 }
 
@@ -88,4 +90,16 @@ fn flip_board(board: &[Bitboard; 12]) -> [Bitboard; 12] {
 
 fn get_king_position(board: &[Bitboard; 12]) -> Square {
     board[5].ls1b_square()
+}
+
+fn split_entry_tuple(data: &[([f32; 768], f32)]) -> (&[[f32; 768]], &[[f32; 1]]) {
+    let len = data.len();
+    let data_ptr = data.as_ptr() as *const [f32; 768];
+    let score_ptr = data.as_ptr() as *const [f32; 1];
+
+    unsafe {
+        let arrays = std::slice::from_raw_parts(data_ptr, len);
+        let scores = std::slice::from_raw_parts(score_ptr.add(768), len);
+        (arrays, scores)
+    }
 }
