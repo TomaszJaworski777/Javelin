@@ -68,7 +68,8 @@ pub fn convert_file() {
 
         let board = Board::from_datapack(&convert_to_12_bitboards(piece_board.piece_boards), piece_board.side_to_move);
 
-        let score = -(400.0 * (1.0 / piece_board.score - 1.0).ln()) as i16;
+        let perspective_score = if piece_board.side_to_move == 0 { piece_board.score } else { 1.0 - piece_board.score };
+        let score = -(400.0 * (1.0 / perspective_score - 1.0).ln()) as i16;
         let result = (piece_board.result + 1) as f32 / 2.0;
 
         let bbs = [

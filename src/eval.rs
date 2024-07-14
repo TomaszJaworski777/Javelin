@@ -14,7 +14,7 @@ pub use policy_network::SubNet;
 pub use value_network::ValueNetwork;
 
 pub const VALUE_NETWORK: ValueNetwork =
-    unsafe { std::mem::transmute(*include_bytes!("../resources/nets/value_010.net")) };
+    unsafe { std::mem::transmute(*include_bytes!("../resources/training/checkpoints/value_11-60/params.bin")) };
 
 pub const POLICY_NETWORK: PolicyNetwork =
     unsafe { std::mem::transmute(*include_bytes!("../resources/nets/policy_008.net")) };
