@@ -1,8 +1,10 @@
+mod bullet_converter;
 mod policy_data_loader;
 mod policy_trainer;
 mod value_trainer;
-mod bullet_converter;
 
+#[allow(unused)]
+use bullet_converter::convert_file;
 use colored::Colorize;
 use javelin::{Bitboard, Side, Square};
 use policy_trainer::PolicyTrainer;
