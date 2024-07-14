@@ -1,15 +1,11 @@
 mod policy_data_loader;
 mod policy_trainer;
-mod value_data_loader;
 mod value_trainer;
+mod bullet_converter;
 
 use colored::Colorize;
 use javelin::{Bitboard, Side, Square};
 use policy_trainer::PolicyTrainer;
-use tch::{
-    nn::{linear, seq},
-    Tensor,
-};
 use value_trainer::ValueTrainer;
 
 fn main() {
@@ -18,21 +14,7 @@ fn main() {
 
 #[allow(unused)]
 fn value_trainer() {
-    let mut trainer = ValueTrainer::new("value_011");
-    let mut structure = seq()
-        .add(linear(trainer.var_store.root() / format!("0"), 768, 512, Default::default()))
-        .add_fn(move |xs: &Tensor| xs.clamp(0.0, 1.0).pow_tensor_scalar(2))
-        .add(linear(trainer.var_store.root() / format!("1"), 512, 1, Default::default()))
-        .add_fn(move |xs: &Tensor| xs.sigmoid());
-
-    trainer.add_structure(structure);
-    trainer.change_learning_rate(0.001, 0.1, 25);
-    trainer.change_batch_size(16_384);
-    trainer.change_batch_per_superbatch_count(4096);
-    trainer.change_superbatch_count(80);
-    trainer.build();
-
-    trainer.run();
+    ValueTrainer::run();
 }
 
 #[allow(unused)]

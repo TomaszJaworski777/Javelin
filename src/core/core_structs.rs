@@ -337,22 +337,22 @@ impl CastleRights {
     }
 
     #[inline]
-    pub fn get_right(&self, right: u8) -> bool {
+    pub fn has_right(&self, right: u8) -> bool {
         get_bit(self.value, right) > 0
     }
 
     pub fn to_string(&self) -> String {
         let mut rights = "".to_string();
-        if self.get_right(CastleRights::WHITE_KING) {
+        if self.has_right(CastleRights::WHITE_KING) {
             rights += "K";
         }
-        if self.get_right(CastleRights::WHITE_QUEEN) {
+        if self.has_right(CastleRights::WHITE_QUEEN) {
             rights += "Q";
         }
-        if self.get_right(CastleRights::BLACK_KING) {
+        if self.has_right(CastleRights::BLACK_KING) {
             rights += "k";
         }
-        if self.get_right(CastleRights::BLACK_QUEEN) {
+        if self.has_right(CastleRights::BLACK_QUEEN) {
             rights += "q";
         }
         if rights == "" {

@@ -1,43 +1,30 @@
-use std::marker::PhantomData;
-
 use crate::core::{Board, Piece, Side};
 
-use super::activation::ActivationFunction;
+use super::{activation::ActivationFunction, ScReLUActivation};
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
-pub struct DenseLayer<const INPUTS: usize, const OUTPUTS: usize, Activation>
-where
-    Activation: ActivationFunction,
+pub struct DenseLayer<const INPUTS: usize, const OUTPUTS: usize>
 {
-    pub layer: NetworkLayer<INPUTS, OUTPUTS>,
-    _marker: PhantomData<Activation>,
+    pub layer: NetworkLayer<INPUTS, OUTPUTS>
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
-pub struct SparseLayer<const INPUTS: usize, const OUTPUTS: usize, Activation>
-where
-    Activation: ActivationFunction,
+pub struct SparseLayer<const INPUTS: usize, const OUTPUTS: usize>
 {
-    pub layer: NetworkLayer<INPUTS, OUTPUTS>,
-    _marker: PhantomData<Activation>,
+    pub layer: NetworkLayer<INPUTS, OUTPUTS>
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
-pub struct CustomLayer<const INPUTS: usize, const OUTPUTS: usize, Activation>
-where
-    Activation: ActivationFunction,
+pub struct CustomLayer<const INPUTS: usize, const OUTPUTS: usize>
 {
-    pub layer: NetworkLayer<INPUTS, OUTPUTS>,
-    _marker: PhantomData<Activation>,
+    pub layer: NetworkLayer<INPUTS, OUTPUTS>
 }
 
 #[allow(unused)]
-impl<const INPUTS: usize, const OUTPUTS: usize, Activation> DenseLayer<INPUTS, OUTPUTS, Activation>
-where
-    Activation: ActivationFunction,
+impl<const INPUTS: usize, const OUTPUTS: usize> DenseLayer<INPUTS, OUTPUTS>
 {
     pub fn layer(&self) -> &NetworkLayer<INPUTS, OUTPUTS> {
         &self.layer
@@ -52,7 +39,7 @@ where
 
         for input_index in 0..INPUTS {
             for output_index in 0..OUTPUTS {
-                let input = Activation::execute(inputs[input_index]);
+                let input = ScReLUActivation::execute(inputs[input_index]);
                 result[output_index] += input * self.layer.weights[input_index][output_index];
             }
         }
@@ -62,9 +49,7 @@ where
 }
 
 #[allow(unused)]
-impl<const INPUTS: usize, const OUTPUTS: usize, Activation> SparseLayer<INPUTS, OUTPUTS, Activation>
-where
-    Activation: ActivationFunction,
+impl<const INPUTS: usize, const OUTPUTS: usize> SparseLayer<INPUTS, OUTPUTS>
 {
     pub const fn layer(&self) -> &NetworkLayer<INPUTS, OUTPUTS> {
         &self.layer
@@ -113,9 +98,7 @@ where
 }
 
 #[allow(unused)]
-impl<const INPUTS: usize, const OUTPUTS: usize, Activation> CustomLayer<INPUTS, OUTPUTS, Activation>
-where
-    Activation: ActivationFunction,
+impl<const INPUTS: usize, const OUTPUTS: usize> CustomLayer<INPUTS, OUTPUTS>
 {
     pub fn layer(&self) -> &NetworkLayer<INPUTS, OUTPUTS> {
         &self.layer
@@ -133,55 +116,19 @@ where
             activation: fn(f32) -> f32,
         ) -> [f32; OUTPUTS],
     ) -> [f32; OUTPUTS] {
-        method(self.layer.weights, self.layer.biases, Activation::execute)
+        method(self.layer.weights, self.layer.biases, ScReLUActivation::execute)
     }
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct NetworkLayer<const INPUTS: usize, const OUTPUTS: usize> {
-    pub weights: [[f32; OUTPUTS]; INPUTS],
+    weights: [[f32; OUTPUTS]; INPUTS],
     biases: [f32; OUTPUTS],
 }
 
 impl<const INPUTS: usize, const OUTPUTS: usize> Default for NetworkLayer<INPUTS, OUTPUTS> {
     fn default() -> Self {
         Self { weights: [[0.0; OUTPUTS]; INPUTS], biases: [0.0; OUTPUTS] }
-    }
-}
-
-#[allow(unused)]
-impl<const INPUTS: usize, const OUTPUTS: usize> NetworkLayer<INPUTS, OUTPUTS> {
-    pub fn set_weights(&mut self, weights: Vec<Vec<f32>>) {
-        for input_index in 0..INPUTS {
-            for output_index in 0..OUTPUTS {
-                self.weights[input_index][output_index] = weights[input_index][output_index];
-            }
-        }
-    }
-
-    pub fn set_biases(&mut self, biases: Vec<f32>) {
-        for output_index in 0..OUTPUTS {
-            self.biases[output_index] = biases[output_index];
-        }
-    }
-
-    pub fn print(&self) {
-        println!("\nWeights:");
-        for weight_index in 0..self.weights.len() {
-            for (index, weight) in self.weights[weight_index].iter().enumerate() {
-                if index != 0 && index % 8 == 0 {
-                    print!("\n");
-                }
-                print!("{}, ", weight);
-            }
-        }
-        println!("\nBiases:");
-        for bias_index in 0..self.biases.len() {
-            if bias_index != 0 && bias_index % 8 == 0 {
-                print!("\n");
-            }
-            print!("{}, ", self.biases[bias_index]);
-        }
     }
 }

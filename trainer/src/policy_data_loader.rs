@@ -18,7 +18,7 @@ impl PolicyDataLoader {
                     flip_board(&convert_to_12_bitboards(data_entry.board.piece_boards))
                 };
     
-                let board = Board::from_datapack(&converted_bitboards);
+                let board = Board::from_datapack(&converted_bitboards, data_entry.board.side_to_move);
                 let threat_map = calculate_threats(converted_bitboards);
 
                 let mut total_visits = 0.0;
