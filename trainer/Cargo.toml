@@ -15,4 +15,4 @@ arrayvec = "0.7.4"
 javelin = { path = "../" }
 datagen = { path = "../datagen/" }
 goober = { git = 'https://github.com/jw1912/goober.git' }
-bullet = { package = "bullet_lib", git = 'https://github.com/jw1912/bullet', features = [] }
+bullet = { package = "bullet_lib", git = 'https://github.com/jw1912/bullet', features = ["hip"] }

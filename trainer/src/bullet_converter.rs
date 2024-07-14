@@ -4,8 +4,9 @@ use std::mem::size_of;
 use std::path::Path;
 use std::time::Instant;
 
+use bullet::format::ChessBoard;
 use datagen::PieceBoard;
-use javelin::{Bitboard, Board, Square};
+use javelin::{Bitboard, Board, Side, Square};
 
 const DATA_PATH: &str = "../../resources/data/value.data";
 const OUTPUT_PATH: &str = "../../resources/data/bullet_data.data";
@@ -23,6 +24,7 @@ pub fn convert_file() {
     let mut writer = BufWriter::new(output_file);
 
     let piece_board_size = size_of::<PieceBoard>();
+    let chess_board_size = size_of::<ChessBoard>();
 
     let mut buffer = vec![0u8; piece_board_size];
 
@@ -65,12 +67,31 @@ pub fn convert_file() {
         }
 
         let board = Board::from_datapack(&convert_to_12_bitboards(piece_board.piece_boards), piece_board.side_to_move);
-        let fen = board.get_fen();
 
         let score = -(400.0 * (1.0 / piece_board.score - 1.0).ln()) as i16;
-        let result = piece_board.result;
+        let result = (piece_board.result + 1) as f32 / 2.0;
 
-        writeln!(writer, "{} | {} | {}", fen, score, result).unwrap();
+        let bbs = [
+            board.get_occupancy_for_side(Side::WHITE).get_value(),
+            board.get_occupancy_for_side(Side::BLACK).get_value(),
+            board.get_piece_mask_for_both(1).get_value(),
+            board.get_piece_mask_for_both(2).get_value(),
+            board.get_piece_mask_for_both(3).get_value(),
+            board.get_piece_mask_for_both(4).get_value(),
+            board.get_piece_mask_for_both(5).get_value(),
+            board.get_piece_mask_for_both(6).get_value(),
+        ];
+
+        let chess_board = ChessBoard::from_raw(bbs, board.side_to_move.current(), score, result).unwrap();
+
+        let chess_board_bytes = unsafe {
+            std::slice::from_raw_parts(
+                (&chess_board as *const ChessBoard) as *const u8,
+                chess_board_size,
+            )
+        };
+
+        writer.write_all(chess_board_bytes).unwrap();
         data_written += 1;
     }
 
