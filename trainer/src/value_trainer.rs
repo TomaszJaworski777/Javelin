@@ -6,7 +6,7 @@ impl ValueTrainer {
         let mut trainer = TrainerBuilder::default()
         .optimiser(optimiser::AdamW)
         .single_perspective()
-        .input(inputs::Chess768)
+        .input(inputs::ChessBucketsMirrored::default())
         .output_buckets(outputs::Single)
         .feature_transformer(512)
         .activate(bullet::Activation::SCReLU)
