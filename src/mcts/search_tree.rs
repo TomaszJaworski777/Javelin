@@ -348,7 +348,7 @@ impl SearchTree {
             game_result,
         );
 
-        let index = if is_root { self.root_index() } else { phantom_node.index() };
+        let index = phantom_node.index();
         if max_depth == 0 || phantom_node.visits() == 0 || index == -1 {
             return;
         }
