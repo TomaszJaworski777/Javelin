@@ -10,7 +10,7 @@ impl ValueTrainer {
         .output_buckets(outputs::Single)
         .feature_transformer(512)
         .activate(bullet::Activation::SCReLU)
-        .add_layer(16)
+        .add_layer(32)
         .activate(bullet::Activation::SCReLU)
         .add_layer(1)
         .build();
