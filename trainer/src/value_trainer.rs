@@ -10,6 +10,8 @@ impl ValueTrainer {
         .output_buckets(outputs::Single)
         .feature_transformer(512)
         .activate(bullet::Activation::SCReLU)
+        .add_layer(16)
+        .activate(bullet::Activation::SCReLU)
         .add_layer(1)
         .build();
 
@@ -18,14 +20,14 @@ impl ValueTrainer {
             eval_scale: 400.0,
             ft_regularisation: 0.0,
             batch_size: 16_384,
-            batches_per_superbatch: 4096,
+            batches_per_superbatch: 6104,
             start_superbatch: 1,
             end_superbatch: 80,
-            wdl_scheduler: wdl::ConstantWDL { value: 1.0 },
+            wdl_scheduler: wdl::ConstantWDL { value: 0.7 },
             lr_scheduler: lr::StepLR {
                 start: 0.001,
                 gamma: 0.1,
-                step: 25,
+                step: 30,
             },
             loss_function: Loss::SigmoidMSE,
             save_rate: 10,
