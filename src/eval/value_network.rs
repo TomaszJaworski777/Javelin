@@ -16,14 +16,16 @@ const SIGMOID_FUNCTION: u8 = 3;
 #[derive(Clone, Copy, Default)]
 pub struct ValueNetwork {
     pub input_layer: SparseLayer<768, 512>,
-    pub output_layer: DenseLayer<512, 1>,
+    pub hidden_layer: DenseLayer<512, 16>,
+    pub output_layer: DenseLayer<16, 1>,
 }
 #[allow(unused)]
 impl ValueNetwork {
     #[inline]
     pub fn evaluate(&self, board: &Board) -> f32 {
         let input_layer_result = self.input_layer.forward(&board);
-        let output_layer_result = self.output_layer.forward(&input_layer_result);
+        let hidden_layer_result = self.hidden_layer.forward(&input_layer_result);
+        let output_layer_result = self.output_layer.forward(&hidden_layer_result);
         output_layer_result.values()[0]
     }
 }
