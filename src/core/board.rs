@@ -323,7 +323,8 @@ impl Board {
             [[" . ", " P ", " N ", " B ", " R ", " Q ", " K "], [" . ", " p ", " n ", " b ", " r ", " q ", " k "]];
 
         let mut info = Vec::new();
-        info.push("FEN: TBA");
+        let fen = format!("FEN: {}", self.get_fen());
+        info.push(fen.as_str());
         let zobrist = format!("Zobrist Key: {}", self.zobrist.key);
         info.push(zobrist.as_str());
 
@@ -373,7 +374,7 @@ impl Board {
     }
 
     #[allow(dead_code)]
-    pub fn from_datapack(data: &[Bitboard; 12]) -> Board {
+    pub fn from_datapack(data: &[Bitboard; 12], side_to_move: u8) -> Board {
         let mut result = Board::new();
 
         for piece_color in 0..2 {
@@ -384,7 +385,94 @@ impl Board {
             }
         }
 
+        result.side_to_move = Side::from_raw(side_to_move as usize);
+
         result
+    }
+
+    pub fn get_fen(&self) -> String {
+        let mut fen = String::new();
+
+        // Piece placement
+        for rank in (0..8).rev() {
+            let mut empty_count = 0;
+            for file in 0..8 {
+                let square = Square::from_coords(rank, file);
+                let (piece, side) = self.get_piece_on_square(square);
+                if piece != Piece::NONE {
+                    if empty_count > 0 {
+                        fen.push_str(&empty_count.to_string());
+                        empty_count = 0;
+                    }
+                    let piece_char = match piece {
+                        Piece::PAWN => 'p',
+                        Piece::KNIGHT => 'n',
+                        Piece::BISHOP => 'b',
+                        Piece::ROOK => 'r',
+                        Piece::QUEEN => 'q',
+                        Piece::KING => 'k',
+                        _ => ' '
+                    };
+                    if side == Side::WHITE {
+                        fen.push(piece_char.to_uppercase().next().unwrap());
+                    } else {
+                        fen.push(piece_char);
+                    }
+                } else {
+                    empty_count += 1;
+                }
+            }
+            if empty_count > 0 {
+                fen.push_str(&empty_count.to_string());
+            }
+            if rank > 0 {
+                fen.push('/');
+            }
+        }
+
+        // Side to move
+        fen.push(' ');
+        if self.side_to_move == Side::WHITE {
+            fen.push('w');
+        } else {
+            fen.push('b');
+        }
+
+        // Castling rights
+        fen.push(' ');
+        let mut castling_rights = String::new();
+        if self.castle_rights.has_right(CastleRights::WHITE_KING) {
+            castling_rights.push('K');
+        }
+        if self.castle_rights.has_right(CastleRights::WHITE_QUEEN) {
+            castling_rights.push('Q');
+        }
+        if self.castle_rights.has_right(CastleRights::BLACK_KING) {
+            castling_rights.push('k');
+        }
+        if self.castle_rights.has_right(CastleRights::BLACK_QUEEN) {
+            castling_rights.push('q');
+        }
+        if castling_rights.is_empty() {
+            castling_rights.push('-');
+        }
+        fen.push_str(&castling_rights);
+
+        // En passant target square
+        fen.push(' ');
+        if self.en_passant == Square::NULL {
+            fen.push('-');
+        } else {
+            fen.push_str(&self.en_passant.to_string());
+        }
+
+        // Halfmove clock and fullmove number
+        fen.push(' ');
+        fen.push_str(&self.half_moves.to_string());
+        fen.push(' ');
+        fen.push_str(&(1).to_string());
+
+        fen
     }
 }
 
@@ -466,8 +554,8 @@ pub fn create_board(fen: &str) -> Board {
 
     board.half_moves = 0;
 
-    if splits.len() > 5 {
-        board.half_moves = splits[5].parse().unwrap();
+    if splits.len() > 4 {
+        board.half_moves = splits[4].parse().unwrap();
     }
 
     board.checkers = Attacks::generate_checkers_mask(&board);

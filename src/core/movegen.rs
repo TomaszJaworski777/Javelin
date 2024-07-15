@@ -98,14 +98,14 @@ fn generate_casting_moves(move_list: &mut MoveList, board: &Board) {
     };
 
     let king_destination = Square::G1 + square_offset;
-    if board.castle_rights.get_right(CastleRights::WHITE_KING + side_multiplier)
+    if board.castle_rights.has_right(CastleRights::WHITE_KING + side_multiplier)
         && is_castle_path_clear(king_destination, king_side_rook_position)
     {
         move_list.push(Move::from_squares(king_position, king_destination, Move::KING_CASTLE_MASK));
     }
 
     let king_destination = Square::C1 + square_offset;
-    if board.castle_rights.get_right(CastleRights::WHITE_QUEEN + side_multiplier)
+    if board.castle_rights.has_right(CastleRights::WHITE_QUEEN + side_multiplier)
         && is_castle_path_clear(king_destination, queen_side_rook_position)
     {
         move_list.push(Move::from_squares(king_position, king_destination, Move::QUEEN_CASTLE_MASK));
