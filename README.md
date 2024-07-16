@@ -18,6 +18,7 @@
 
 | Version | CCRL 40/15 | CCRL Blitz | Estimated | Release Date |
 | :-: | :-: | :-: | :-: | :-: |
+| [3.0.0](https://github.com/TomaszJaworski777/Javelin/releases/tag/3.0.0) | - | - | 2817 | 17th July 2024 |
 | [2.0.0](https://github.com/TomaszJaworski777/Javelin/releases/tag/2.0.0) | - | 2559 | 2539 | 27th June 2024 |
 | [1.0.0](https://github.com/TomaszJaworski777/Javelin/releases/tag/1.0.0) | - | 1830 | 1798 | 31th May 2024 |
 
@@ -42,6 +43,7 @@ Javelin is developed by Tomasz Jaworski. Special thanks to:
 * [@AndyGrant](https://github.com/AndyGrant) for letting me borrow his SEE implementation
 * [@princesslana](https://github.com/princesslana) for helping with subnet policy trainer
 * [@jw1912](https://github.com/jw1912) for creating [goober](https://github.com/jw1912/goober), that I used for policy training and inference
+* [@jw1912](https://github.com/jw1912) for creating [bullet](https://github.com/jw1912/bullet), that I used for value net training
 
 ## Command List
 Javelin supports all necessary commands to initialize UCI protocol, full description of the protocol can be found [here](https://gist.github.com/DOBRO/2592c6dad754ba67e6dcaec8c90165bf).
@@ -67,8 +69,9 @@ Javelin supports all necessary commands to initialize UCI protocol, full descrip
    * MVV-LVA
    * Static Exchange Evaluation
 * Value Network
-   * Architecture: 768->128->1
+   * Architecture: 768->512->32->1
    * Horizontal mirroring based on kings file
 * Policy Network
    * Architecture: 128 subnets pairs (768->16)
    * Selecting subnet pair for move destination based on SEE result
+   * Selecting subnet pair for starting square based on the threats to that square
