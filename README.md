@@ -69,9 +69,9 @@ Javelin supports all necessary commands to initialize UCI protocol, full descrip
    * MVV-LVA
    * Static Exchange Evaluation
 * Value Network
-   * Architecture: 768->512->32->1
+   * Architecture: `768->512->32->1`
    * Horizontal mirroring based on kings file
 * Policy Network
-   * Architecture: 128 subnets pairs (768->16)
+   * Architecture: 128 subnet pairs `768->16`
    * Selecting subnet pair for move destination based on SEE result
    * Selecting subnet pair for starting square based on the threats to that square
