@@ -1,9 +1,6 @@
-use crate::{
-    core::{Board, Move},
-    mcts::GameResult,
-    options::Options,
-};
+use crate::{mcts::GameResult, options::Options};
 use colored::*;
+use spear::{ChessBoard, Move, Side};
 use std::ops::{Index, IndexMut};
 
 use super::{node::Node, phantom_node::PhantomNode};
@@ -77,8 +74,12 @@ impl SearchTree {
         new_node_index
     }
 
-    pub fn reuse_tree(&mut self, current_board: &Board, previous_board: &Board) -> bool {
-        let new_root = self.find_position(self.root_index(), current_board, previous_board, 2);
+    pub fn reuse_tree<const STM_WHITE: bool, const NSTM_WHITE: bool>(
+        &mut self,
+        current_board: &ChessBoard,
+        previous_board: &ChessBoard,
+    ) -> bool {
+        let new_root = self.find_position::<STM_WHITE, NSTM_WHITE>(self.root_index(), current_board, previous_board, 2);
 
         let mut found = false;
         if new_root != -1 && self[new_root].children().len() > 0 {
@@ -96,7 +97,13 @@ impl SearchTree {
         found
     }
 
-    pub fn find_position(&mut self, start_index: i32, board: &Board, previous_board: &Board, depth: i32) -> i32 {
+    pub fn find_position<const STM_WHITE: bool, const NSTM_WHITE: bool>(
+        &mut self,
+        start_index: i32,
+        board: &ChessBoard,
+        previous_board: &ChessBoard,
+        depth: i32,
+    ) -> i32 {
         if board == previous_board {
             return start_index;
         }
@@ -109,9 +116,9 @@ impl SearchTree {
             let child_index = child_phantom.index();
             let mut child_board = previous_board.clone();
 
-            child_board.make_move(child_phantom.mv());
+            child_board.make_move::<STM_WHITE, NSTM_WHITE>(child_phantom.mv());
 
-            let found = self.find_position(child_index, board, &child_board, depth - 1);
+            let found = self.find_position::<NSTM_WHITE, STM_WHITE>(child_index, board, &child_board, depth - 1);
 
             if found != -1 {
                 return found;
@@ -121,7 +128,7 @@ impl SearchTree {
         -1
     }
 
-    pub fn reset_tree(&mut self, current_board: &Board) {
+    pub fn reset_tree(&mut self, current_board: &ChessBoard) {
         let tree_capacity = Self::mem_to_capacity(Options::hash() as usize);
         self.tree = vec![Node::new(GameResult::None, -1, 0); tree_capacity];
         self.root_phantom = PhantomNode::new(0, Move::NULL, 0.0);
@@ -140,7 +147,11 @@ impl SearchTree {
         self[end_index].set_forward_link(-1);
 
         let mut root_node = Node::new(GameResult::None, -1, 0);
-        root_node.expand::<true>(&current_board);
+        if current_board.side_to_move() == Side::WHITE {
+            root_node.expand::<true, true, false>(&current_board);
+        } else {
+            root_node.expand::<true, false, true>(&current_board);
+        }
         let root_index = self.push(root_node);
         self.set_root_index(root_index);
     }

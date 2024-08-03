@@ -1,31 +1,27 @@
-use crate::core::{Board, Piece, Side};
+use spear::{ChessBoard, Piece, Side};
 
 use super::{activation::ActivationFunction, ScReLUActivation};
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
-pub struct DenseLayer<const INPUTS: usize, const OUTPUTS: usize>
-{
-    pub layer: NetworkLayer<INPUTS, OUTPUTS>
+pub struct DenseLayer<const INPUTS: usize, const OUTPUTS: usize> {
+    pub layer: NetworkLayer<INPUTS, OUTPUTS>,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
-pub struct SparseLayer<const INPUTS: usize, const OUTPUTS: usize>
-{
-    pub layer: NetworkLayer<INPUTS, OUTPUTS>
+pub struct SparseLayer<const INPUTS: usize, const OUTPUTS: usize> {
+    pub layer: NetworkLayer<INPUTS, OUTPUTS>,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
-pub struct CustomLayer<const INPUTS: usize, const OUTPUTS: usize>
-{
-    pub layer: NetworkLayer<INPUTS, OUTPUTS>
+pub struct CustomLayer<const INPUTS: usize, const OUTPUTS: usize> {
+    pub layer: NetworkLayer<INPUTS, OUTPUTS>,
 }
 
 #[allow(unused)]
-impl<const INPUTS: usize, const OUTPUTS: usize> DenseLayer<INPUTS, OUTPUTS>
-{
+impl<const INPUTS: usize, const OUTPUTS: usize> DenseLayer<INPUTS, OUTPUTS> {
     pub fn layer(&self) -> &NetworkLayer<INPUTS, OUTPUTS> {
         &self.layer
     }
@@ -47,8 +43,7 @@ impl<const INPUTS: usize, const OUTPUTS: usize> DenseLayer<INPUTS, OUTPUTS>
 }
 
 #[allow(unused)]
-impl<const INPUTS: usize, const OUTPUTS: usize> SparseLayer<INPUTS, OUTPUTS>
-{
+impl<const INPUTS: usize, const OUTPUTS: usize> SparseLayer<INPUTS, OUTPUTS> {
     pub const fn layer(&self) -> &NetworkLayer<INPUTS, OUTPUTS> {
         &self.layer
     }
@@ -57,10 +52,10 @@ impl<const INPUTS: usize, const OUTPUTS: usize> SparseLayer<INPUTS, OUTPUTS>
         &mut self.layer
     }
 
-    pub fn forward(&self, board: &Board) -> Accumulator<OUTPUTS> {
+    pub fn forward<const STM_WHITE: bool, const NSTM_WHITE: bool>(&self, board: &ChessBoard) -> Accumulator<OUTPUTS> {
         let mut result = self.layer.biases;
 
-        Self::map_value_inputs(board, |weight_index| {
+        Self::map_value_inputs::<_, STM_WHITE, NSTM_WHITE>(board, |weight_index| {
             for (i, weight) in result.vals.iter_mut().zip(&self.layer.weights[weight_index].vals) {
                 *i += *weight;
             }
@@ -69,35 +64,35 @@ impl<const INPUTS: usize, const OUTPUTS: usize> SparseLayer<INPUTS, OUTPUTS>
         result
     }
 
-    fn map_value_inputs<F: FnMut(usize)>(board: &Board, mut method: F) {
-        let flip = board.side_to_move == Side::BLACK;
-        let horizontal_mirror = if board.get_king_square(board.side_to_move).get_value() % 8 > 3 { 7 } else { 0 };
+    fn map_value_inputs<F: FnMut(usize), const STM_WHITE: bool, const NSTM_WHITE: bool>(
+        board: &ChessBoard,
+        mut method: F,
+    ) {
+        let flip = board.side_to_move() == Side::BLACK;
+        let horizontal_mirror = if board.get_king_square::<STM_WHITE>().get_raw() % 8 > 3 { 7 } else { 0 };
 
-        for piece in Piece::PAWN..=Piece::KING {
-            let piece_index = 64 * (piece - Piece::PAWN);
+        for piece in Piece::PAWN.get_raw()..=Piece::KING.get_raw() {
+            let piece = Piece::from_raw(piece);
+            let piece_index = 64 * piece.get_raw() as usize;
 
-            let mut stm_bitboard = board.get_piece_mask(piece, board.side_to_move);
-            let mut nstm_bitboard = board.get_piece_mask(piece, board.side_to_move.flipped());
+            let mut stm_bitboard = board.get_piece_mask_for_side::<STM_WHITE>(piece);
+            let mut nstm_bitboard = board.get_piece_mask_for_side::<NSTM_WHITE>(piece);
 
             if flip {
                 stm_bitboard = stm_bitboard.flip();
                 nstm_bitboard = nstm_bitboard.flip();
             }
 
-            for square in stm_bitboard {
-                method(piece_index + (square.get_value() ^ horizontal_mirror))
-            }
+            stm_bitboard.map(|square| method(piece_index + (square.get_raw() as usize ^ horizontal_mirror)));
 
-            for square in nstm_bitboard {
-                method(384 + piece_index + (square.get_value() ^ horizontal_mirror))
-            }
+            nstm_bitboard
+                .map(|square| method(384 + piece_index + (square.get_raw() as usize ^ horizontal_mirror)));
         }
     }
 }
 
 #[allow(unused)]
-impl<const INPUTS: usize, const OUTPUTS: usize> CustomLayer<INPUTS, OUTPUTS>
-{
+impl<const INPUTS: usize, const OUTPUTS: usize> CustomLayer<INPUTS, OUTPUTS> {
     pub fn layer(&self) -> &NetworkLayer<INPUTS, OUTPUTS> {
         &self.layer
     }

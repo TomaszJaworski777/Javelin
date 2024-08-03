@@ -1,7 +1,6 @@
-use crate::{
-    core::Board,
-    neural::{DenseLayer, SparseLayer},
-};
+use spear::ChessBoard;
+
+use crate::neural::{DenseLayer, SparseLayer};
 
 #[allow(unused)]
 const NO_FUNCTION: u8 = 0;
@@ -22,8 +21,8 @@ pub struct ValueNetwork {
 #[allow(unused)]
 impl ValueNetwork {
     #[inline]
-    pub fn evaluate(&self, board: &Board) -> f32 {
-        let input_layer_result = self.input_layer.forward(&board);
+    pub fn evaluate<const STM_WHITE: bool, const NSTM_WHITE: bool>(&self, board: &ChessBoard) -> f32 {
+        let input_layer_result = self.input_layer.forward::<STM_WHITE, NSTM_WHITE>(&board);
         let hidden_layer_result = self.hidden_layer.forward(&input_layer_result);
         let output_layer_result = self.output_layer.forward(&hidden_layer_result);
         output_layer_result.values()[0]

@@ -1,5 +1,6 @@
-use crate::{core::Move, mcts::GameResult};
+use crate::mcts::GameResult;
 use colored::*;
+use spear::Move;
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct PhantomNode {

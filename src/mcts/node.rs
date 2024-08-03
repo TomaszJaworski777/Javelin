@@ -1,8 +1,6 @@
-use crate::{
-    core::{Board, MoveList, MoveProvider},
-    mcts::Evaluation,
-    options::Options,
-};
+use spear::ChessBoard;
+
+use crate::{mcts::Evaluation, options::Options};
 
 use super::phantom_node::PhantomNode;
 
@@ -103,28 +101,23 @@ impl Node {
         self.child = 0;
     }
 
-    pub fn expand<const ROOT: bool>(&mut self, board: &Board) {
-        //Generate all possible moves from the node
-        let mut move_list = MoveList::new();
-        MoveProvider::generate_moves::<false>(&mut move_list, &board);
-
-        let is_single_move = move_list.len() == 1;
+    pub fn expand<const ROOT: bool, const STM_WHITE: bool, const NSTM_WHITE: bool>(&mut self, board: &ChessBoard) {
         let mut max_policy_value = f32::NEG_INFINITY;
 
         //Generate inputs for the policy network
-        let policy_inputs = Evaluation::get_policy_inputs(board);
-        let threats = board.get_attack_map(board.side_to_move.flipped());
-        self.children = Vec::with_capacity(move_list.len());
+        let policy_inputs = Evaluation::get_policy_inputs::<STM_WHITE, NSTM_WHITE>(board);
+        let threats = board.generate_attack_map::<STM_WHITE, NSTM_WHITE>();
+        self.children = Vec::new();
 
         //Prebake new children with raw policy
-        for mv in move_list {
+        board.map_moves::<_, STM_WHITE, NSTM_WHITE>(|mv| {
             //If there is only one move, policy is not needed
-            let policy = if is_single_move { 1.0 } else { Evaluation::get_policy_value(board, &mv, &policy_inputs, threats) };
+            let policy = Evaluation::get_policy_value(board, mv, &policy_inputs, threats);
             self.children.push(PhantomNode::new((policy * 1000.0) as i32, mv, 0.0));
 
             //Save highest policy for later softmax
             max_policy_value = max_policy_value.max(policy);
-        }
+        });
 
         let mut total_policy = 0.0;
         let pst = if ROOT { Options::root_pst() } else { Options::non_root_pst() };
@@ -147,13 +140,16 @@ impl Node {
         }
     }
 
-    pub fn recalculate_policies<const ROOT: bool>(&mut self, board: &Board) {
+    pub fn recalculate_policies<const ROOT: bool, const STM_WHITE: bool, const NSTM_WHITE: bool>(
+        &mut self,
+        board: &ChessBoard,
+    ) {
         let is_single_move = self.children().len() == 1;
         let mut max_policy_value = f32::NEG_INFINITY;
 
         //Generate inputs for the policy network
-        let policy_inputs = Evaluation::get_policy_inputs(board);
-        let threats = board.get_attack_map(board.side_to_move.flipped());
+        let policy_inputs = Evaluation::get_policy_inputs::<STM_WHITE, NSTM_WHITE>(board);
+        let threats = board.generate_attack_map::<STM_WHITE, NSTM_WHITE>();
 
         //Update children
         for child_phantom in self.children_mut() {
@@ -161,7 +157,7 @@ impl Node {
             let policy = if is_single_move {
                 1.0
             } else {
-                Evaluation::get_policy_value(board, &child_phantom.mv(), &policy_inputs, threats)
+                Evaluation::get_policy_value(board, child_phantom.mv(), &policy_inputs, threats)
             };
             child_phantom.update_policy(policy);
 

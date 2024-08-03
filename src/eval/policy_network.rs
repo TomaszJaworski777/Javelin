@@ -1,9 +1,7 @@
 use goober::{activation, layer::SparseConnected, FeedForwardNetwork, Matrix, SparseVector, Vector};
+use spear::{Bitboard, ChessBoard, Move, Side};
 
-use crate::{
-    core::{Board, Move, Side, Bitboard},
-    see::SEE
-};
+use crate::see::SEE;
 
 #[allow(unused)]
 const NO_FUNCTION: u8 = 0;
@@ -50,15 +48,15 @@ impl PolicyNetwork {
     }
 
     #[inline]
-    pub fn evaluate(&self, board: &Board, mv: &Move, inputs: &SparseVector, threats: Bitboard) -> f32 {
-        let flip = if board.side_to_move == Side::WHITE { 0 } else { 56 };
+    pub fn evaluate(&self, board: &ChessBoard, mv: Move, inputs: &SparseVector, threats: Bitboard) -> f32 {
+        let flip = if board.side_to_move() == Side::WHITE { 0 } else { 56 };
 
-        let threat = usize::from((threats & (1 << mv.get_from_square().get_value())).is_not_empty());
-        let from_subnet = &self.subnets[usize::from(mv.get_from_square().get_value() ^ flip)][threat];
+        let threat = usize::from((threats & (1 << mv.get_from_square().get_raw())).is_not_empty());
+        let from_subnet = &self.subnets[usize::from(mv.get_from_square().get_raw() ^ flip)][threat];
         let from_vec = from_subnet.out(inputs);
 
-        let see = usize::from(SEE::static_exchange_evaluation(board, *mv, -108));
-        let to_subnet = &self.subnets[64 + usize::from(mv.get_to_square().get_value() ^ flip)][see];
+        let see = usize::from(SEE::static_exchange_evaluation(board, mv, -108));
+        let to_subnet = &self.subnets[64 + usize::from(mv.get_to_square().get_raw() ^ flip)][see];
         let to_vec = to_subnet.out(inputs);
 
         //let hce = self.hce.out(&Self::get_hce_feats(board, mv))[0];
@@ -66,11 +64,11 @@ impl PolicyNetwork {
         from_vec.dot(&to_vec) //+ hce
     }
 
-    pub fn get_hce_feats(_: &Board, mov: &Move) -> Vector<4> {
+    pub fn get_hce_feats(_: &ChessBoard, mov: &Move) -> Vector<4> {
         let mut feats = Vector::zeroed();
 
         if mov.is_promotion() {
-            feats[mov.get_promotion_piece() - 2] = 1.0;
+            feats[mov.get_promotion_piece().get_raw() as usize - 2] = 1.0;
         }
 
         feats

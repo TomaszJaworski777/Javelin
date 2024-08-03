@@ -4,16 +4,16 @@ pub struct ValueTrainer;
 impl ValueTrainer {
     pub fn run() {
         let mut trainer = TrainerBuilder::default()
-        .optimiser(optimiser::AdamW)
-        .single_perspective()
-        .input(inputs::ChessBucketsMirrored::default())
-        .output_buckets(outputs::Single)
-        .feature_transformer(512)
-        .activate(bullet::Activation::SCReLU)
-        .add_layer(32)
-        .activate(bullet::Activation::SCReLU)
-        .add_layer(1)
-        .build();
+            .optimiser(optimiser::AdamW)
+            .single_perspective()
+            .input(inputs::ChessBucketsMirrored::default())
+            .output_buckets(outputs::Single)
+            .feature_transformer(512)
+            .activate(bullet::Activation::SCReLU)
+            .add_layer(32)
+            .activate(bullet::Activation::SCReLU)
+            .add_layer(1)
+            .build();
 
         let schedule = TrainingSchedule {
             net_id: "value_11".to_string(),
@@ -24,11 +24,7 @@ impl ValueTrainer {
             start_superbatch: 1,
             end_superbatch: 80,
             wdl_scheduler: wdl::ConstantWDL { value: 0.7 },
-            lr_scheduler: lr::StepLR {
-                start: 0.001,
-                gamma: 0.1,
-                step: 30,
-            },
+            lr_scheduler: lr::StepLR { start: 0.001, gamma: 0.1, step: 30 },
             loss_function: Loss::SigmoidMSE,
             save_rate: 10,
             optimiser_settings: optimiser::AdamWParams {

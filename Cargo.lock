@@ -275,7 +275,7 @@ dependencies = [
 
 [[package]]
 name = "javelin"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "arrayvec",
  "colored",
@@ -283,6 +283,7 @@ dependencies = [
  "goober",
  "once_cell",
  "rand 0.8.5",
+ "spear",
  "unicase",
 ]
 
@@ -657,6 +658,15 @@ name = "shlex"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
+
+[[package]]
+name = "spear"
+version = "0.1.0"
+source = "git+https://github.com/TomaszJaworski777/Spear.git#8acdefbd6a9e45ab7432f1f8243fa0e1c1a51f8d"
+dependencies = [
+ "colored",
+ "once_cell",
+]
 
 [[package]]
 name = "stacker"

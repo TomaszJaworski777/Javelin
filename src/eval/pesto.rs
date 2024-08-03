@@ -1,6 +1,4 @@
-use crate::core::{Board, Side};
-
-const PHASE: [i32; 6] = [0, 1, 1, 2, 4, 0];
+use spear::{ChessBoard, Side};
 
 const MIDGAME_PIECE_VALUE: [i32; 6] = [82, 337, 365, 477, 1025, 0];
 const ENDGAME_PIECE_VALUE: [i32; 6] = [94, 281, 297, 512, 936, 0];
@@ -98,23 +96,25 @@ static ENDGAME_PIECE_TABLE: [[i32; 64]; 6] = [
 pub struct Pesto;
 impl Pesto {
     #[allow(unused)]
-    pub fn get_score(board: &Board) -> i32 {
+    pub fn get_score(board: &ChessBoard) -> i32 {
         let mut midgame_score = 0;
         let mut endgame_score = 0;
-        let mut game_phase = 0;
 
-        for square in board.get_occupancy() {
-            let (piece_index, side) = board.get_piece_on_square(square);
-            let piece_table_index = if side == Side::WHITE { square.get_value() ^ 56 } else { square.get_value() };
-            let multiplier = (side.current() as i32 * -2) + 1;
+        board.get_occupancy().map(|square| {
+            let piece = board.get_piece_on_square(square);
+            let piece_color = board.get_piece_color_on_square(square);
+            let piece_table_index =
+                if piece_color == Side::WHITE { square.get_raw() ^ 56 } else { square.get_raw() } as usize;
+            let multiplier = (piece_color.get_raw() as i32 * -2) + 1;
             midgame_score += multiplier
-                * (MIDGAME_PIECE_TABLE[piece_index - 1][piece_table_index] + MIDGAME_PIECE_VALUE[piece_index - 1]);
+                * (MIDGAME_PIECE_TABLE[piece.get_raw() as usize][piece_table_index]
+                    + MIDGAME_PIECE_VALUE[piece.get_raw() as usize]);
             endgame_score += multiplier
-                * (ENDGAME_PIECE_TABLE[piece_index - 1][piece_table_index] + ENDGAME_PIECE_VALUE[piece_index - 1]);
-            game_phase += PHASE[piece_index - 1];
-        }
+                * (ENDGAME_PIECE_TABLE[piece.get_raw() as usize][piece_table_index]
+                    + ENDGAME_PIECE_VALUE[piece.get_raw() as usize]);
+        });
 
-        let midgame_phase = game_phase.max(24);
+        let midgame_phase = board.get_phase().max(24) as i32;
         let endgame_phase = 24 - midgame_phase;
         (midgame_score * midgame_phase + endgame_score * endgame_phase) / 24
     }

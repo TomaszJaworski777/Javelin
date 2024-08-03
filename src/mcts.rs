@@ -10,15 +10,11 @@ pub use qsearch::qsearch;
 pub use search_info::SearchInfo;
 pub use search_rules::SearchRules;
 pub use search_tree::SearchTree;
+use spear::{ChessBoard, ChessPosition, Move, Side};
 use std::sync::RwLock;
 
 use self::{node::Node, phantom_node::PhantomNode};
-use crate::{
-    core::{Board, Move, MoveList, MoveProvider},
-    eval::Evaluation,
-    options::Options,
-    search_report::SearchReport,
-};
+use crate::{eval::Evaluation, options::Options, search_report::SearchReport};
 use std::{sync::Arc, time::Instant};
 
 pub struct Search<const LOG: bool> {
@@ -41,17 +37,27 @@ impl<'a, const LOG: bool> Search<LOG> {
         &self.search_info
     }
 
-    pub fn reuse_tree(&mut self, board: &Board, previous_board: &Board) {
+    pub fn reuse_tree(&mut self, board: &ChessBoard, previous_board: &ChessBoard) {
         let is_tree_same_size = SearchTree::mem_to_capacity(Options::hash() as usize) == self.tree.capacity();
         if board != previous_board && is_tree_same_size {
             //If positions are not equal we try to find the new position in the tree
             //and reuse the tree. We also reset the search info.
-            if self.tree.reuse_tree(board, previous_board) {
-                //We want to recalculate policies due to change of root
-                //(we flatten policies at root to reduce the chance of
-                //missing good move with low policy)
-                let root_index = self.tree.root_index();
-                self.tree[root_index].recalculate_policies::<true>(board);
+            if board.side_to_move() == Side::WHITE {
+                if self.tree.reuse_tree::<true, false>(board, previous_board) {
+                    //We want to recalculate policies due to change of root
+                    //(we flatten policies at root to reduce the chance of
+                    //missing good move with low policy)
+                    let root_index = self.tree.root_index();
+                    self.tree[root_index].recalculate_policies::<true, true, false>(board);
+                }
+            } else {
+                if self.tree.reuse_tree::<false, true>(board, previous_board) {
+                    //We want to recalculate policies due to change of root
+                    //(we flatten policies at root to reduce the chance of
+                    //missing good move with low policy)
+                    let root_index = self.tree.root_index();
+                    self.tree[root_index].recalculate_policies::<true, false, true>(board);
+                }
             }
         } else if self.tree.node_count() == 0 || !is_tree_same_size {
             //If we are using the same tree we want to make sure it has a root
@@ -63,7 +69,7 @@ impl<'a, const LOG: bool> Search<LOG> {
         self.search_info = SearchInfo::new();
     }
 
-    pub fn run<const PRETTY_PRINT: bool>(&mut self, search_rules: SearchRules, root_position: &Board) -> Move {
+    pub fn run<const PRETTY_PRINT: bool>(&mut self, search_rules: SearchRules, root_position: &ChessPosition) -> Move {
         if PRETTY_PRINT && LOG {
             println!("   Depth   Score    Time      Nodes     Speed        Usage   Pv Line");
         }
@@ -76,7 +82,7 @@ impl<'a, const LOG: bool> Search<LOG> {
         //If tree is complitly empty we want to reset it in order to spawn
         //and expand root node
         if self.tree.node_count() == 0 {
-            self.tree.reset_tree(root_position);
+            self.tree.reset_tree(root_position.board());
         }
 
         //Iteration loop that breaks, when search rules decide seach should not longer continue
@@ -86,7 +92,11 @@ impl<'a, const LOG: bool> Search<LOG> {
             //including selection, expansion, simulation and backpropagation
             let mut position = *root_position;
             let mut current_depth = 0;
-            self.perform_iteration_step(self.tree.root_index(), &mut position, &mut current_depth);
+            if position.board().side_to_move() == Side::WHITE {
+                self.perform_iteration_step::<true, false>(self.tree.root_index(), &mut position, &mut current_depth)
+            } else {
+                self.perform_iteration_step::<false, true>(self.tree.root_index(), &mut position, &mut current_depth)
+            };
 
             if self.search_info.current_iterations % 128 == 0 {
                 self.search_info.time_passed = timer.elapsed().as_millis();
@@ -134,10 +144,10 @@ impl<'a, const LOG: bool> Search<LOG> {
         self.tree.get_best_phantom().mv()
     }
 
-    fn perform_iteration_step(
+    fn perform_iteration_step<const STM_WHITE: bool, const NSTM_WHITE: bool>(
         &mut self,
         current_node_index: i32,
-        current_board: &mut Board,
+        current_position: &mut ChessPosition,
         current_depth: &mut u32,
     ) -> f32 {
         *current_depth += 1;
@@ -155,12 +165,12 @@ impl<'a, const LOG: bool> Search<LOG> {
         //of this node. If node had no visits (leaf node), then we simulate the node and return it's value. We will
         //expand this node on second visit
         let mut score = if self.tree[current_node_index].is_terminal() || parent_visits == 0 {
-            self.get_node_score(current_node_index, &current_board)
+            self.get_node_score::<STM_WHITE, NSTM_WHITE>(current_node_index, current_position)
         } else {
             //On second visit we extend the node, if it wasn't already extended.
             //This allows us to reduce amount of time we evaluate policy net
             if !self.tree[current_node_index].is_extended() {
-                self.tree[current_node_index].expand::<false>(&current_board);
+                self.tree[current_node_index].expand::<false, STM_WHITE, NSTM_WHITE>(current_position.board());
             }
 
             //Select best phantom child (selection returns index of the move from it's parent)
@@ -176,19 +186,19 @@ impl<'a, const LOG: bool> Search<LOG> {
             //process selected child and move deeper into the tree, until we find a leaf node
             //or terminal state
             if new_child_index == usize::MAX {
-                self.get_node_score(current_node_index, &current_board)
+                self.get_node_score::<STM_WHITE, NSTM_WHITE>(current_node_index, current_position)
             } else {
                 //Extract phantom of selected child and save index of corresponding tree node
                 let selected_node_phantom = self.tree.get_phantom(current_node_index, new_child_index);
                 let mut child_node_index = selected_node_phantom.index();
 
-                current_board.make_move(selected_node_phantom.mv());
+                current_position.make_move::<STM_WHITE, NSTM_WHITE>(selected_node_phantom.mv());
 
                 //If index of corresponding tree node is equal to -1, it means that node
                 //doesn't exist on a tree, and we have to create it
                 if child_node_index == -1 {
                     //Create new node, assaign it's default values and it's game result and add it to the tree
-                    let selected_node_result = self.get_node_result(&current_board);
+                    let selected_node_result = self.get_node_result(&current_position);
                     child_node_index =
                         self.tree.push(Node::new(selected_node_result, current_node_index, new_child_index));
                     self.tree.get_phantom_mut(current_node_index, new_child_index).set_index(child_node_index);
@@ -197,7 +207,7 @@ impl<'a, const LOG: bool> Search<LOG> {
                 //Save result of processed node for backpropagation stage and
                 //perform another iteration step deeper into the tree
                 child_result = self.tree[child_node_index].result();
-                self.perform_iteration_step(child_node_index, current_board, current_depth)
+                self.perform_iteration_step::<NSTM_WHITE, STM_WHITE>(child_node_index, current_position, current_depth)
             }
         };
 
@@ -309,9 +319,13 @@ impl<'a, const LOG: bool> Search<LOG> {
     }
 
     #[inline]
-    fn get_node_score(&self, node_index: i32, board: &Board) -> f32 {
+    fn get_node_score<const STM_WHITE: bool, const NSTM_WHITE: bool>(
+        &self,
+        node_index: i32,
+        position: &ChessPosition,
+    ) -> f32 {
         match self.tree[node_index].result() {
-            GameResult::None => sigmoid(qsearch(board, -30_000, 30_000, 0)),
+            GameResult::None => sigmoid(qsearch::<STM_WHITE, NSTM_WHITE>(position, -30_000, 30_000, 0)),
             GameResult::Win(_) => 1.0,
             GameResult::Lose(_) => 0.0,
             GameResult::Draw => 0.5,
@@ -319,19 +333,40 @@ impl<'a, const LOG: bool> Search<LOG> {
     }
 
     #[inline]
-    fn get_node_result(&self, board: &Board) -> GameResult {
-        if board.is_insufficient_material() || board.three_fold() || board.half_moves >= 100 {
+    fn get_node_result(&self, position: &ChessPosition) -> GameResult {
+        if position.board().is_insufficient_material()
+            || position.is_repetition()
+            || position.board().half_move_counter() >= 100
+        {
             return GameResult::Draw;
         }
 
-        let mut move_list = MoveList::new();
-        MoveProvider::generate_moves::<false>(&mut move_list, &board);
+        let mut no_moves = true;
+        if position.board().side_to_move() == Side::WHITE {
+            position.board().map_moves::<_, true, false>(|_| no_moves = false);
 
-        if move_list.len() == 0 {
-            return if board.is_in_check() { GameResult::Lose(0) } else { GameResult::Draw };
+            if !no_moves {
+                return GameResult::None;
+            }
+
+            if position.board().is_in_check::<true, false>() {
+                GameResult::Lose(0)
+            } else {
+                GameResult::Draw
+            }
+        } else {
+            position.board().map_moves::<_, false, true>(|_| no_moves = false);
+
+            if !no_moves {
+                return GameResult::None;
+            }
+
+            if position.board().is_in_check::<false, true>() {
+                GameResult::Lose(0)
+            } else {
+                GameResult::Draw
+            }
         }
-
-        GameResult::None
     }
 
     fn print_report<const PRETTY_PRINT: bool>(&mut self, search_info: SearchInfo, last_report: &mut String) {

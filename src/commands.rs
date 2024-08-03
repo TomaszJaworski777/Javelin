@@ -4,19 +4,19 @@ use std::{
     thread,
 };
 
+use spear::{ChessBoard, ChessPosition, Move, Perft, Side, FEN};
+
 use crate::{
     benchmark::Benchmark,
-    core::{create_board, Board, MoveList, MoveProvider, Side},
     mcts::{Search, SearchRules, SearchTree},
     options::Options,
-    perft::Perft,
 };
 
 type CommandFn = Box<dyn Fn(&mut ContextVariables, &[String]) + Send + Sync + 'static>;
 
 struct ContextVariables {
-    board: Board,
-    previous_board: Arc<Mutex<Board>>,
+    board: ChessPosition,
+    previous_board: Arc<Mutex<ChessBoard>>,
     search: Arc<Mutex<Search<true>>>,
     interruption_token: Arc<RwLock<bool>>,
     uci_initialized: bool,
@@ -24,10 +24,17 @@ struct ContextVariables {
 
 impl ContextVariables {
     fn new() -> Self {
-        let board = create_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let position = ChessPosition::from_fen(&FEN::start_position());
+        let board = position.board();
         let interruption_token = Arc::new(RwLock::new(false));
         let search = Arc::new(Mutex::new(Search::new(SearchTree::new(), Some(Arc::clone(&interruption_token)))));
-        Self { board, previous_board: Arc::new(Mutex::new(board)), search, interruption_token, uci_initialized: false }
+        Self {
+            board: position,
+            previous_board: Arc::new(Mutex::new(*board)),
+            search,
+            interruption_token,
+            uci_initialized: false,
+        }
     }
 }
 
@@ -50,7 +57,7 @@ impl Commands {
         commands.add_command("go", Commands::go_command);
         commands.add_command("stop", Commands::stop_search_command);
         commands.add_command("tree", Commands::tree_command);
-        commands.add_command("perft_bulk", Commands::perft_command);
+        commands.add_command("bulk", Commands::perft_command);
         commands.add_command("perft", Commands::perft_no_bulk_command);
         commands.add_command("bench", Commands::bench_command);
 
@@ -111,20 +118,31 @@ impl Commands {
     }
 
     fn new_game_command(context: &mut ContextVariables, args: &[String]) {
-        context.board = create_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        context.board = ChessPosition::from_fen(&FEN::start_position());
         context.search =
             Arc::new(Mutex::new(Search::new(SearchTree::new(), Some(Arc::clone(&context.interruption_token)))));
     }
 
     fn position_command(context: &mut ContextVariables, args: &[String]) {
-        let apply_moves = |moves: &[String], board: &mut Board| {
+        let apply_moves = |moves: &[String], position: &mut ChessPosition| {
             if let Some(start_index) = moves.iter().position(|x| x == "moves") {
                 for move_str in &moves[start_index + 1..] {
-                    let mut move_list = MoveList::new();
-                    MoveProvider::generate_moves::<false>(&mut move_list, board);
+                    let board = *position.board();
+                    let side_to_move = board.side_to_move();
+                    let make_move = |mv: Move| {
+                        if mv.to_string() == *move_str {
+                            if side_to_move == Side::WHITE {
+                                position.make_move::<true, false>(mv)
+                            } else {
+                                position.make_move::<false, true>(mv)
+                            }
+                        }
+                    };
 
-                    if let Some(mv) = move_list.iter().find(|&m| m.to_string() == *move_str) {
-                        board.make_move(*mv);
+                    if side_to_move == Side::WHITE {
+                        board.map_moves::<_, true, false>(make_move)
+                    } else {
+                        board.map_moves::<_, false, true>(make_move)
                     }
                 }
             }
@@ -132,13 +150,13 @@ impl Commands {
 
         match args.split_first() {
             Some((first, rest)) if first.as_str() == "startpos" => {
-                let mut new_board = create_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+                let mut new_board = ChessPosition::from_fen(&FEN::start_position());
                 apply_moves(rest, &mut new_board);
                 context.board = new_board;
             }
             Some((first, rest)) if first.as_str() == "fen" && rest.len() >= 6 => {
                 let fen = rest[..6].join(" ");
-                let mut new_board = create_board(&fen);
+                let mut new_board = ChessPosition::from_fen(&FEN::from_string(fen));
 
                 if rest.len() > 6 {
                     apply_moves(&rest[6..], &mut new_board);
@@ -151,7 +169,7 @@ impl Commands {
     }
 
     fn draw_board_command(context: &mut ContextVariables, args: &[String]) {
-        context.board.draw_board();
+        context.board.board().draw_board();
     }
 
     fn go_command(context: &mut ContextVariables, args: &[String]) {
@@ -190,7 +208,7 @@ impl Commands {
             }
             i += 1;
         }
-        let (time, increment, moves_to_go) = if context.board.side_to_move == Side::WHITE {
+        let (time, increment, moves_to_go) = if context.board.board().side_to_move() == Side::WHITE {
             (timers.0, timers.2, timers.4)
         } else {
             (timers.1, timers.3, timers.4)
@@ -199,7 +217,7 @@ impl Commands {
             rules.time_for_move = SearchRules::calculate_time(time, increment, moves_to_go)
         }
 
-        context.search.lock().unwrap().reuse_tree(&context.board, &*context.previous_board.lock().unwrap());
+        context.search.lock().unwrap().reuse_tree(&context.board.board(), &*context.previous_board.lock().unwrap());
 
         let board = context.board;
         let rules_final = rules;
@@ -214,7 +232,7 @@ impl Commands {
                 search_clone.lock().unwrap().run::<true>(rules_final, &board)
             };
             println!("bestmove {}", result.to_string());
-            *previous_board_clone.lock().unwrap() = board;
+            *previous_board_clone.lock().unwrap() = *board.board();
         });
     }
 
@@ -241,7 +259,7 @@ impl Commands {
             return;
         }
 
-        Perft::execute::<true>(&context.board, args[0].parse().unwrap_or_default(), true);
+        Perft::perft::<true, true, true>(&context.board.board().get_fen(), args[0].parse().unwrap_or_default());
     }
 
     fn perft_no_bulk_command(context: &mut ContextVariables, args: &[String]) {
@@ -249,7 +267,7 @@ impl Commands {
             return;
         }
 
-        Perft::execute::<false>(&context.board, args[0].parse().unwrap_or_default(), true);
+        Perft::perft::<false, true, true>(&context.board.board().get_fen(), args[0].parse().unwrap_or_default());
     }
 
     fn bench_command(context: &mut ContextVariables, args: &[String]) {

@@ -1,10 +1,8 @@
 use colored::*;
+use spear::{ChessPosition, FEN};
 use std::time::Instant;
 
-use crate::{
-    core::create_board,
-    mcts::{Search, SearchRules, SearchTree},
-};
+use crate::mcts::{Search, SearchRules, SearchTree};
 
 pub struct Benchmark;
 impl Benchmark {
@@ -73,7 +71,7 @@ impl Benchmark {
         let mut total_time = 0.0;
         let mut total_nps = 0;
         for fen in Benchmark::FENS {
-            let board = create_board(fen);
+            let board = ChessPosition::from_fen(&FEN::from_str(fen));
             let mut search = Search::<false>::new(SearchTree::new(), None);
             let search_timer = Instant::now();
             search.run::<false>(rules, &board);

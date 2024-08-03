@@ -1,17 +1,13 @@
 mod benchmark;
 mod commands;
-mod core;
 mod eval;
 mod mcts;
 mod neural;
 mod options;
-mod perft;
 mod search_report;
 mod see;
 
 pub use commands::Commands;
-pub use core::Side;
-pub use core::{create_board, get_bit, Bitboard, Board, Move, MoveList, MoveProvider, Square};
 pub use eval::Evaluation;
 pub use eval::PolicyNetwork;
 pub use eval::SubNet;
@@ -22,4 +18,3 @@ pub use mcts::SearchRules;
 pub use mcts::SearchTree;
 pub use neural::DenseLayer;
 pub use see::SEE;
-pub use core::Attacks;

@@ -49,10 +49,10 @@ pub fn convert_file() {
             let minutes = seconds_remaining / 60;
 
             print!("Entry {:.2}k/{:.2}k ({entries_this_second}). Current staus: {:.2}k/{:.2}k (written/filtered). Time remaining: {minutes}m {}s\r", 
-                entry_count as f32 / 1000.0, 
-                data_loaded as f32 / 1000.0, 
-                data_written as f32 / 1000.0, 
-                data_filtered as f32/ 1000.0, 
+                entry_count as f32 / 1000.0,
+                data_loaded as f32 / 1000.0,
+                data_written as f32 / 1000.0,
+                data_filtered as f32/ 1000.0,
                 seconds_remaining % 60);
             let _ = std::io::stdout().flush();
 
@@ -85,12 +85,8 @@ pub fn convert_file() {
 
         let chess_board = ChessBoard::from_raw(bbs, board.side_to_move.current(), score, result).unwrap();
 
-        let chess_board_bytes = unsafe {
-            std::slice::from_raw_parts(
-                (&chess_board as *const ChessBoard) as *const u8,
-                chess_board_size,
-            )
-        };
+        let chess_board_bytes =
+            unsafe { std::slice::from_raw_parts((&chess_board as *const ChessBoard) as *const u8, chess_board_size) };
 
         writer.write_all(chess_board_bytes).unwrap();
         data_written += 1;
