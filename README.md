@@ -27,6 +27,8 @@
 ## Overview
 Javelin is a second UCI chess engine I made. It uses Monte Carlo Tree Search (MCTS) to find best moves. I made it as an experiment, wanting to try something different with MCTS. Javelin works with any chess GUI that supports UCI. Data for training value and policy neural networks was generated through entirely through selfplay from the beginning, when Javelin was using basic PeSTO. 
 
+This engine is discontinued and currently i'm working on different engine [Jackal](https://github.com/TomaszJaworski777/Jackal)
+
 ## Compiling
 To compile Javelin, follow these steps after downloading the source code from the release:
 
