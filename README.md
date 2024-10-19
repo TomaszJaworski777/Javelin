@@ -18,7 +18,7 @@
 
 | Version | CCRL 40/15 | CCRL Blitz | Estimated | Release Date |
 | :-: | :-: | :-: | :-: | :-: |
-| [3.0.0](https://github.com/TomaszJaworski777/Javelin/releases/tag/3.0.0) | - | - | 2817 | 17th July 2024 |
+| [3.0.0](https://github.com/TomaszJaworski777/Javelin/releases/tag/3.0.0) | - | 2775 | 2817 | 17th July 2024 |
 | [2.0.0](https://github.com/TomaszJaworski777/Javelin/releases/tag/2.0.0) | - | 2559 | 2539 | 27th June 2024 |
 | [1.0.0](https://github.com/TomaszJaworski777/Javelin/releases/tag/1.0.0) | - | 1830 | 1798 | 31th May 2024 |
 
